@@ -17,7 +17,7 @@ A FastAPI service that acts as a control plane for LAN-connected oscilloscopes, 
 
 ## Architecture
 
-```
+```shell
 OpenBIS Web UI (JS)
         │  Bearer token + REST
         ▼
@@ -67,17 +67,17 @@ Tests use `fakeredis` and the mock driver — no Redis or hardware required.
 
 All settings are read from environment variables (or a `.env` file):
 
-| Variable | Default | Description |
-|---|---|---|
-| `REDIS_URL` | `redis://localhost:6379` | Redis connection URL |
-| `OPENBIS_URL` | _(required)_ | OpenBIS server URL |
-| `BUFFER_DIR` | `./buffer` | Root directory for artifact storage |
-| `OSCILLOSCOPES_CONFIG` | `./config/oscilloscopes.yaml` | Device list |
-| `LOCK_TTL_SECONDS` | `1800` | Lock expiry (seconds) |
-| `HEALTH_CHECK_INTERVAL_SECONDS` | `5` | TCP health check interval |
-| `TOKEN_CACHE_SECONDS` | `60` | Token validation cache TTL |
-| `EOD_RESET_TIMEZONE` | `Europe/Berlin` | Timezone for end-of-day reset |
-| `DEBUG` | `False` | Use mock driver; skip health monitor |
+| Variable                        | Default                       | Description                          |
+| ------------------------------- | ----------------------------- | ------------------------------------ |
+| `REDIS_URL`                     | `redis://localhost:6379`      | Redis connection URL                 |
+| `OPENBIS_URL`                   | _(required)_                  | OpenBIS server URL                   |
+| `BUFFER_DIR`                    | `./buffer`                    | Root directory for artifact storage  |
+| `OSCILLOSCOPES_CONFIG`          | `./config/oscilloscopes.yaml` | Device list                          |
+| `LOCK_TTL_SECONDS`              | `1800`                        | Lock expiry (seconds)                |
+| `HEALTH_CHECK_INTERVAL_SECONDS` | `5`                           | TCP health check interval            |
+| `TOKEN_CACHE_SECONDS`           | `60`                          | Token validation cache TTL           |
+| `EOD_RESET_TIMEZONE`            | `Europe/Berlin`               | Timezone for end-of-day reset        |
+| `DEBUG`                         | `False`                       | Use mock driver; skip health monitor |
 
 ## Registering oscilloscopes
 
@@ -103,28 +103,28 @@ See [`drivers/README.md`](drivers/README.md) for detailed instructions.
 
 ## API overview
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/auth/me` | Current user identity |
-| `GET` | `/devices` | List all devices |
-| `GET` | `/devices/{id}` | Device detail + capabilities |
-| `POST` | `/devices/{id}/lock` | Acquire exclusive lock → `control_session_id` |
-| `POST` | `/devices/{id}/unlock` | Release lock |
-| `POST` | `/devices/{id}/heartbeat` | Renew lock TTL |
-| `POST` | `/devices/{id}/run` | Start acquisition (requires lock) |
-| `POST` | `/devices/{id}/stop` | Stop acquisition (requires lock) |
-| `POST` | `/devices/{id}/acquire` | Capture all enabled channels + screenshot |
-| `GET` | `/devices/{id}/channels/{ch}/data` | Latest waveform for channel as JSON |
-| `GET` | `/devices/{id}/screenshot` | Latest screenshot as `image/png` |
-| `GET` | `/sessions/{id}/artifacts` | List artifacts with persist flags |
-| `POST` | `/sessions/{id}/artifacts/{art}/flag` | Set `persist=true/false` |
-| `POST` | `/sessions/{id}/commit` | Register flagged artifacts in OpenBIS |
-| `POST` | `/admin/locks/reset` | Clear all locks (admin) |
-| `POST` | `/admin/devices/{id}/force-unlock` | Force-release one lock (admin) |
+| Method | Path                                  | Description                                   |
+| ------ | ------------------------------------- | --------------------------------------------- |
+| `GET`  | `/auth/me`                            | Current user identity                         |
+| `GET`  | `/devices`                            | List all devices                              |
+| `GET`  | `/devices/{id}`                       | Device detail + capabilities                  |
+| `POST` | `/devices/{id}/lock`                  | Acquire exclusive lock → `control_session_id` |
+| `POST` | `/devices/{id}/unlock`                | Release lock                                  |
+| `POST` | `/devices/{id}/heartbeat`             | Renew lock TTL                                |
+| `POST` | `/devices/{id}/run`                   | Start acquisition (requires lock)             |
+| `POST` | `/devices/{id}/stop`                  | Stop acquisition (requires lock)              |
+| `POST` | `/devices/{id}/acquire`               | Capture all enabled channels + screenshot     |
+| `GET`  | `/devices/{id}/channels/{ch}/data`    | Latest waveform for channel as JSON           |
+| `GET`  | `/devices/{id}/screenshot`            | Latest screenshot as `image/png`              |
+| `GET`  | `/sessions/{id}/artifacts`            | List artifacts with persist flags             |
+| `POST` | `/sessions/{id}/artifacts/{art}/flag` | Set `persist=true/false`                      |
+| `POST` | `/sessions/{id}/commit`               | Register flagged artifacts in OpenBIS         |
+| `POST` | `/admin/locks/reset`                  | Clear all locks (admin)                       |
+| `POST` | `/admin/devices/{id}/force-unlock`    | Force-release one lock (admin)                |
 
 ## Buffer layout
 
-```
+```shell
 buffer/
 └── {device_id}/
     └── {session_id}/

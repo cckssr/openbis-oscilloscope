@@ -3,7 +3,8 @@
     "allow": [
       "Bash(python3 -m py_compile:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(.venv/bin/pytest:*)"
     ]
   }
 }
