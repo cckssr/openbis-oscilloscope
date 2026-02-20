@@ -1,32 +1,29 @@
 import asyncio
-import tempfile
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import fakeredis.aioredis as fakeredis
 import pytest
 import pytest_asyncio
-from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 
 from app.buffer.service import BufferService
 from app.instruments.manager import DeviceConfig, DeviceEntry, DeviceState, InstrumentManager
 from app.instruments.mock_driver import MockOscilloscopeDriver
 from app.locks.service import LockService
-from app.openbis_client.client import UserInfo
+from app.openbis_client.client import OpenBISClient, UserInfo
 
 
 # ---------------------------------------------------------------------------
-# Fake Redis
+# Redis
 # ---------------------------------------------------------------------------
 
-@pytest.fixture
-def fake_redis():
+@pytest_asyncio.fixture
+async def fake_redis():
     return fakeredis.FakeRedis()
 
 
-@pytest.fixture
-def lock_service(fake_redis):
+@pytest_asyncio.fixture
+async def lock_service(fake_redis):
     return LockService(fake_redis)
 
 
@@ -50,7 +47,9 @@ def admin_user():
 
 @pytest.fixture
 def mock_driver():
-    return MockOscilloscopeDriver()
+    d = MockOscilloscopeDriver()
+    d.connect()
+    return d
 
 
 @pytest.fixture
@@ -74,51 +73,46 @@ def instrument_manager(mock_driver):
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def temp_buffer_dir(tmp_path):
-    return tmp_path / "buffer"
-
-
-@pytest.fixture
-def buffer_service(temp_buffer_dir):
-    return BufferService(buffer_dir=str(temp_buffer_dir))
+def buffer_service(tmp_path):
+    return BufferService(buffer_dir=str(tmp_path / "buffer"))
 
 
 # ---------------------------------------------------------------------------
-# FastAPI test app
+# Full app fixture (with worker tasks running)
 # ---------------------------------------------------------------------------
 
-@pytest.fixture
-def app(fake_redis, instrument_manager, buffer_service, regular_user):
+@pytest_asyncio.fixture
+async def app(fake_redis, instrument_manager, buffer_service, regular_user):
     from app.main import create_app
 
     test_app = create_app()
 
-    # Override lifespan by directly setting state
-    ls = LockService(fake_redis)
-
-    from app.openbis_client.client import OpenBISClient
     mock_openbis = MagicMock(spec=OpenBISClient)
     mock_openbis.validate_token = AsyncMock(return_value=regular_user)
 
-    # Start worker tasks for devices
-    async def _start_workers():
-        for device_id, entry in instrument_manager.devices.items():
-            entry.worker_task = asyncio.create_task(
-                instrument_manager._device_worker(device_id),
-                name=f"worker-{device_id}",
-            )
-
-    import asyncio as _asyncio
-    loop = _asyncio.new_event_loop()
-    loop.run_until_complete(_start_workers())
-
     test_app.state.redis = fake_redis
-    test_app.state.lock_service = ls
+    test_app.state.lock_service = LockService(fake_redis)
     test_app.state.instrument_manager = instrument_manager
     test_app.state.buffer_service = buffer_service
     test_app.state.openbis_client = mock_openbis
 
-    return test_app
+    # Start per-device worker tasks
+    for device_id, entry in instrument_manager.devices.items():
+        entry.worker_task = asyncio.create_task(
+            instrument_manager._device_worker(device_id),
+            name=f"worker-{device_id}",
+        )
+
+    yield test_app
+
+    # Teardown: cancel worker tasks
+    for entry in instrument_manager.devices.values():
+        if entry.worker_task and not entry.worker_task.done():
+            entry.worker_task.cancel()
+            try:
+                await entry.worker_task
+            except asyncio.CancelledError:
+                pass
 
 
 @pytest_asyncio.fixture

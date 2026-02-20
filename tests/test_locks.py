@@ -1,13 +1,12 @@
-import time
-
-import fakeredis.aioredis as fakeredis
 import pytest
+import pytest_asyncio
+import fakeredis.aioredis as fakeredis
 
 from app.locks.service import LockService
 
 
-@pytest.fixture
-def lock_svc():
+@pytest_asyncio.fixture
+async def lock_svc():
     redis = fakeredis.FakeRedis()
     return LockService(redis)
 

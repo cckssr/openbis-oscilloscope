@@ -1,21 +1,22 @@
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.core.exceptions import AdminRequiredError, LockRequiredError
-from app.locks.service import LockInfo, LockService
-from app.openbis_client.client import UserInfo, openbis_client
+from app.locks.service import LockInfo
+from app.openbis_client.client import UserInfo
 
 _bearer = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
 ) -> UserInfo:
     from app.core.exceptions import AuthError
 
     if credentials is None:
         raise AuthError("Missing Authorization header")
-    return await openbis_client.validate_token(credentials.credentials)
+    return await request.app.state.openbis_client.validate_token(credentials.credentials)
 
 
 async def require_admin(user: UserInfo = Depends(get_current_user)) -> UserInfo:
@@ -24,9 +25,7 @@ async def require_admin(user: UserInfo = Depends(get_current_user)) -> UserInfo:
     return user
 
 
-def make_lock_dependency(lock_service: LockService):
-    """Factory that returns a FastAPI dependency for lock verification."""
-
+def make_lock_dependency(lock_service):
     async def require_lock(
         device_id: str,
         session_id: str,

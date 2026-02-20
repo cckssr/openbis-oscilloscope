@@ -54,6 +54,8 @@ class BufferService:
 
     def _find_session_dir(self, session_id: str) -> tuple[Path, str] | None:
         """Search all device directories for a session."""
+        if not self._root.exists():
+            return None
         for device_dir in self._root.iterdir():
             if not device_dir.is_dir():
                 continue
