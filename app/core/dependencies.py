@@ -16,7 +16,9 @@ async def get_current_user(
 
     if credentials is None:
         raise AuthError("Missing Authorization header")
-    return await request.app.state.openbis_client.validate_token(credentials.credentials)
+    return await request.app.state.openbis_client.validate_token(
+        credentials.credentials
+    )
 
 
 async def require_admin(user: UserInfo = Depends(get_current_user)) -> UserInfo:
@@ -32,7 +34,11 @@ def make_lock_dependency(lock_service):
         user: UserInfo = Depends(get_current_user),
     ) -> LockInfo:
         lock = await lock_service.get_lock(device_id)
-        if lock is None or lock.session_id != session_id or lock.owner_user != user.user_id:
+        if (
+            lock is None
+            or lock.session_id != session_id
+            or lock.owner_user != user.user_id
+        ):
             raise LockRequiredError(device_id)
         return lock
 

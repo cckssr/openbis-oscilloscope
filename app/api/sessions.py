@@ -62,7 +62,9 @@ async def commit_session(
     if not flagged:
         if not buffer_service.list_artifacts(session_id):
             raise SessionNotFoundError(session_id)
-        raise HTTPException(status_code=400, detail="No artifacts are flagged for commit")
+        raise HTTPException(
+            status_code=400, detail="No artifacts are flagged for commit"
+        )
 
     # Collect all file paths for flagged artifacts
     all_files = []

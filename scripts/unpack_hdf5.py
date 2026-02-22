@@ -21,7 +21,10 @@ def unpack(h5_path: pathlib.Path, output_dir: pathlib.Path) -> None:
     try:
         import h5py
     except ImportError:
-        print("ERROR: h5py is required. Install it with:  pip install h5py", file=sys.stderr)
+        print(
+            "ERROR: h5py is required. Install it with:  pip install h5py",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     output_dir.mkdir(parents=True, exist_ok=True)

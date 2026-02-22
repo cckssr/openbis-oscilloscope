@@ -14,7 +14,10 @@ class HealthMonitor:
 
     async def start(self) -> None:
         self._task = asyncio.create_task(self._run(), name="health-monitor")
-        logger.info("HealthMonitor started (interval=%ds)", settings.HEALTH_CHECK_INTERVAL_SECONDS)
+        logger.info(
+            "HealthMonitor started (interval=%ds)",
+            settings.HEALTH_CHECK_INTERVAL_SECONDS,
+        )
 
     async def stop(self) -> None:
         if self._task:
@@ -73,7 +76,9 @@ class HealthMonitor:
                     logger.warning("Recovery failed for %s: %s", device_id, exc)
         else:
             if prev_state not in (DeviceState.OFFLINE,):
-                logger.warning("Device %s went offline (was %s)", device_id, prev_state.value)
+                logger.warning(
+                    "Device %s went offline (was %s)", device_id, prev_state.value
+                )
                 if prev_state == DeviceState.BUSY:
                     # Mark as interrupted in buffer — handled by the command future
                     logger.warning("Device %s went offline while BUSY", device_id)

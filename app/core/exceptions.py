@@ -32,17 +32,23 @@ class DeviceOfflineError(AppError):
 
 class LockConflictError(AppError):
     def __init__(self, device_id: str, owner: str):
-        super().__init__(409, f"Device '{device_id}' is locked by '{owner}'", "lock_conflict")
+        super().__init__(
+            409, f"Device '{device_id}' is locked by '{owner}'", "lock_conflict"
+        )
 
 
 class LockRequiredError(AppError):
     def __init__(self, device_id: str):
-        super().__init__(403, f"You do not hold the lock for device '{device_id}'", "lock_required")
+        super().__init__(
+            403, f"You do not hold the lock for device '{device_id}'", "lock_required"
+        )
 
 
 class ArtifactNotFoundError(AppError):
     def __init__(self, artifact_id: str):
-        super().__init__(404, f"Artifact '{artifact_id}' not found", "artifact_not_found")
+        super().__init__(
+            404, f"Artifact '{artifact_id}' not found", "artifact_not_found"
+        )
 
 
 class SessionNotFoundError(AppError):

@@ -25,6 +25,7 @@ async def reset_all_locks(
 
     # Reset all LOCKED devices back to ONLINE
     from app.instruments.manager import DeviceState
+
     for device_id, entry in manager.devices.items():
         if entry.state == DeviceState.LOCKED:
             manager.update_state(device_id, DeviceState.ONLINE)
@@ -52,6 +53,7 @@ async def force_unlock(
 
     if released:
         from app.instruments.manager import DeviceState
+
         manager.update_state(device_id, DeviceState.ONLINE)
 
     return {"device_id": device_id, "released": released}

@@ -84,7 +84,9 @@ class BufferService:
         # Write CSV
         csv_path = d / csv_name
         with csv_path.open("w", newline="") as f:
-            f.write(f"# device: {device_id}  channel: {waveform.channel}  acquired: {now_iso}\n")
+            f.write(
+                f"# device: {device_id}  channel: {waveform.channel}  acquired: {now_iso}\n"
+            )
             f.write(
                 f"# sample_rate: {waveform.sample_rate:.3e}  "
                 f"record_length: {waveform.record_length}  "
@@ -111,15 +113,17 @@ class BufferService:
         (d / meta_name).write_text(json.dumps(meta_payload, indent=2))
 
         # Update index
-        index["artifacts"].append({
-            "artifact_id": artifact_id,
-            "artifact_type": "trace",
-            "channel": waveform.channel,
-            "seq": seq,
-            "persist": False,
-            "created_at": now_iso,
-            "files": [csv_name, meta_name],
-        })
+        index["artifacts"].append(
+            {
+                "artifact_id": artifact_id,
+                "artifact_type": "trace",
+                "channel": waveform.channel,
+                "seq": seq,
+                "persist": False,
+                "created_at": now_iso,
+                "files": [csv_name, meta_name],
+            }
+        )
         self._save_index(device_id, session_id, index)
 
         logger.debug("Stored waveform artifact %s", artifact_id)
@@ -142,15 +146,17 @@ class BufferService:
 
         (d / png_name).write_bytes(png_bytes)
 
-        index["artifacts"].append({
-            "artifact_id": artifact_id,
-            "artifact_type": "screenshot",
-            "channel": None,
-            "seq": seq,
-            "persist": False,
-            "created_at": now_iso,
-            "files": [png_name],
-        })
+        index["artifacts"].append(
+            {
+                "artifact_id": artifact_id,
+                "artifact_type": "screenshot",
+                "channel": None,
+                "seq": seq,
+                "persist": False,
+                "created_at": now_iso,
+                "files": [png_name],
+            }
+        )
         self._save_index(device_id, session_id, index)
 
         logger.debug("Stored screenshot artifact %s", artifact_id)
@@ -176,6 +182,7 @@ class BufferService:
         result = self._find_session_dir(session_id)
         if result is None:
             from app.core.exceptions import SessionNotFoundError
+
             raise SessionNotFoundError(session_id)
         _, device_id = result
         index = self._load_index(device_id, session_id)
@@ -185,6 +192,7 @@ class BufferService:
                 self._save_index(device_id, session_id, index)
                 return
         from app.core.exceptions import ArtifactNotFoundError
+
         raise ArtifactNotFoundError(artifact_id)
 
     def get_flagged_artifacts(self, session_id: str) -> list[ArtifactInfo]:
@@ -194,6 +202,7 @@ class BufferService:
         result = self._find_session_dir(session_id)
         if result is None:
             from app.core.exceptions import SessionNotFoundError
+
             raise SessionNotFoundError(session_id)
         session_dir, device_id = result
         index = self._load_index(device_id, session_id)
@@ -201,6 +210,7 @@ class BufferService:
             if artifact["artifact_id"] == artifact_id:
                 return [session_dir / f for f in artifact["files"]]
         from app.core.exceptions import ArtifactNotFoundError
+
         raise ArtifactNotFoundError(artifact_id)
 
     def export_hdf5(self, session_id: str, artifact_ids: list[str]) -> Path:
@@ -210,6 +220,7 @@ class BufferService:
         result = self._find_session_dir(session_id)
         if result is None:
             from app.core.exceptions import SessionNotFoundError
+
             raise SessionNotFoundError(session_id)
         session_dir, device_id = result
         index = self._load_index(device_id, session_id)

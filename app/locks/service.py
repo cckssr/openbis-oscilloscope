@@ -27,13 +27,17 @@ class LockService:
         """Atomically acquire lock via SET NX EX. Returns True if acquired."""
         key = self._key(device_id)
         now = time.time()
-        payload = json.dumps({
-            "owner_user": user_id,
-            "session_id": session_id,
-            "acquired_at": now,
-            "last_seen": now,
-        })
-        result = await self._redis.set(key, payload, nx=True, ex=settings.LOCK_TTL_SECONDS)
+        payload = json.dumps(
+            {
+                "owner_user": user_id,
+                "session_id": session_id,
+                "acquired_at": now,
+                "last_seen": now,
+            }
+        )
+        result = await self._redis.set(
+            key, payload, nx=True, ex=settings.LOCK_TTL_SECONDS
+        )
         return result is not None
 
     async def _load(self, device_id: str) -> dict | None:
@@ -56,7 +60,9 @@ class LockService:
         if d is None or d["session_id"] != session_id:
             return False
         d["last_seen"] = time.time()
-        await self._redis.set(self._key(device_id), json.dumps(d), ex=settings.LOCK_TTL_SECONDS)
+        await self._redis.set(
+            self._key(device_id), json.dumps(d), ex=settings.LOCK_TTL_SECONDS
+        )
         return True
 
     async def get_lock(self, device_id: str) -> LockInfo | None:

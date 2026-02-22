@@ -134,9 +134,11 @@ class InstrumentManager:
 
                 # Restore to LOCKED or ONLINE depending on prior state
                 if entry.state == DeviceState.BUSY:
-                    entry.state = prev_state if prev_state in (
-                        DeviceState.LOCKED, DeviceState.ONLINE
-                    ) else DeviceState.ONLINE
+                    entry.state = (
+                        prev_state
+                        if prev_state in (DeviceState.LOCKED, DeviceState.ONLINE)
+                        else DeviceState.ONLINE
+                    )
 
             except asyncio.CancelledError:
                 break

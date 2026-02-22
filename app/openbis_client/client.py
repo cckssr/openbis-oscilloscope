@@ -38,14 +38,16 @@ class OpenBISClient:
             if not o.is_session_active():
                 raise AuthError("Token is invalid or expired")
 
-            user_id = o.get_session_information()["userName"]
+            user_id = o.get_session_info().userName
 
             # Determine admin status by checking if user is in instance admin group
             is_admin = False
             try:
                 groups = o.get_role_assignments(userId=user_id)
                 for _, row in groups.df.iterrows():
-                    if row.get("role") in ("ADMIN", "INSTANCE_ADMIN") and row.get("roleLevel") in (
+                    if row.get("role") in ("ADMIN", "INSTANCE_ADMIN") and row.get(
+                        "roleLevel"
+                    ) in (
                         "INSTANCE",
                         None,
                     ):

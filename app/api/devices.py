@@ -5,7 +5,12 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import Response
 
 from app.core.dependencies import get_current_user
-from app.core.exceptions import DeviceNotFoundError, DeviceOfflineError, LockConflictError, LockRequiredError
+from app.core.exceptions import (
+    DeviceNotFoundError,
+    DeviceOfflineError,
+    LockConflictError,
+    LockRequiredError,
+)
 from app.instruments.manager import DeviceState, InstrumentManager
 from app.locks.service import LockService
 from app.openbis_client.client import UserInfo
@@ -20,6 +25,7 @@ def _get_services(request: Request) -> tuple[InstrumentManager, LockService]:
 # ---------------------------------------------------------------------------
 # Device listing
 # ---------------------------------------------------------------------------
+
 
 @router.get("", response_model=list[dict])
 async def list_devices(
@@ -38,15 +44,17 @@ async def list_devices(
                 # Mask session_id unless it's the caller's own lock
                 "is_mine": lock.owner_user == user.user_id,
             }
-        result.append({
-            "id": ds.id,
-            "label": ds.label,
-            "ip": ds.ip,
-            "port": ds.port,
-            "state": ds.state.value,
-            "last_error": ds.last_error,
-            "lock": lock_info,
-        })
+        result.append(
+            {
+                "id": ds.id,
+                "label": ds.label,
+                "ip": ds.ip,
+                "port": ds.port,
+                "state": ds.state.value,
+                "last_error": ds.last_error,
+                "lock": lock_info,
+            }
+        )
     return result
 
 
@@ -90,6 +98,7 @@ async def get_device(
 # ---------------------------------------------------------------------------
 # Lock management
 # ---------------------------------------------------------------------------
+
 
 @router.post("/{device_id}/lock", response_model=dict)
 async def acquire_lock(
@@ -155,6 +164,7 @@ async def heartbeat(
 # ---------------------------------------------------------------------------
 # Instrument commands (require lock)
 # ---------------------------------------------------------------------------
+
 
 def _verify_lock_ownership(lock, user_id: str, session_id: str, device_id: str) -> None:
     if lock is None or lock.session_id != session_id or lock.owner_user != user_id:
@@ -254,7 +264,9 @@ async def acquire(
                 continue
 
             waveform = driver.acquire_waveform(ch)
-            art_id = buffer_service.store_waveform(device_id, session_id, waveform, meta)
+            art_id = buffer_service.store_waveform(
+                device_id, session_id, waveform, meta
+            )
             artifact_ids.append(art_id)
 
         # Also capture screenshot
@@ -293,11 +305,11 @@ async def get_channel_data(
     # Find most recent trace artifact for this channel
     artifacts = buffer_service.list_artifacts(session_id)
     matching = [
-        a for a in artifacts
-        if a.artifact_type == "trace" and a.channel == channel
+        a for a in artifacts if a.artifact_type == "trace" and a.channel == channel
     ]
     if not matching:
         from app.core.exceptions import ArtifactNotFoundError
+
         raise ArtifactNotFoundError(f"No data for channel {channel}")
 
     latest = max(matching, key=lambda a: a.seq)
@@ -305,6 +317,7 @@ async def get_channel_data(
     csv_path = next((p for p in paths if p.suffix == ".csv"), None)
     if csv_path is None:
         from app.core.exceptions import ArtifactNotFoundError
+
         raise ArtifactNotFoundError(latest.artifact_id)
 
     # Parse CSV and return as JSON

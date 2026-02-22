@@ -16,6 +16,7 @@ def create_scheduler(lock_service, instrument_manager) -> AsyncIOScheduler:
         logger.info("End-of-day lock reset: cleared %d locks", count)
 
         from app.instruments.manager import DeviceState
+
         for device_id, entry in instrument_manager.devices.items():
             if entry.state == DeviceState.LOCKED:
                 instrument_manager.update_state(device_id, DeviceState.ONLINE)

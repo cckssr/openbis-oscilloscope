@@ -1,5 +1,5 @@
 """Mock oscilloscope driver for development and testing."""
-import io
+
 import math
 
 import numpy as np

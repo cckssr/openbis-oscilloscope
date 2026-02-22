@@ -37,7 +37,7 @@ class TriggerConfig:
     source: str
     level_v: float
     slope: str  # "RISE", "FALL", "EITHER"
-    mode: str   # "AUTO", "NORMAL", "SINGLE"
+    mode: str  # "AUTO", "NORMAL", "SINGLE"
 
 
 @dataclass
