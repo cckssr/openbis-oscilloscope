@@ -1,5 +1,5 @@
-#!/usr/bin/env python3
 """
+#!/usr/bin/env python3
 unpack_hdf5.py — Extract all waveform channels from an oscilloscope HDF5 bundle to CSV.
 
 Usage:
@@ -18,8 +18,23 @@ import sys
 
 
 def unpack(h5_path: pathlib.Path, output_dir: pathlib.Path) -> None:
+    """Extract all waveform groups from an HDF5 export file to individual CSV files.
+
+    Each top-level group in the HDF5 file is expected to contain ``time_s`` and
+    ``voltage_V`` datasets. Groups missing either dataset are skipped with a
+    warning. Scalar metadata attributes on each group are written as ``# key: value``
+    comment lines at the top of the corresponding CSV.
+
+    Args:
+        h5_path: Path to the input ``.h5`` file to read.
+        output_dir: Directory where the extracted CSV files will be written.
+            Created if it does not exist.
+
+    Raises:
+        SystemExit: If ``h5py`` is not installed (exits with code 1).
+    """
     try:
-        import h5py
+        import h5py  # pylint: disable=import-outside-toplevel
     except ImportError:
         print(
             "ERROR: h5py is required. Install it with:  pip install h5py",
@@ -69,6 +84,15 @@ def unpack(h5_path: pathlib.Path, output_dir: pathlib.Path) -> None:
 
 
 def main() -> None:
+    """Parse command-line arguments and run the HDF5 unpacker.
+
+    Resolves the input file path, determines the output directory (defaults to
+    an ``unpacked/`` subfolder next to the input file), and delegates to
+    :func:`unpack`.
+
+    Raises:
+        SystemExit: If the input file does not exist (exits with code 1).
+    """
     parser = argparse.ArgumentParser(
         description="Unpack oscilloscope HDF5 export to CSV files."
     )

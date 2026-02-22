@@ -27,6 +27,12 @@ class MyOscilloscope(BaseOscilloscopeDriver):
     """
 
     def __init__(self, ip: str, port: int = 5025) -> None:
+        """Initialize the driver with the instrument's network address.
+
+        Args:
+            ip: IP address of the oscilloscope.
+            port: TCP port number. Defaults to ``5025`` (standard LXI/SCPI port).
+        """
         super().__init__(ip, port)
         self._resource = None  # e.g. a PyMeasure Instrument instance
 

@@ -1,3 +1,5 @@
+"""Main application module for the OpenBIS Oscilloscope Control Service."""
+
 import logging
 from contextlib import asynccontextmanager
 
@@ -23,13 +25,48 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Manage the full startup and shutdown lifecycle of the application.
+
+    This async context manager is passed to FastAPI and is executed once when
+    the server starts (before the first request) and once when it shuts down.
+
+    Startup order:
+        1. Connect to Redis (or create an in-memory fake in ``DEBUG`` mode).
+        2. Instantiate core services: :class:`~app.locks.service.LockService`,
+           :class:`~app.instruments.manager.InstrumentManager`,
+           :class:`~app.buffer.service.BufferService`,
+           :class:`~app.openbis_client.client.OpenBISClient`.
+        3. Load device config and start per-device worker tasks.
+        4. In ``DEBUG`` mode: immediately connect mock drivers so devices
+           appear as ``ONLINE`` without the health monitor.
+        5. Start :class:`~app.instruments.health_monitor.HealthMonitor`
+           (skipped in ``DEBUG`` mode).
+        6. Start the APScheduler end-of-day cron job.
+        7. Attach all service instances to ``app.state`` for dependency access.
+
+    Shutdown order (reverse):
+        Scheduler → HealthMonitor → InstrumentManager → Redis connection.
+
+    Args:
+        app: The FastAPI application instance whose ``state`` is populated
+             with service references during startup.
+
+    Yields:
+        Control to FastAPI for request handling after startup completes.
+    """
     # ---- Startup --------------------------------------------------------
     logger.info("Starting openbis-oscilloscope service (DEBUG=%s)", settings.DEBUG)
 
     # Redis
-    redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=False)
-    await redis_client.ping()
-    logger.info("Connected to Redis: %s", settings.REDIS_URL)
+    if settings.DEBUG:
+        import fakeredis.aioredis as fakeredis  # pylint: disable=import-outside-toplevel
+
+        redis_client = fakeredis.FakeRedis()
+        logger.info("Using in-memory fake Redis (DEBUG mode, no Redis required)")
+    else:
+        redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=False)
+        await redis_client.ping()
+        logger.info("Connected to Redis: %s", settings.REDIS_URL)
 
     # Core services
     lock_service = LockService(redis_client)
@@ -40,7 +77,7 @@ async def lifespan(app: FastAPI):
     # In DEBUG mode pre-connect mock drivers
     if settings.DEBUG:
         await instrument_manager.startup()
-        for device_id, entry in instrument_manager.devices.items():
+        for device_id, _ in instrument_manager.devices.items():
             try:
                 driver = instrument_manager.instantiate_driver(device_id)
                 driver.connect()
@@ -82,9 +119,26 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
+    """Create and configure the FastAPI application instance.
+
+    Constructs the :class:`~fastapi.FastAPI` app with the :func:`lifespan`
+    context manager, registers the global :class:`~app.core.exceptions.AppError`
+    exception handler, and mounts all API routers under their respective prefixes:
+
+    - ``/auth`` — authentication endpoints
+    - ``/devices`` — device control endpoints
+    - ``/sessions`` — session and artifact management
+    - ``/admin`` — admin-only operations
+    - ``/health`` — simple liveness probe
+
+    Returns:
+        A fully configured :class:`~fastapi.FastAPI` instance ready to be
+        served by an ASGI server such as Uvicorn.
+    """
     app = FastAPI(
         title="OpenBIS Oscilloscope Control Service",
-        description="REST API for controlling LAN-connected oscilloscopes and storing acquisitions in OpenBIS",
+        description="REST API for controlling LAN-connected oscilloscopes and storing "
+        "acquisitions in OpenBIS",
         version="0.1.0",
         lifespan=lifespan,
     )
@@ -98,6 +152,11 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health_check():
+        """Liveness probe endpoint.
+
+        Returns:
+            A JSON object ``{"status": "ok"}`` when the application is running.
+        """
         return {"status": "ok"}
 
     return app

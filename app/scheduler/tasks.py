@@ -1,7 +1,11 @@
+"""Task definitions for background scheduling with APScheduler."""
+
 import logging
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+
+from app.instruments.manager import DeviceState
 
 from app.config import settings
 
@@ -9,13 +13,38 @@ logger = logging.getLogger(__name__)
 
 
 def create_scheduler(lock_service, instrument_manager) -> AsyncIOScheduler:
+    """Build and return a configured :class:`~apscheduler.schedulers.asyncio.AsyncIOScheduler`.
+
+    Registers a single end-of-day cron job (``eod_lock_reset``) that fires at
+    23:59 every day in the timezone defined by
+    :attr:`~app.config.Settings.EOD_RESET_TIMEZONE`. The job clears all Redis
+    lock keys and resets any ``LOCKED`` devices back to ``ONLINE``.
+
+    The caller is responsible for starting the scheduler with ``scheduler.start()``
+    and stopping it with ``scheduler.shutdown()`` during application lifecycle
+    management.
+
+    Args:
+        lock_service: The :class:`~app.locks.service.LockService` instance whose
+            ``reset_all_locks`` method will be called by the job.
+        instrument_manager: The :class:`~app.instruments.manager.InstrumentManager`
+            instance used to reset device states after locks are cleared.
+
+    Returns:
+        A configured but not yet started
+        :class:`~apscheduler.schedulers.asyncio.AsyncIOScheduler`.
+    """
     scheduler = AsyncIOScheduler()
 
     async def eod_lock_reset():
+        """Clear all device locks and reset LOCKED device states at end of day.
+
+        Called by APScheduler at 23:59 every day. Deletes all ``lock:*`` keys
+        from Redis and transitions every ``LOCKED`` device back to ``ONLINE``
+        so they are available the next morning.
+        """
         count = await lock_service.reset_all_locks()
         logger.info("End-of-day lock reset: cleared %d locks", count)
-
-        from app.instruments.manager import DeviceState
 
         for device_id, entry in instrument_manager.devices.items():
             if entry.state == DeviceState.LOCKED:

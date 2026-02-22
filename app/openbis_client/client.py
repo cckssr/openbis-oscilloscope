@@ -1,3 +1,5 @@
+"""Client module for interacting with OpenBIS via the pybis library."""
+
 import logging
 from dataclasses import dataclass
 
@@ -12,22 +14,68 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class UserInfo:
+    """Identity information for an authenticated OpenBIS user.
+
+    Attributes:
+        user_id: The OpenBIS username (e.g. ``"jdoe"``).
+        display_name: Human-readable name shown in the UI (currently equal to
+            ``user_id`` as pybis does not expose a separate display name).
+        is_admin: ``True`` if the user holds the ``ADMIN`` or ``INSTANCE_ADMIN``
+            role at the ``INSTANCE`` level in OpenBIS.
+    """
+
     user_id: str
     display_name: str
     is_admin: bool
 
 
 class OpenBISClient:
+    """Thin wrapper around the pybis library for token validation and dataset registration.
+
+    Token validation results are cached in a :class:`cachetools.TTLCache` for
+    :attr:`~app.config.Settings.TOKEN_CACHE_SECONDS` seconds to avoid making a
+    round-trip to OpenBIS on every API request.
+    """
+
     def __init__(self) -> None:
+        """Initialize the client with an empty TTL token cache."""
         self._cache: cachetools.TTLCache = cachetools.TTLCache(
             maxsize=256, ttl=settings.TOKEN_CACHE_SECONDS
         )
 
     def _get_openbis(self) -> Openbis:
-        return Openbis(settings.OPENBIS_URL, verify_certificates=False)
+        """Create and return a new unauthenticated pybis :class:`Openbis` instance.
+
+        Returns:
+            A :class:`pybis.Openbis` instance pointed at
+            :attr:`~app.config.Settings.OPENBIS_URL`.
+        """
+        return Openbis(settings.OPENBIS_URL, verify_certificates=True)
 
     async def validate_token(self, token: str) -> UserInfo:
-        """Validate token against OpenBIS; caches result for TOKEN_CACHE_SECONDS."""
+        """Validate an OpenBIS session token and return the authenticated user.
+
+        If the token is present in the cache, the cached :class:`UserInfo` is
+        returned immediately without contacting OpenBIS. Otherwise, pybis is
+        used to verify the session, resolve the username, and determine admin
+        status. Successful results are stored in the cache.
+
+        Admin status is determined by checking whether the user has the
+        ``ADMIN`` or ``INSTANCE_ADMIN`` role at the ``INSTANCE`` level.
+        Failure to retrieve role assignments is tolerated (admin defaults to
+        ``False``).
+
+        Args:
+            token: The raw Bearer token from the ``Authorization`` header.
+
+        Returns:
+            A :class:`UserInfo` dataclass with the user's ID, display name,
+            and admin flag.
+
+        Raises:
+            AuthError: If the token is invalid, expired, or the OpenBIS session
+                is not active. Also raised if the pybis call itself fails.
+        """
         if token in self._cache:
             return self._cache[token]
 
@@ -77,7 +125,25 @@ class OpenBISClient:
         files: list,
         properties: dict,
     ) -> str:
-        """Register files as a new OpenBIS dataset. Returns permId."""
+        """Register a set of files as a new OpenBIS ``RAW_DATA`` dataset.
+
+        Uses pybis to create the dataset, upload the provided files, and attach
+        custom properties. The dataset is linked to the specified experiment.
+
+        Args:
+            token: A valid OpenBIS session token used to authenticate the upload.
+            experiment_id: OpenBIS experiment identifier in the form
+                ``"/SPACE/PROJECT/EXPERIMENT"``.
+            files: List of absolute file path strings to upload.
+            properties: Dict of custom property key-value pairs to attach to the
+                dataset (e.g. ``{"session_id": "...", "artifact_count": "3"}``).
+
+        Returns:
+            The OpenBIS permanent identifier (``permId``) of the created dataset.
+
+        Raises:
+            OpenBISError: If the pybis call fails for any reason.
+        """
         try:
             o = self._get_openbis()
             o.set_token(token, save_token=False)

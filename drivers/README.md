@@ -14,18 +14,18 @@ cp my_oscilloscope.py drivers/rigol_ds1054z.py
 
 Every driver must implement these abstract methods:
 
-| Method | Description |
-|---|---|
-| `connect()` | Open connection (VISA, raw TCP socket, etc.) |
-| `disconnect()` | Close connection |
-| `identify() -> InstrumentInfo` | Query `*IDN?`, return make/model/firmware |
-| `run()` | Start continuous acquisition |
-| `stop()` | Stop acquisition |
-| `acquire_waveform(channel) -> WaveformData` | Transfer waveform data |
-| `get_screenshot() -> bytes` | Capture screen as PNG bytes |
-| `get_channel_config(channel) -> ChannelConfig` | Query channel settings |
-| `get_timebase() -> TimebaseConfig` | Query timebase settings |
-| `get_trigger() -> TriggerConfig` | Query trigger settings |
+| Method                                         | Description                                  |
+| ---------------------------------------------- | -------------------------------------------- |
+| `connect()`                                    | Open connection (VISA, raw TCP socket, etc.) |
+| `disconnect()`                                 | Close connection                             |
+| `identify() -> InstrumentInfo`                 | Query `*IDN?`, return make/model/firmware    |
+| `run()`                                        | Start continuous acquisition                 |
+| `stop()`                                       | Stop acquisition                             |
+| `acquire_waveform(channel) -> WaveformData`    | Transfer waveform data                       |
+| `get_screenshot() -> bytes`                    | Capture screen as PNG bytes                  |
+| `get_channel_config(channel) -> ChannelConfig` | Query channel settings                       |
+| `get_timebase() -> TimebaseConfig`             | Query timebase settings                      |
+| `get_trigger() -> TriggerConfig`               | Query trigger settings                       |
 
 `get_all_settings()` is provided by the base class — it calls the above methods and assembles a metadata dict automatically.
 
