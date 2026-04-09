@@ -67,16 +67,16 @@ Tests use `fakeredis` and the mock driver — no Redis or hardware required.
 
 All settings are read from environment variables (or a `.env` file):
 
-| Variable                        | Default                       | Description                          |
-| ------------------------------- | ----------------------------- | ------------------------------------ |
-| `REDIS_URL`                     | `redis://localhost:6379`      | Redis connection URL                 |
-| `OPENBIS_URL`                   | _(required)_                  | OpenBIS server URL                   |
-| `BUFFER_DIR`                    | `./buffer`                    | Root directory for artifact storage  |
-| `OSCILLOSCOPES_CONFIG`          | `./config/oscilloscopes.yaml` | Device list                          |
-| `LOCK_TTL_SECONDS`              | `1800`                        | Lock expiry (seconds)                |
-| `HEALTH_CHECK_INTERVAL_SECONDS` | `5`                           | TCP health check interval            |
-| `TOKEN_CACHE_SECONDS`           | `60`                          | Token validation cache TTL           |
-| `EOD_RESET_TIMEZONE`            | `Europe/Berlin`               | Timezone for end-of-day reset        |
+| Variable                        | Default                       | Description                                         |
+| ------------------------------- | ----------------------------- | --------------------------------------------------- |
+| `REDIS_URL`                     | `redis://localhost:6379`      | Redis connection URL                                |
+| `OPENBIS_URL`                   | _(required)_                  | OpenBIS server URL                                  |
+| `BUFFER_DIR`                    | `./buffer`                    | Root directory for artifact storage                 |
+| `OSCILLOSCOPES_CONFIG`          | `./config/oscilloscopes.yaml` | Device list                                         |
+| `LOCK_TTL_SECONDS`              | `1800`                        | Lock expiry (seconds)                               |
+| `HEALTH_CHECK_INTERVAL_SECONDS` | `5`                           | TCP health check interval                           |
+| `TOKEN_CACHE_SECONDS`           | `60`                          | Token validation cache TTL                          |
+| `EOD_RESET_TIMEZONE`            | `Europe/Berlin`               | Timezone for end-of-day reset                       |
 | `DEBUG`                         | `False`                       | Mock driver + fakeredis; bypass OpenBIS auth/commit |
 | `DEBUG_TOKEN`                   | `debug-token`                 | Bearer token accepted in `DEBUG` mode               |
 

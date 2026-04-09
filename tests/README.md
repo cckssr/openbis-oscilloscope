@@ -23,14 +23,14 @@ pytest tests/test_auth.py -k "test_me"  # single test
 
 ## Test files
 
-| File                 | What it tests                                                                                                                           |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `test_auth.py`       | Token validation, `get_current_user`, `require_admin`, DEBUG token acceptance, invalid token rejection.                                 |
-| `test_devices.py`    | Device listing, lock acquire/release/heartbeat, state transitions, command dispatch (run, stop, acquire, screenshot, channel data).     |
-| `test_locks.py`      | Lock acquisition, double-acquire conflict, TTL expiry, `renew_lock`, `reset_all_locks`.                                                 |
-| `test_buffer.py`     | `store_waveform`, `store_screenshot`, `list_artifacts`, `set_flag`, `export_hdf5`, `index.json` integrity.                              |
-| `test_sessions.py`   | `GET /sessions/{id}/artifacts`, `POST .../flag`, `POST .../commit` (no artifacts, no flagged, success, multiple flagged).               |
-| `test_admin.py`      | `POST /admin/locks/reset` and `POST /admin/devices/{id}/force-unlock` — admin vs non-admin access.                                      |
+| File               | What it tests                                                                                                                       |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `test_auth.py`     | Token validation, `get_current_user`, `require_admin`, DEBUG token acceptance, invalid token rejection.                             |
+| `test_devices.py`  | Device listing, lock acquire/release/heartbeat, state transitions, command dispatch (run, stop, acquire, screenshot, channel data). |
+| `test_locks.py`    | Lock acquisition, double-acquire conflict, TTL expiry, `renew_lock`, `reset_all_locks`.                                             |
+| `test_buffer.py`   | `store_waveform`, `store_screenshot`, `list_artifacts`, `set_flag`, `export_hdf5`, `index.json` integrity.                          |
+| `test_sessions.py` | `GET /sessions/{id}/artifacts`, `POST .../flag`, `POST .../commit` (no artifacts, no flagged, success, multiple flagged).           |
+| `test_admin.py`    | `POST /admin/locks/reset` and `POST /admin/devices/{id}/force-unlock` — admin vs non-admin access.                                  |
 
 ## Design principles
 
