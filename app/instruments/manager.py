@@ -275,7 +275,7 @@ class InstrumentManager:
         if entry is None:
             raise KeyError(f"Unknown device: {device_id}")
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         future: asyncio.Future = loop.create_future()
         await entry.queue.put((coro_fn, future))
 

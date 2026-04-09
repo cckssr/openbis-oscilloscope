@@ -424,7 +424,7 @@ class BufferService:
         )
         return csv_file, meta_file
 
-    def _read_trace_csv(self, csv_file: Path) -> tuple[list[float], list[float]]:
+    def read_trace_csv(self, csv_file: Path) -> tuple[list[float], list[float]]:
         """Read waveform arrays from a trace CSV file.
 
         Comment lines (prefixed by ``#``), header lines, and malformed rows are
@@ -513,7 +513,7 @@ class BufferService:
                     continue
                 csv_file, meta_file = trace_files
 
-                times, volts = self._read_trace_csv(csv_file)
+                times, volts = self.read_trace_csv(csv_file)
 
                 grp = h5f.create_group(art_id)
                 grp.create_dataset("time_s", data=np.array(times))

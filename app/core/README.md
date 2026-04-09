@@ -25,6 +25,7 @@ Defines the `AppError` hierarchy and the global exception handler.
 | `AdminRequiredError`    | 403  | Endpoint requires admin role                      |
 | `DeviceNotFoundError`   | 404  | `device_id` not in oscilloscopes.yaml             |
 | `DeviceOfflineError`    | 503  | Device exists but is not reachable                |
+| `ValidationError`       | 400  | Request is valid but semantically incorrect       |
 | `LockRequiredError`     | 409  | Command needs a lock but none was acquired        |
 | `LockConflictError`     | 409  | Lock is held by a different user/session          |
 | `ArtifactNotFoundError` | 404  | Artifact ID not in a session's index              |

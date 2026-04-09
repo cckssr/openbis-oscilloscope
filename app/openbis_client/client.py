@@ -1,6 +1,7 @@
 """Client module for interacting with OpenBIS via the pybis library."""
 
 import logging
+import uuid
 from dataclasses import dataclass
 
 import cachetools
@@ -147,6 +148,11 @@ class OpenBISClient:
         Raises:
             OpenBISError: If the pybis call fails for any reason.
         """
+        if settings.DEBUG:
+            fake_id = f"DEBUG-{uuid.uuid4().hex[:12].upper()}"
+            logger.info("DEBUG mode: simulating OpenBIS dataset creation → %s", fake_id)
+            return fake_id
+
         try:
             o = self._get_openbis()
             o.set_token(token, save_token=False)

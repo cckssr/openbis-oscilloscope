@@ -176,3 +176,45 @@ async def test_command_without_lock_fails(setup):
             headers={"Authorization": "Bearer tok"},
         )
     assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_get_channel_data(setup):
+    app, ls, manager, buf, user = setup
+    session_id = str(uuid.uuid4())
+    await ls.acquire_lock("scope-01", "alice", session_id)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # First acquire so there is waveform data buffered
+        acq = await client.post(
+            f"/devices/scope-01/acquire?session_id={session_id}",
+            headers={"Authorization": "Bearer tok"},
+        )
+        assert acq.status_code == 200
+
+        resp = await client.get(
+            f"/devices/scope-01/channels/1/data?session_id={session_id}",
+            headers={"Authorization": "Bearer tok"},
+        )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "time_s" in data
+    assert "voltage_V" in data
+    assert len(data["time_s"]) > 0
+    assert len(data["time_s"]) == len(data["voltage_V"])
+
+
+@pytest.mark.asyncio
+async def test_get_channel_data_no_waveform(setup):
+    """Requesting channel data before any acquisition returns 404."""
+    app, ls, manager, buf, user = setup
+    session_id = str(uuid.uuid4())
+    await ls.acquire_lock("scope-01", "alice", session_id)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get(
+            f"/devices/scope-01/channels/1/data?session_id={session_id}",
+            headers={"Authorization": "Bearer tok"},
+        )
+    assert resp.status_code == 404

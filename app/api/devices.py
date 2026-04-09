@@ -502,19 +502,7 @@ async def get_channel_data(
 
         raise ArtifactNotFoundError(latest.artifact_id)
 
-    # Parse CSV and return as JSON
-    times, volts = [], []
-    with csv_path.open() as f:
-        for line in f:
-            if line.startswith("#"):
-                continue
-            parts = line.strip().split(",")
-            if len(parts) == 2:
-                try:
-                    times.append(float(parts[0]))
-                    volts.append(float(parts[1]))
-                except ValueError:
-                    pass
+    times, volts = buffer_service.read_trace_csv(csv_path)
 
     return {
         "artifact_id": latest.artifact_id,

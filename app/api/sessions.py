@@ -1,10 +1,9 @@
 """API endpoints for managing control sessions and their artifacts."""
 
 from fastapi import APIRouter, Depends, Request
-from fastapi import HTTPException
 
 from app.core.dependencies import get_current_user
-from app.core.exceptions import SessionNotFoundError
+from app.core.exceptions import SessionNotFoundError, ValidationError
 from app.openbis_client.client import UserInfo
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
@@ -135,9 +134,7 @@ async def commit_session(
     if not flagged:
         if not buffer_service.list_artifacts(session_id):
             raise SessionNotFoundError(session_id)
-        raise HTTPException(
-            status_code=400, detail="No artifacts are flagged for commit"
-        )
+        raise ValidationError("No artifacts are flagged for commit")
 
     # Collect all file paths for flagged artifacts
     all_files = []

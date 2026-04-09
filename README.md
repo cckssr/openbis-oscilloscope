@@ -77,7 +77,8 @@ All settings are read from environment variables (or a `.env` file):
 | `HEALTH_CHECK_INTERVAL_SECONDS` | `5`                           | TCP health check interval            |
 | `TOKEN_CACHE_SECONDS`           | `60`                          | Token validation cache TTL           |
 | `EOD_RESET_TIMEZONE`            | `Europe/Berlin`               | Timezone for end-of-day reset        |
-| `DEBUG`                         | `False`                       | Use mock driver; skip health monitor |
+| `DEBUG`                         | `False`                       | Mock driver + fakeredis; bypass OpenBIS auth/commit |
+| `DEBUG_TOKEN`                   | `debug-token`                 | Bearer token accepted in `DEBUG` mode               |
 
 ## Registering oscilloscopes
 
@@ -85,14 +86,22 @@ Edit `config/oscilloscopes.yaml`:
 
 ```yaml
 oscilloscopes:
-  - id: "scope-01"
+  # Rigol DS1000Z series (DS1054Z, DS1074Z, DS1104Z, …)
+  - id: "rigol-01"
     ip: "192.168.1.100"
     port: 5025
-    label: "Lab Scope 1"
-    driver: "drivers.my_oscilloscope.MyOscilloscope"
+    label: "Rigol DS1054Z"
+    driver: "drivers.RigolDS1000.RigolDS1000"
+
+  # Mock device — no hardware required (always active in DEBUG=True mode)
+  - id: "scope-01"
+    ip: "127.0.0.1"
+    port: 5025
+    label: "Mock Scope"
+    driver: "mock"
 ```
 
-Set `driver: "mock"` to use the built-in mock driver for a specific device.
+Set `driver: "mock"` to use the built-in mock driver for a specific device regardless of `DEBUG` mode.
 
 ## Adding a real oscilloscope driver
 
