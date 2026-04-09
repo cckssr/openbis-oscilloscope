@@ -76,6 +76,9 @@ class OpenBISClient:
             AuthError: If the token is invalid, expired, or the OpenBIS session
                 is not active. Also raised if the pybis call itself fails.
         """
+        if settings.DEBUG and token == settings.DEBUG_TOKEN:
+            return UserInfo(user_id="debug-user", display_name="Debug User", is_admin=True)
+
         if token in self._cache:
             return self._cache[token]
 

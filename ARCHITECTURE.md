@@ -171,7 +171,7 @@ If a client crashes without calling unlock, the lock expires after `LOCK_TTL_SEC
 
 Manages on-disk persistence of all acquisition artifacts. Each device/session combination gets its own subdirectory:
 
-```
+```text
 buffer/
 └── {device_id}/
     └── {session_id}/
@@ -183,7 +183,7 @@ buffer/
 
 **CSV format** — human-readable, Excel-compatible:
 
-```
+```text
 # device: scope-01  channel: 1  acquired: 2026-02-22T14:30:00+00:00
 # sample_rate: 1.000e+09  record_length: 10000  unit_x: s  unit_y: V
 time_s,voltage_V
@@ -230,7 +230,7 @@ The central component for device lifecycle and command dispatch. At startup it r
 
 **Device states:**
 
-```
+```text
 OFFLINE  ──(TCP reachable)──► ONLINE ──(lock acquired)──► LOCKED
   ▲                              │                           │
   │                         (command)                  (command)
@@ -400,7 +400,7 @@ The `/commit` endpoint requires a JSON body with `experiment_id` (OpenBIS experi
 
 ### Typical Acquisition Session
 
-```
+```text
 1. POST /devices/{id}/lock
    → OpenBIS token validated
    → Redis SET lock:{id} NX EX 1800
@@ -443,6 +443,7 @@ If the client disappears without calling `/unlock`, the Redis key expires after 
 
 1. Copy `drivers/my_oscilloscope.py`, rename it, and implement all abstract methods using the instrument's communication protocol (SCPI over TCP/socket, vendor SDK, etc.).
 2. Add the device to `config/oscilloscopes.yaml`:
+
    ```yaml
    oscilloscopes:
      - id: "scope-lab3"
@@ -451,6 +452,7 @@ If the client disappears without calling `/unlock`, the Redis key expires after 
        label: "Keysight DSOX3034T"
        driver: "drivers.my_oscilloscope.MyOscilloscope"
    ```
+
 3. Restart the service. The `InstrumentManager` dynamically imports the driver class by path.
 
 In `DEBUG=True` mode the driver field is ignored and the `MockOscilloscopeDriver` is always used.

@@ -21,6 +21,8 @@ class Settings(BaseSettings):
         EOD_RESET_TIMEZONE: IANA timezone name used for the end-of-day lock-reset cron job.
         DEBUG: When ``True``, mock drivers are used and Redis is replaced with an in-memory
             fake, so the service starts without any external dependencies.
+        DEBUG_TOKEN: A fixed Bearer token accepted in ``DEBUG`` mode that bypasses OpenBIS
+            validation. Ignored when ``DEBUG`` is ``False``.
     """
 
     model_config = SettingsConfigDict(
@@ -36,6 +38,7 @@ class Settings(BaseSettings):
     TOKEN_CACHE_SECONDS: int = 60
     EOD_RESET_TIMEZONE: str = "Europe/Berlin"
     DEBUG: bool = False
+    DEBUG_TOKEN: str = "debug-token"
 
 
 settings = Settings()

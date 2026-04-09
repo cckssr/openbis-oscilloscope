@@ -2,6 +2,15 @@
 
 This directory contains the custom driver(s) for your oscilloscope model. Drivers bridge the abstract `BaseOscilloscopeDriver` interface and your instrument's SCPI command set.
 
+## Available drivers
+
+| File                 | Class         | Hardware                                                                                                                    |
+| -------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `RigolDS1000.py`     | `RigolDS1000` | Rigol DS1000Z series (DS1054Z, DS1074Z, DS1104Z, MSO variants). Uses PyMeasure's `RigolDS1000ZSeries` over TCP socket VISA. |
+| `my_oscilloscope.py` | —             | Annotated stub — copy this to add a new driver.                                                                             |
+
+---
+
 ## 1. Start from the stub
 
 `my_oscilloscope.py` is a fully annotated stub. Copy it, rename the class, and fill in the `TODO` sections:
