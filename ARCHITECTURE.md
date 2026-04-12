@@ -82,17 +82,18 @@ Routes are registered from `app/api/` under their respective prefixes (`/auth`, 
 
 Uses `pydantic-settings` to load configuration from environment variables (or a `.env` file). All settings have documented defaults.
 
-| Variable                        | Default                       | Purpose                                        |
-| ------------------------------- | ----------------------------- | ---------------------------------------------- |
-| `REDIS_URL`                     | `redis://localhost:6379`      | Redis for distributed locks                    |
-| `OPENBIS_URL`                   | _(required)_                  | OpenBIS server base URL                        |
-| `BUFFER_DIR`                    | `./buffer`                    | Root directory for stored artifacts            |
-| `OSCILLOSCOPES_CONFIG`          | `./config/oscilloscopes.yaml` | Device inventory file                          |
-| `LOCK_TTL_SECONDS`              | `1800`                        | Lock expires after 30 min without heartbeat    |
-| `HEALTH_CHECK_INTERVAL_SECONDS` | `5`                           | How often to TCP-check each device             |
-| `TOKEN_CACHE_SECONDS`           | `60`                          | How long to cache a validated OpenBIS token    |
-| `EOD_RESET_TIMEZONE`            | `Europe/Berlin`               | Timezone for the 23:59 daily lock reset        |
-| `DEBUG`                         | `False`                       | If `True`, use the mock driver for all devices |
+| Variable                        | Default                       | Purpose                                             |
+| ------------------------------- | ----------------------------- | --------------------------------------------------- |
+| `REDIS_URL`                     | `redis://localhost:6379`      | Redis for distributed locks                         |
+| `OPENBIS_URL`                   | _(required)_                  | OpenBIS server base URL                             |
+| `BUFFER_DIR`                    | `./buffer`                    | Root directory for stored artifacts                 |
+| `OSCILLOSCOPES_CONFIG`          | `./config/oscilloscopes.yaml` | Device inventory file                               |
+| `LOCK_TTL_SECONDS`              | `1800`                        | Lock expires after 30 min without heartbeat         |
+| `HEALTH_CHECK_INTERVAL_SECONDS` | `5`                           | How often to TCP-check each device                  |
+| `TOKEN_CACHE_SECONDS`           | `60`                          | How long to cache a validated OpenBIS token         |
+| `EOD_RESET_TIMEZONE`            | `Europe/Berlin`               | Timezone for the 23:59 daily lock reset             |
+| `DEBUG`                         | `False`                       | Mock driver + fakeredis; bypass OpenBIS auth/commit |
+| `DEBUG_TOKEN`                   | `debug-token`                 | Bearer token accepted in `DEBUG` mode               |
 
 ---
 
@@ -112,11 +113,12 @@ Defines a hierarchy of typed exceptions, all subclassing `AppError`. Each carrie
 | `ArtifactNotFoundError` | 404    | Unknown artifact ID                      |
 | `SessionNotFoundError`  | 404    | Unknown session ID                       |
 | `OpenBISError`          | 502    | OpenBIS upstream call failed             |
+| `ValidationError`       | 400    | Semantically invalid request             |
 
-A global FastAPI exception handler catches any `AppError` and returns a consistent JSON response:
+A global FastAPI exception handler catches any `AppError` and returns a consistent JSON response. The `error` field is a snake_case machine-readable slug:
 
 ```json
-{ "error": "LOCK_CONFLICT", "detail": "Device is currently locked by user X" }
+{ "error": "lock_conflict", "detail": "Device is currently locked by user X" }
 ```
 
 ---
@@ -233,11 +235,11 @@ The central component for device lifecycle and command dispatch. At startup it r
 ```text
 OFFLINE  ──(TCP reachable)──► ONLINE ──(lock acquired)──► LOCKED
   ▲                              │                           │
-  │                         (command)                  (command)
+  │                          (command)                   (command)
   │                              ▼                           ▼
-  └──(TCP lost)──────────── BUSY ◄──────────────────── BUSY
+  └──(TCP lost)─────────────── BUSY ◄───────────────────── BUSY
                                  │
-                             (error)
+                              (error)
                                  ▼
                                ERROR
 ```
@@ -383,7 +385,7 @@ Command endpoints (`run`, `stop`, `acquire`, `data`, `screenshot`) require the c
 | `POST` | `/sessions/{id}/artifacts/{art}/flag` | Set `persist: true/false` to mark/unmark for commit     |
 | `POST` | `/sessions/{id}/commit`               | Upload flagged artifacts to OpenBIS; returns `permId`   |
 
-The `/commit` endpoint requires a JSON body with `experiment_id` (OpenBIS experiment identifier) and an optional `sample_id`.
+The `/commit` endpoint takes query parameters: `experiment_id` (required, an OpenBIS experiment identifier like `/SPACE/PROJECT/EXPERIMENT`) and `sample_id` (optional, to link the dataset to a specific sample). In `DEBUG` mode the upload is simulated and a fake `permId` of the form `DEBUG-<hex>` is returned.
 
 ---
 
@@ -425,9 +427,9 @@ The `/commit` endpoint requires a JSON body with `experiment_id` (OpenBIS experi
 6. POST /sessions/{session_id}/artifacts/{id}/flag  { persist: true }
    → Sets persist flag in index.json
 
-7. POST /sessions/{session_id}/commit  { experiment_id: "/SPACE/PROJ/EXP" }
+7. POST /sessions/{session_id}/commit?experiment_id=/SPACE/PROJ/EXP
    → Collects flagged artifact files
-   → pybis creates RAW_DATA dataset in OpenBIS
+   → pybis creates RAW_DATA dataset in OpenBIS (or simulated permId in DEBUG mode)
    → Returns permId
 
 8. POST /devices/{id}/unlock  { session_id }
@@ -441,18 +443,16 @@ If the client disappears without calling `/unlock`, the Redis key expires after 
 
 ### Adding a Real Oscilloscope Driver
 
-1. Copy `drivers/my_oscilloscope.py`, rename it, and implement all abstract methods using the instrument's communication protocol (SCPI over TCP/socket, vendor SDK, etc.).
+1. Copy `drivers/my_oscilloscope.py`, rename it, and implement all abstract methods using the instrument's communication protocol (SCPI over TCP/socket, vendor SDK via `pymeasure`, etc.). `drivers/RigolDS1000.py` is a worked example using `pymeasure` for a Rigol DS1000Z-series scope.
 2. Add the device to `config/oscilloscopes.yaml`:
 
    ```yaml
    oscilloscopes:
-     - id: "scope-lab3"
+     - id: "rigol-01"
        ip: "192.168.1.105"
        port: 5025
-       label: "Keysight DSOX3034T"
-       driver: "drivers.my_oscilloscope.MyOscilloscope"
+       label: "Rigol DS1054Z"
+       driver: "drivers.RigolDS1000.RigolDS1000"
    ```
 
-3. Restart the service. The `InstrumentManager` dynamically imports the driver class by path.
-
-In `DEBUG=True` mode the driver field is ignored and the `MockOscilloscopeDriver` is always used.
+3. Restart the service. The `InstrumentManager` dynamically imports the driver class by the dotted path in the `driver` field. The special value `"mock"` (also the default in the shipped YAML) uses the in-memory `MockOscilloscopeDriver`, which is what lets the whole service run with `DEBUG=True` without any hardware.

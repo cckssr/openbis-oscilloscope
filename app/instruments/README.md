@@ -68,9 +68,26 @@ The check interval is controlled by `HEALTH_CHECK_INTERVAL_SECONDS` (default 5 s
 
 ---
 
+### `driver_rigolDS1000.py`
+
+`RigolDS1000Driver` — concrete `BaseOscilloscopeDriver` for the Rigol DS1000Z family. Wraps `RigolDS1000ZSeries` from `pymeasure_rigol_ds1000.py` and adapts it to the project driver interface.
+
+| Method                       | Implementation notes                                                                                                                         |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `connect()` / `disconnect()` | Delegates to `instrument.adapter.open()` / `.close()`. pymeasure opens the adapter at construction.                                          |
+| `identify()`                 | Returns `InstrumentInfo` from `*IDN?`; firmware is the 4th comma-separated field.                                                            |
+| `run()` / `stop()`           | Direct pass-through to `instrument.run()` / `.stop()`.                                                                                       |
+| `acquire_waveform(channel)`  | Sets source to `CHAN{n}`, reads RAW/BYTE waveform, converts via preamble; builds time array from xorigin + xincrement.                       |
+| `get_screenshot()`           | Returns raw image bytes from `instrument.get_display_data()`.                                                                                |
+| `get_channel_config(ch)`     | Reads `ch{n}.scale`, `.offset`, `.coupling`, `.probe_ratio`, `.is_enabled`.                                                                  |
+| `get_timebase()`             | Reads `timebase_scale`, `timebase_offset`, `acq_sample_rate`.                                                                                |
+| `get_trigger()`              | Reads edge trigger properties; maps slopes (`POS`→`RISE`, `NEG`→`FALL`, `RFAL`→`EITHER`) and sweep modes (`NORM`→`NORMAL`, `SING`→`SINGLE`). |
+
+---
+
 ### `pymeasure_rigol_ds1000.py`
 
-PyMeasure-based SCPI driver for the Rigol DS1000Z family (`OscilloscopeChannel` channel class + `RigolDS1000ZSeries` instrument class). This file is the low-level SCPI implementation; it is wrapped by `drivers/RigolDS1000.py` which adapts it to the `BaseOscilloscopeDriver` interface.
+PyMeasure-based SCPI driver for the Rigol DS1000Z family (`OscilloscopeChannel` channel class + `RigolDS1000ZSeries` instrument class). This file is the low-level SCPI implementation; it is wrapped by `driver_rigolDS1000.py` which adapts it to the `BaseOscilloscopeDriver` interface.
 
 Key properties exposed on `RigolDS1000ZSeries`:
 
