@@ -456,3 +456,203 @@ If the client disappears without calling `/unlock`, the Redis key expires after 
    ```
 
 3. Restart the service. The `InstrumentManager` dynamically imports the driver class by the dotted path in the `driver` field. The special value `"mock"` (also the default in the shipped YAML) uses the in-memory `MockOscilloscopeDriver`, which is what lets the whole service run with `DEBUG=True` without any hardware.
+
+---
+
+## Deployment
+
+The system has three distinct parts. OpenBIS is an external institutional server you do not run yourself. The FastAPI backend and the Vite frontend are both yours, run together via Docker Compose.
+
+### System overview
+
+```
+                    ┌─────────────────────────────────┐
+                    │         docker-compose          │
+                    │                                 │
+Browser ────────────┤  Nginx (:80)                    │
+                    │    /        → Vite dist (static)│
+                    │    /api/    → FastAPI (:8000)   │
+                    │                                 │
+                    │  FastAPI (:8000)                │
+                    │    ↓                            │
+                    │  Redis (:6379)                  │
+                    └──────────────┬──────────────────┘
+                                   │ token validation
+                                   │ dataset archiving
+                    ┌──────────────▼──────────────────┐
+                    │  OpenBIS server (external /      │
+                    │  institutional)                  │
+                    └─────────────────────────────────┘
+```
+
+Nginx acts as a reverse proxy. Everything is reachable on a single domain and port — the browser never talks to FastAPI directly, which avoids all CORS configuration.
+
+| Part             | Role                                                      | Runs where                    |
+| ---------------- | --------------------------------------------------------- | ----------------------------- |
+| **OpenBIS**      | Bearer token validation, dataset archiving                | External institutional server |
+| **FastAPI**      | Oscilloscope control, Redis locks, buffer, OpenBIS client | Your Docker Compose           |
+| **Nginx + Vite** | UI served as static files; proxies `/api/` to FastAPI     | Your Docker Compose           |
+| **Redis**        | Distributed device locks with TTL                         | Your Docker Compose           |
+
+---
+
+### Docker Compose
+
+**`docker-compose.yml`**
+
+```yaml
+services:
+  api:
+    build: .
+    environment:
+      - OPENBIS_URL=${OPENBIS_URL}
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+
+  webapp:
+    build: ./openbis_webapp
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+```
+
+No ports are exposed for `api` or `redis` — they are only reachable inside the Compose network. Only Nginx (the `webapp` service) is exposed to the outside.
+
+---
+
+### Nginx configuration
+
+**`openbis_webapp/nginx.conf`**
+
+```nginx
+server {
+  listen 80;
+
+  # API — proxied to the FastAPI container
+  location /api/ {
+    proxy_pass http://api:8000/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+  }
+
+  # SPA — serve static files with fallback for client-side routing
+  location / {
+    root /usr/share/nginx/html;
+    try_files $uri $uri/ /index.html;
+  }
+}
+```
+
+`api` resolves to the FastAPI container via Docker's internal DNS. The trailing slash on `proxy_pass` strips the `/api` prefix before forwarding, so `GET /api/devices` reaches FastAPI as `GET /devices`.
+
+---
+
+### Webapp Dockerfile
+
+**`openbis_webapp/Dockerfile`**
+
+```dockerfile
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY . .
+RUN npm install -g pnpm && pnpm install && pnpm build
+
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+```
+
+A two-stage build: Node compiles the Vite app to `dist/`, the final Nginx image copies only the static output — no Node runtime in production.
+
+---
+
+### Development workflow
+
+No Docker needed during development. Run FastAPI and the Vite dev server directly:
+
+```bash
+# Terminal 1 — FastAPI with mock hardware and in-memory Redis
+DEBUG=True uvicorn app.main:app --reload
+
+# Terminal 2 — Vite dev server
+cd openbis_webapp && pnpm dev
+```
+
+The Vite dev server proxies `/api/` calls to FastAPI. Add this to `openbis_webapp/vite.config.ts`:
+
+```ts
+server: {
+  proxy: {
+    '/api': {
+      target: 'http://localhost:8000',
+      rewrite: (path) => path.replace(/^\/api/, ''),
+    },
+  },
+},
+```
+
+With this proxy the frontend code always calls `/api/devices`, `/api/sessions/...`, etc. — the same paths that work in production through Nginx — so no environment-specific URL configuration is needed in the Vite app.
+
+---
+
+## API Documentation
+
+FastAPI generates interactive API documentation automatically from the source code. No separate documentation files need to be maintained.
+
+### Where to find it
+
+| URL                                  | Tool       | Use                                                |
+| ------------------------------------ | ---------- | -------------------------------------------------- |
+| `http://localhost:8000/docs`         | Swagger UI | Interactive — try requests directly in the browser |
+| `http://localhost:8000/redoc`        | ReDoc      | Readable reference — better for sharing            |
+| `http://localhost:8000/openapi.json` | Raw schema | Machine-readable OpenAPI 3.x JSON                  |
+
+These are available whenever the FastAPI server is running, including in `DEBUG=True` mode.
+
+### How FastAPI builds the schema
+
+FastAPI inspects the Python source at startup and generates the full OpenAPI schema automatically. No annotation is manual — it is derived from:
+
+| Source in code                                  | What it produces in the docs                             |
+| ----------------------------------------------- | -------------------------------------------------------- |
+| `@router.get("/devices")`                       | HTTP method and path                                     |
+| Function parameter types (`str`, `int`, `UUID`) | Query/path parameter types and whether they are required |
+| `Body(...)` / Pydantic model as parameter       | Request body schema with field names and types           |
+| `response_model=DeviceStatus`                   | Response body schema                                     |
+| `status_code=201`                               | Documented response code                                 |
+| `summary="Acquire lock"` on the decorator       | Short title in the UI                                    |
+| Docstring of the route function                 | Long description shown in the UI                         |
+| `responses={409: {"model": ErrorResponse}}`     | Additional response codes and their shapes               |
+
+Example — this route definition:
+
+```python
+@router.post(
+    "/{device_id}/lock",
+    response_model=LockResponse,
+    status_code=200,
+    summary="Acquire exclusive lock",
+    responses={409: {"model": ErrorResponse}},
+)
+async def acquire_lock(
+    device_id: str,
+    user: UserInfo = Depends(get_current_user),
+) -> LockResponse:
+    """Acquire an exclusive lock on the device.
+
+    Returns a `control_session_id` that must be passed to all subsequent
+    command endpoints. Raises 409 if the device is already locked.
+    """
+```
+
+…automatically produces a documented endpoint with: path parameter `device_id`, Bearer auth requirement, `LockResponse` schema for 200, `ErrorResponse` schema for 409, and the docstring as the description.
+
+### Authentication in the docs
+
+The Swagger UI has an **Authorize** button (top right). Enter your OpenBIS Bearer token there once and every "Try it out" request will include the `Authorization: Bearer <token>` header automatically.
+
+In `DEBUG=True` mode the accepted token is the value of `DEBUG_TOKEN` (default: `debug-token`). Enter that in the Authorize dialog to use the interactive docs without a live OpenBIS connection.

@@ -1,6 +1,6 @@
 # OpenBIS Oscilloscope Control Service
 
-A FastAPI service that acts as a control plane for LAN-connected oscilloscopes, consumed by the OpenBIS web UI. It manages exclusive device locks, buffers acquired waveform data on disk, and commits user-flagged acquisitions as OpenBIS datasets via pybis.
+A three-part system for remotely controlling LAN-connected oscilloscopes from a browser. A **Vite web UI** talks to a **FastAPI backend** (oscilloscope control, locking, buffering) which in turn connects to an external **OpenBIS server** for authentication and dataset archiving.
 
 ## Features
 
@@ -17,21 +17,26 @@ A FastAPI service that acts as a control plane for LAN-connected oscilloscopes, 
 
 ## Architecture
 
-```shell
-OpenBIS Web UI (JS)
-        │  Bearer token + REST
-        ▼
-FastAPI Service  ──► Redis (locks + TTL)
-        │
-        ├── InstrumentManager
-        │       └── per-device asyncio.Queue worker
-        │
-        ├── HealthMonitor  (background TCP check)
-        │
-        ├── BufferService  (CSV / PNG / HDF5 on disk)
-        │
-        └── OpenBISClient  (pybis + TTLCache)
 ```
+Browser
+  │
+  ▼
+Nginx (:80)  ─── /        → Vite UI (static files)
+             └── /api/    → FastAPI (:8000)
+                                │
+                                ├── Redis (locks + TTL)
+                                ├── InstrumentManager
+                                │     └── per-device asyncio.Queue worker
+                                ├── HealthMonitor (background TCP check)
+                                ├── BufferService (CSV / PNG / HDF5 on disk)
+                                └── OpenBISClient (pybis + TTLCache)
+                                          │
+                                          ▼
+                                   OpenBIS server (external)
+                                   token validation + dataset archiving
+```
+
+See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the full component breakdown, deployment guide, and API documentation reference.
 
 ## Quick start (Docker)
 
@@ -42,17 +47,19 @@ cp .env.example .env
 docker compose up
 ```
 
-The API is available at `http://localhost:8000`.
-Interactive docs: `http://localhost:8000/docs`
+The UI is available at `http://localhost:80`.
+Interactive API docs: `http://localhost:8000/docs` (also accessible via Nginx at `http://localhost/api/docs`).
 
 ## Development setup
 
 ```bash
+# Terminal 1 — FastAPI backend (mock hardware, no Redis or OpenBIS needed)
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-
-# Run with mock driver (no real oscilloscope needed)
 DEBUG=True uvicorn app.main:app --reload
+
+# Terminal 2 — Vite frontend (proxies /api/ to FastAPI automatically)
+cd openbis_webapp && pnpm install && pnpm dev
 ```
 
 ## Running tests
