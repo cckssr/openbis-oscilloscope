@@ -16,8 +16,8 @@ All FastAPI routers. Each file is a single router mounted in `app/main.py`.
 
 | Method | Path                                      | Auth   | Lock needed | Description                                                        |
 | ------ | ----------------------------------------- | ------ | ----------- | ------------------------------------------------------------------ |
-| GET    | `/devices`                                | Bearer | —           | List all devices with their current state and lock info.           |
-| GET    | `/devices/{device_id}`                    | Bearer | —           | Detailed device info: state, label, capabilities.                  |
+| GET    | `/devices`                                | Bearer | —           | List all devices with their current state and lock info. Lock object includes `session_id` when `is_mine` is true. |
+| GET    | `/devices/{device_id}`                    | Bearer | —           | Detailed device info: state, label, capabilities. Lock object includes `session_id` when `is_mine` is true.       |
 | POST   | `/devices/{device_id}/lock`               | Bearer | —           | Acquire exclusive lock. Returns `control_session_id`.              |
 | POST   | `/devices/{device_id}/unlock`             | Bearer | Own lock    | Release the lock (`?session_id=`).                                 |
 | POST   | `/devices/{device_id}/heartbeat`          | Bearer | Own lock    | Renew lock TTL (`?session_id=`).                                   |
@@ -26,6 +26,10 @@ All FastAPI routers. Each file is a single router mounted in `app/main.py`.
 | POST   | `/devices/{device_id}/acquire`            | Bearer | Own lock    | Capture all enabled channels + screenshot. Returns `artifact_ids`. |
 | GET    | `/devices/{device_id}/channels/{ch}/data` | Bearer | Own lock    | Latest waveform for channel as JSON `{time_s, voltage_V}` arrays.  |
 | GET    | `/devices/{device_id}/screenshot`         | Bearer | Own lock    | Live screenshot as `image/png`.                                    |
+| GET    | `/devices/{device_id}/settings`           | Bearer | —           | All channel configs, timebase, and trigger as a single snapshot.   |
+| PUT    | `/devices/{device_id}/channels/{ch}/config` | Bearer | Own lock  | Apply channel config (`enabled`, `scale_v_div`, `offset_v`, `coupling`, `probe_attenuation`). |
+| PUT    | `/devices/{device_id}/timebase`           | Bearer | Own lock    | Apply timebase (`scale_s_div`, `offset_s`).                        |
+| PUT    | `/devices/{device_id}/trigger`            | Bearer | Own lock    | Apply trigger (`source`, `level_v`, `slope`, `mode`).              |
 
 ---
 

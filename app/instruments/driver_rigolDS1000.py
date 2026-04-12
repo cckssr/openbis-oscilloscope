@@ -175,3 +175,53 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
             slope=slope,
             mode=mode,
         )
+
+    def set_channel_config(self, channel: int, config: ChannelConfig) -> None:
+        """Apply channel configuration to the instrument.
+
+        Args:
+            channel: 1-based channel number (1–4).
+            config: The :class:`ChannelConfig` values to apply.
+        """
+        ch = getattr(self.instrument, f"ch{channel}")
+        ch.is_enabled = config.enabled
+        ch.scale = config.scale_v_div
+        ch.offset = config.offset_v
+        ch.coupling = config.coupling
+        ch.probe_ratio = config.probe_attenuation
+
+    def set_timebase(self, config: TimebaseConfig) -> None:
+        """Apply timebase configuration to the instrument.
+
+        ``sample_rate`` is derived from the hardware after setting scale/offset
+        and cannot be written directly; that field is ignored here.
+
+        Args:
+            config: The :class:`TimebaseConfig` values to apply.
+        """
+        self.instrument.timebase_scale = config.scale_s_div
+        self.instrument.timebase_offset = config.offset_s
+
+    def set_trigger(self, config: TriggerConfig) -> None:
+        """Apply trigger configuration to the instrument.
+
+        Source is normalised from ``"CH1"`` → ``"CHAN1"`` before writing.
+        Slope and mode are reverse-mapped from the project convention back to
+        the instrument's SCPI values.
+
+        Args:
+            config: The :class:`TriggerConfig` values to apply.
+        """
+        # Reverse maps
+        _slope_rev = {v: k for k, v in _SLOPE_MAP.items()}
+        _sweep_rev = {v: k for k, v in _SWEEP_MAP.items()}
+
+        # Normalise CH1 → CHAN1 for the instrument
+        source = config.source
+        if source.startswith("CH") and not source.startswith("CHAN"):
+            source = "CHAN" + source[2:]
+
+        self.instrument.trigger_edge_source = source
+        self.instrument.trigger_edge_level = config.level_v
+        self.instrument.trigger_edge_slope = _slope_rev.get(config.slope, config.slope)
+        self.instrument.trigger_sweep = _sweep_rev.get(config.mode, config.mode)

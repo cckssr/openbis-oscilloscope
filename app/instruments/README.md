@@ -19,7 +19,7 @@ Abstract base class every driver must subclass, plus the data classes used as re
 | `InstrumentInfo` | `idn`, `ip`, `firmware`                                                                      | Identity string and parsed firmware version.                                                |
 
 **Abstract methods every driver must implement:**
-`connect()`, `disconnect()`, `identify()`, `run()`, `stop()`, `acquire_waveform(channel)`, `get_screenshot()`, `get_channel_config(channel)`, `get_timebase()`, `get_trigger()`
+`connect()`, `disconnect()`, `identify()`, `run()`, `stop()`, `acquire_waveform(channel)`, `get_screenshot()`, `get_channel_config(channel)`, `get_timebase()`, `get_trigger()`, `set_channel_config(channel, config)`, `set_timebase(config)`, `set_trigger(config)`
 
 `get_all_settings()` is provided by the base class — it assembles a metadata dict from the above methods automatically.
 
@@ -64,7 +64,10 @@ The check interval is controlled by `HEALTH_CHECK_INTERVAL_SECONDS` (default 5 s
 
 ### `mock_driver.py`
 
-`MockOscilloscopeDriver` — a fully functional `BaseOscilloscopeDriver` that returns deterministic dummy data without real hardware. Used automatically in `DEBUG=True` mode and in tests.
+`MockOscilloscopeDriver` — a fully functional `BaseOscilloscopeDriver` that returns synthetic sine-wave data without real hardware. Used automatically in `DEBUG=True` mode and in tests.
+
+- When `run()` is called, `acquire_waveform()` uses `time.time()` as a phase offset so successive calls return different waveform snapshots (simulates a live scope).
+- When `stop()` is called, the stop timestamp is recorded and all subsequent `acquire_waveform()` calls return the same frozen waveform until `run()` is called again.
 
 ---
 
@@ -82,6 +85,9 @@ The check interval is controlled by `HEALTH_CHECK_INTERVAL_SECONDS` (default 5 s
 | `get_channel_config(ch)`     | Reads `ch{n}.scale`, `.offset`, `.coupling`, `.probe_ratio`, `.is_enabled`.                                                                  |
 | `get_timebase()`             | Reads `timebase_scale`, `timebase_offset`, `acq_sample_rate`.                                                                                |
 | `get_trigger()`              | Reads edge trigger properties; maps slopes (`POS`→`RISE`, `NEG`→`FALL`, `RFAL`→`EITHER`) and sweep modes (`NORM`→`NORMAL`, `SING`→`SINGLE`). |
+| `set_channel_config(ch, cfg)`| Writes `ch{n}.is_enabled`, `.scale`, `.offset`, `.coupling`, `.probe_ratio`.                                                                 |
+| `set_timebase(cfg)`          | Writes `timebase_scale` and `timebase_offset`. `sample_rate` is read-only on the instrument and is ignored.                                  |
+| `set_trigger(cfg)`           | Reverse-maps slope/mode to SCPI values; normalises `CH1` → `CHAN1`; writes edge source, level, slope, and sweep mode.                        |
 
 ---
 

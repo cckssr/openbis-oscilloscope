@@ -62,9 +62,17 @@ export function WaveformPlot({
   return (
     <div className="relative w-full h-full bg-white border-2 border-(--lab-border) rounded">
       <ResponsiveContainer width="100%" height="100%">
+        {/* Time and Sample Rate */}
+        <div className="absolute top-4 left-4 font-mono text-xs text-(--lab-text-secondary) space-y-0.5">
+          <div>
+            {timebase} &nbsp; {sampleRate}
+          </div>
+        </div>
+
+        {/* Oscilloscope Display */}
         <LineChart
           data={data}
-          margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
+          margin={{ top: 40, right: 20, bottom: 20, left: 20 }}
         >
           <CartesianGrid strokeDasharray="0" stroke="#E5E7EB" strokeWidth={1} />
           <XAxis
@@ -75,6 +83,7 @@ export function WaveformPlot({
               fontSize: 11,
               fontFamily: "JetBrains Mono",
             }}
+            tickCount={10}
             label={{
               value: "Time",
               position: "insideBottom",
@@ -89,6 +98,7 @@ export function WaveformPlot({
               fontSize: 11,
               fontFamily: "JetBrains Mono",
             }}
+            tickCount={10}
             label={{
               value: "Voltage (V)",
               angle: -90,
@@ -109,11 +119,6 @@ export function WaveformPlot({
           {lines}
         </LineChart>
       </ResponsiveContainer>
-
-      <div className="absolute bottom-4 left-4 font-mono text-xs text-(--lab-text-secondary) space-y-0.5">
-        <div>{timebase}</div>
-        <div>{sampleRate}</div>
-      </div>
 
       {enabledChannels.ch1 && (
         <div

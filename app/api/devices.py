@@ -63,11 +63,13 @@ async def list_devices(
         lock = await lock_service.get_lock(ds.id)
         lock_info = None
         if lock:
+            is_mine = lock.owner_user == user.user_id
             lock_info = {
                 "owner_user": lock.owner_user,
                 "acquired_at": lock.acquired_at,
-                # Mask session_id unless it's the caller's own lock
-                "is_mine": lock.owner_user == user.user_id,
+                "is_mine": is_mine,
+                # Expose session_id only to the lock owner so they can reclaim control
+                **({"session_id": lock.session_id} if is_mine else {}),
             }
         result.append(
             {
@@ -116,10 +118,13 @@ async def get_device(
     lock = await lock_service.get_lock(device_id)
     lock_info = None
     if lock:
+        is_mine = lock.owner_user == user.user_id
         lock_info = {
             "owner_user": lock.owner_user,
             "acquired_at": lock.acquired_at,
-            "is_mine": lock.owner_user == user.user_id,
+            "is_mine": is_mine,
+            # Expose session_id only to the lock owner so they can reclaim control
+            **({"session_id": lock.session_id} if is_mine else {}),
         }
 
     capabilities = []
@@ -510,6 +515,241 @@ async def get_channel_data(
         "time_s": times,
         "voltage_V": volts,
     }
+
+
+@router.get("/{device_id}/settings", response_model=dict)
+async def get_settings(
+    device_id: str,
+    request: Request,
+    user: UserInfo = Depends(get_current_user),
+) -> dict:
+    """Return the current instrument settings as a single snapshot.
+
+    Reads channel configs (1–4), timebase, and trigger from the driver.
+    Requires authentication but does **not** require holding the lock, so a
+    user can inspect settings before acquiring control.
+
+    Args:
+        device_id: Path parameter identifying the target device.
+        request: The current HTTP request.
+        user: The authenticated user.
+
+    Returns:
+        A dict with ``channels`` (keyed 1–4), ``timebase``, and ``trigger``.
+
+    Raises:
+        DeviceNotFoundError: If ``device_id`` is not registered.
+        DeviceOfflineError: If the device driver is not connected.
+    """
+    manager, _ = _get_services(request)
+    try:
+        entry = manager.get_device(device_id)
+    except KeyError as e:
+        raise DeviceNotFoundError(device_id) from e
+
+    if entry.driver is None:
+        raise DeviceOfflineError(device_id)
+
+    driver = entry.driver
+
+    async def _get():
+        channels = {}
+        for ch in range(1, 5):
+            try:
+                cfg = driver.get_channel_config(ch)
+                channels[ch] = {
+                    "enabled": cfg.enabled,
+                    "scale_v_div": cfg.scale_v_div,
+                    "offset_v": cfg.offset_v,
+                    "coupling": cfg.coupling,
+                    "probe_attenuation": cfg.probe_attenuation,
+                }
+            except Exception:
+                pass
+        tb = driver.get_timebase()
+        trig = driver.get_trigger()
+        return {
+            "channels": channels,
+            "timebase": {
+                "scale_s_div": tb.scale_s_div,
+                "offset_s": tb.offset_s,
+                "sample_rate": tb.sample_rate,
+            },
+            "trigger": {
+                "source": trig.source,
+                "level_v": trig.level_v,
+                "slope": trig.slope,
+                "mode": trig.mode,
+            },
+        }
+
+    return await manager.execute_command(device_id, _get)
+
+
+@router.put("/{device_id}/channels/{channel}/config", response_model=dict)
+async def set_channel_config(
+    device_id: str,
+    channel: int,
+    session_id: str,
+    config: dict,
+    request: Request,
+    user: UserInfo = Depends(get_current_user),
+) -> dict:
+    """Apply a channel configuration to the instrument.
+
+    Args:
+        device_id: Path parameter identifying the target device.
+        channel: Path parameter for the 1-based channel number.
+        session_id: Query parameter; the UUID returned when the lock was acquired.
+        config: Request body with ``enabled``, ``scale_v_div``, ``offset_v``,
+            ``coupling``, and ``probe_attenuation``.
+        request: The current HTTP request.
+        user: The authenticated user.
+
+    Returns:
+        A dict with ``applied: true`` and the channel number.
+
+    Raises:
+        DeviceNotFoundError: If ``device_id`` is not registered.
+        LockRequiredError: If the caller does not hold the lock.
+        DeviceOfflineError: If the device driver is not connected.
+    """
+    from app.instruments.base_driver import ChannelConfig
+
+    manager, lock_service = _get_services(request)
+    try:
+        entry = manager.get_device(device_id)
+    except KeyError as e:
+        raise DeviceNotFoundError(device_id) from e
+
+    lock = await lock_service.get_lock(device_id)
+    _verify_lock_ownership(lock, user.user_id, session_id, device_id)
+
+    if entry.driver is None:
+        raise DeviceOfflineError(device_id)
+
+    driver = entry.driver
+    cfg = ChannelConfig(
+        channel=channel,
+        enabled=config.get("enabled", True),
+        scale_v_div=config.get("scale_v_div", 1.0),
+        offset_v=config.get("offset_v", 0.0),
+        coupling=config.get("coupling", "DC"),
+        probe_attenuation=config.get("probe_attenuation", 1.0),
+    )
+
+    async def _set():
+        driver.set_channel_config(channel, cfg)
+
+    await manager.execute_command(device_id, _set)
+    return {"applied": True, "channel": channel}
+
+
+@router.put("/{device_id}/timebase", response_model=dict)
+async def set_timebase(
+    device_id: str,
+    session_id: str,
+    config: dict,
+    request: Request,
+    user: UserInfo = Depends(get_current_user),
+) -> dict:
+    """Apply a timebase configuration to the instrument.
+
+    Args:
+        device_id: Path parameter identifying the target device.
+        session_id: Query parameter; the UUID returned when the lock was acquired.
+        config: Request body with ``scale_s_div`` and ``offset_s``.
+        request: The current HTTP request.
+        user: The authenticated user.
+
+    Returns:
+        A dict with ``applied: true``.
+
+    Raises:
+        DeviceNotFoundError: If ``device_id`` is not registered.
+        LockRequiredError: If the caller does not hold the lock.
+        DeviceOfflineError: If the device driver is not connected.
+    """
+    from app.instruments.base_driver import TimebaseConfig
+
+    manager, lock_service = _get_services(request)
+    try:
+        entry = manager.get_device(device_id)
+    except KeyError as e:
+        raise DeviceNotFoundError(device_id) from e
+
+    lock = await lock_service.get_lock(device_id)
+    _verify_lock_ownership(lock, user.user_id, session_id, device_id)
+
+    if entry.driver is None:
+        raise DeviceOfflineError(device_id)
+
+    driver = entry.driver
+    tb = TimebaseConfig(
+        scale_s_div=config.get("scale_s_div", 1e-3),
+        offset_s=config.get("offset_s", 0.0),
+        sample_rate=0.0,  # read-only on hardware; ignored by set_timebase
+    )
+
+    async def _set():
+        driver.set_timebase(tb)
+
+    await manager.execute_command(device_id, _set)
+    return {"applied": True}
+
+
+@router.put("/{device_id}/trigger", response_model=dict)
+async def set_trigger(
+    device_id: str,
+    session_id: str,
+    config: dict,
+    request: Request,
+    user: UserInfo = Depends(get_current_user),
+) -> dict:
+    """Apply a trigger configuration to the instrument.
+
+    Args:
+        device_id: Path parameter identifying the target device.
+        session_id: Query parameter; the UUID returned when the lock was acquired.
+        config: Request body with ``source``, ``level_v``, ``slope``, and ``mode``.
+        request: The current HTTP request.
+        user: The authenticated user.
+
+    Returns:
+        A dict with ``applied: true``.
+
+    Raises:
+        DeviceNotFoundError: If ``device_id`` is not registered.
+        LockRequiredError: If the caller does not hold the lock.
+        DeviceOfflineError: If the device driver is not connected.
+    """
+    from app.instruments.base_driver import TriggerConfig
+
+    manager, lock_service = _get_services(request)
+    try:
+        entry = manager.get_device(device_id)
+    except KeyError as e:
+        raise DeviceNotFoundError(device_id) from e
+
+    lock = await lock_service.get_lock(device_id)
+    _verify_lock_ownership(lock, user.user_id, session_id, device_id)
+
+    if entry.driver is None:
+        raise DeviceOfflineError(device_id)
+
+    driver = entry.driver
+    trig = TriggerConfig(
+        source=config.get("source", "CH1"),
+        level_v=config.get("level_v", 0.0),
+        slope=config.get("slope", "RISE"),
+        mode=config.get("mode", "AUTO"),
+    )
+
+    async def _set():
+        driver.set_trigger(trig)
+
+    await manager.execute_command(device_id, _set)
+    return {"applied": True}
 
 
 @router.get("/{device_id}/screenshot")

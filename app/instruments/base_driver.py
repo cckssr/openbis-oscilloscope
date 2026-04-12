@@ -200,6 +200,34 @@ class BaseOscilloscopeDriver(ABC):
             A :class:`TriggerConfig` snapshot of source, level, slope, and mode.
         """
 
+    @abstractmethod
+    def set_channel_config(self, channel: int, config: ChannelConfig) -> None:
+        """Apply the given channel configuration to the instrument.
+
+        Args:
+            channel: 1-based channel number to configure.
+            config: The :class:`ChannelConfig` values to apply.
+        """
+
+    @abstractmethod
+    def set_timebase(self, config: TimebaseConfig) -> None:
+        """Apply the given timebase configuration to the instrument.
+
+        The ``sample_rate`` field of *config* is read-only on most hardware and
+        is ignored by implementations that cannot set it directly.
+
+        Args:
+            config: The :class:`TimebaseConfig` values to apply.
+        """
+
+    @abstractmethod
+    def set_trigger(self, config: TriggerConfig) -> None:
+        """Apply the given trigger configuration to the instrument.
+
+        Args:
+            config: The :class:`TriggerConfig` values to apply.
+        """
+
     def get_all_settings(self) -> dict:
         """Collect a complete snapshot of all instrument settings for metadata storage.
 

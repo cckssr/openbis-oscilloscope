@@ -30,6 +30,19 @@ export default defineConfig({
     },
   },
 
+  server: {
+    // Proxy /api/* to the FastAPI backend during development.
+    // The /api prefix is stripped before forwarding, so /api/devices → /devices.
+    // In production, Nginx handles this proxy (see openbis_webapp/nginx.conf).
+    proxy: {
+      "/api": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ""),
+      },
+    },
+  },
+
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ["**/*.svg", "**/*.csv"],
 });
