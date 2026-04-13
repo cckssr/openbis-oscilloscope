@@ -27,6 +27,7 @@ All FastAPI routers. Each file is a single router mounted in `app/main.py`.
 | GET    | `/devices/{device_id}/channels/{ch}/data` | Bearer | Own lock    | Latest waveform for channel as JSON `{time_s, voltage_V}` arrays.  |
 | GET    | `/devices/{device_id}/screenshot`         | Bearer | Own lock    | Live screenshot as `image/png`.                                    |
 | GET    | `/devices/{device_id}/settings`           | Bearer | —           | All channel configs, timebase, and trigger as a single snapshot.   |
+| GET    | `/devices/{device_id}/probe`              | Bearer | —           | Step-by-step connectivity diagnostic: TCP check → driver connect → `*IDN?`. Returns per-step result and error. Does not affect device state. |
 | PUT    | `/devices/{device_id}/channels/{ch}/config` | Bearer | Own lock  | Apply channel config (`enabled`, `scale_v_div`, `offset_v`, `coupling`, `probe_attenuation`). |
 | PUT    | `/devices/{device_id}/timebase`           | Bearer | Own lock    | Apply timebase (`scale_s_div`, `offset_s`).                        |
 | PUT    | `/devices/{device_id}/trigger`            | Bearer | Own lock    | Apply trigger (`source`, `level_v`, `slope`, `mode`).              |

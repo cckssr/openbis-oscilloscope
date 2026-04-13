@@ -22,7 +22,7 @@ export function SegmentedControl({
           className={`px-3 py-1 text-xs font-medium transition-colors ${
             value === option
               ? "bg-(--lab-accent) text-white"
-              : "text-(--lab-text-secondary)] hover:text-(--lab-text-primary) hover:bg-[var(--lab-panel)"
+              : "text-(--lab-text-secondary) hover:text-(--lab-text-primary) hover:bg-(--lab-panel)"
           } ${index === 0 ? "rounded-l" : ""} ${index === options.length - 1 ? "rounded-r" : ""} ${
             index < options.length - 1 ? "border-r-2 border-(--lab-border)" : ""
           }`}

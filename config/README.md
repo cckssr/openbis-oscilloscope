@@ -22,8 +22,10 @@ oscilloscopes:
 | Value                               | Behaviour                                                                   |
 | ----------------------------------- | --------------------------------------------------------------------------- |
 | `"mock"`                            | Uses `MockOscilloscopeDriver` for this device regardless of `DEBUG` mode    |
-| `"drivers.RigolDS1000.RigolDS1000"` | Rigol DS1000Z series via PyMeasure                                          |
+| `"drivers.RigolDS1000.RigolDS1000"` | Rigol DS1000Z series via PyMeasure over VXI-11. Set `port: 111`.           |
 | Any dotted path                     | Dynamically imported by `InstrumentManager.instantiate_driver()` at startup |
+
+**Port field:** used by the health monitor for TCP reachability checks. Use `111` for VXI-11 instruments (RPC portmapper), or `5025` for instruments with a raw LXI SCPI socket.
 
 ## Adding a new device
 

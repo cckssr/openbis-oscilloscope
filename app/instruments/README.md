@@ -42,7 +42,7 @@ Abstract base class every driver must subclass, plus the data classes used as re
 
 - `startup()` — reads `oscilloscopes.yaml`, creates a `DeviceEntry` per device, spawns one `asyncio` worker task per device.
 - `execute_command(device_id, cmd, ...)` — enqueues a command; the per-device worker picks it up and calls the driver method. Commands to different devices run in parallel; commands to the same device are serialized.
-- `instantiate_driver(device_id)` — dynamically imports the driver class from the dotted path in config, or returns `MockOscilloscopeDriver` when `driver: "mock"` or `DEBUG=True`.
+- `instantiate_driver(device_id)` — dynamically imports the driver class from the dotted path in config, or returns `MockOscilloscopeDriver` when `driver: "mock"`. Real drivers are always used regardless of `DEBUG` mode.
 - `update_state(device_id, state)` — called by the health monitor and the app on state changes.
 - `shutdown()` — cancels all worker tasks, disconnects all drivers.
 
@@ -58,7 +58,9 @@ Abstract base class every driver must subclass, plus the data classes used as re
 | `ERROR` → `ONLINE`              | Same as above                                               |
 | `ONLINE` / `LOCKED` → `OFFLINE` | TCP connect fails; driver is disconnected and set to `None` |
 
-The check interval is controlled by `HEALTH_CHECK_INTERVAL_SECONDS` (default 5 s). The monitor is skipped entirely in `DEBUG=True` mode.
+The check interval is controlled by `HEALTH_CHECK_INTERVAL_SECONDS` (default 5 s). The TCP connection timeout is controlled by `HEALTH_CHECK_TCP_TIMEOUT_SECONDS` (default 2.0 s).
+
+The monitor is **always started**, including in `DEBUG=True` mode. Devices configured with `driver: "mock"` are skipped entirely (they are pre-connected at startup and have no real network endpoint). Real hardware devices are monitored in all modes.
 
 ---
 
@@ -68,6 +70,10 @@ The check interval is controlled by `HEALTH_CHECK_INTERVAL_SECONDS` (default 5 s
 
 - When `run()` is called, `acquire_waveform()` uses `time.time()` as a phase offset so successive calls return different waveform snapshots (simulates a live scope).
 - When `stop()` is called, the stop timestamp is recorded and all subsequent `acquire_waveform()` calls return the same frozen waveform until `run()` is called again.
+- The waveform window respects the stored `_timebase.scale_s_div` (10 divisions wide), so applying a new timebase from the UI is reflected in subsequent acquisitions.
+- Sine amplitude is `scale_v_div × 3` so the waveform fills roughly 3 vertical divisions per channel.
+- Noise uses a shared `np.random.default_rng` instance (seeded once at construction) so noise varies between acquisitions when running and is frozen when stopped.
+- `get_screenshot()` returns a cached 640×480 white PNG (built once via `_get_blank_png()`, not regenerated on every call).
 
 ---
 
@@ -77,10 +83,10 @@ The check interval is controlled by `HEALTH_CHECK_INTERVAL_SECONDS` (default 5 s
 
 | Method                       | Implementation notes                                                                                                                         |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `connect()` / `disconnect()` | Delegates to `instrument.adapter.open()` / `.close()`. pymeasure opens the adapter at construction.                                          |
+| `connect()` / `disconnect()` | Delegates to `instrument.adapter.open()` / `.close()`. pymeasure opens the adapter at construction. `connect()` wraps `open()` in a `ConnectionError` on failure. |
 | `identify()`                 | Returns `InstrumentInfo` from `*IDN?`; firmware is the 4th comma-separated field.                                                            |
 | `run()` / `stop()`           | Direct pass-through to `instrument.run()` / `.stop()`.                                                                                       |
-| `acquire_waveform(channel)`  | Sets source to `CHAN{n}`, reads RAW/BYTE waveform, converts via preamble; builds time array from xorigin + xincrement.                       |
+| `acquire_waveform(channel)`  | Validates channel 1–4. Sets source to `CHAN{n}`, reads RAW/BYTE waveform; time array built as `xorigin + (arange(n) - xreference) * xincrement` (xreference is a sample index). Calls `run()` after read to restart acquisition. Raises `ValueError` if channel out of range or xincrement ≤ 0. |
 | `get_screenshot()`           | Returns raw image bytes from `instrument.get_display_data()`.                                                                                |
 | `get_channel_config(ch)`     | Reads `ch{n}.scale`, `.offset`, `.coupling`, `.probe_ratio`, `.is_enabled`.                                                                  |
 | `get_timebase()`             | Reads `timebase_scale`, `timebase_offset`, `acq_sample_rate`.                                                                                |

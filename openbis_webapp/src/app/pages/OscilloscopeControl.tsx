@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router";
 import { StatusBadge } from "../components/StatusBadge";
-import { NumericInput } from "../components/NumericInput";
-import { SegmentedControl } from "../components/SegmentedControl";
 import { WaveformPlot } from "../components/WaveformPlot";
+import { ChannelsPanel } from "../components/ChannelsPanel";
+import { TimebasePanel } from "../components/TimebasePanel";
+import { TriggerPanel } from "../components/TriggerPanel";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../../api/client";
 import {
@@ -36,12 +37,13 @@ import {
   Camera,
   ZoomIn,
   ZoomOut,
-  Move,
   RotateCcw,
   Download,
   Lock,
   Unlock,
   Database,
+  Settings,
+  EyeOff,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -56,7 +58,6 @@ type PlotPoint = {
   ch4?: number;
 };
 
-/** Uniform downsample to at most maxLen points. */
 function downsample(arr: number[], maxLen: number): number[] {
   if (arr.length <= maxLen) return arr;
   const step = arr.length / maxLen;
@@ -69,9 +70,7 @@ function buildPlotData(
 ): PlotPoint[] {
   const entries = Object.entries(channelData) as [string, WaveformData][];
   if (!entries.length) return [];
-
   const firstTime = downsample(entries[0][1].time_s, maxPoints);
-
   return firstTime.map((time, i) => {
     const point: PlotPoint = { time };
     for (const [ch, data] of entries) {
@@ -100,69 +99,106 @@ function formatTimebase(sPerDiv: number): string {
 // Component
 // ---------------------------------------------------------------------------
 
-const HEARTBEAT_INTERVAL_MS = 4 * 60 * 1000; // 4 min (TTL is 30 min)
+const HEARTBEAT_INTERVAL_MS = 4 * 60 * 1000;
+
+/** Zoom step: each click shrinks/expands the visible window by this fraction. */
+const ZOOM_STEP = 0.25;
+
+const DEFAULT_CHANNEL_CFG: ChannelConfig = {
+  enabled: false,
+  scale_v_div: 1.0,
+  offset_v: 0,
+  coupling: "DC",
+  probe_attenuation: 1,
+};
 
 export function OscilloscopeControl() {
   const { deviceId } = useParams<{ deviceId: string }>();
   const navigate = useNavigate();
   const { token } = useAuth();
 
-  // Device state
   const [device, setDevice] = useState<DeviceDetail | null>(null);
   const [deviceError, setDeviceError] = useState<string | null>(null);
 
-  // Lock state
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [lockError, setLockError] = useState<string | null>(null);
   const [lockLoading, setLockLoading] = useState(false);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Acquisition state
   const [isRunning, setIsRunning] = useState(false);
-  const [isAcquiring, setIsAcquiring] = useState(false);
+  const isAcquiringRef = useRef(false); // synchronous guard for overlapping acquires
+  const [isAcquiring, setIsAcquiring] = useState(false); // for UI rendering only
   const [cmdError, setCmdError] = useState<string | null>(null);
   const [waveformData, setWaveformData] = useState<PlotPoint[]>([]);
   const [timebaseLabel, setTimebaseLabel] = useState("Timebase: —");
   const [sampleRateLabel, setSampleRateLabel] = useState("Sample rate: —");
-  // (enabledChannels is derived from channelSettings below the settings state block)
 
-  // Settings panel state
+  // Continuous acquisition: interval handle and user-selected FPS (1–10)
+  const runLoopRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [fps, setFps] = useState(2);
+
+  // Zoom domain: null = full scope window
+  const [xDomain, setXDomain] = useState<[number, number] | null>(null);
+  const fullXDomainRef = useRef<[number, number] | null>(null); // scope-window extent for zoom reset
+
   const [activeTab, setActiveTab] = useState<
     "channels" | "timebase" | "trigger"
   >("channels");
 
-  // Pending (locally edited) settings — what the user sees in the controls
+  // Expert mode: persisted in localStorage; false = production-restricted view
+  const [expertMode, setExpertMode] = useState(
+    () => localStorage.getItem("expertMode") === "true",
+  );
+  const toggleExpertMode = () => {
+    setExpertMode((prev) => {
+      const next = !prev;
+      localStorage.setItem("expertMode", String(next));
+      // Switch back to channels tab if current tab would become hidden
+      if (!next) setActiveTab("channels");
+      return next;
+    });
+  };
+
+  // Pending settings (what the user sees in the controls)
   const [channelSettings, setChannelSettings] = useState<
     Record<number, ChannelConfig>
   >({
-    1: { enabled: true,  scale_v_div: 1.0, offset_v: 0, coupling: "DC", probe_attenuation: 1 },
-    2: { enabled: false, scale_v_div: 1.0, offset_v: 0, coupling: "DC", probe_attenuation: 1 },
-    3: { enabled: false, scale_v_div: 1.0, offset_v: 0, coupling: "DC", probe_attenuation: 1 },
-    4: { enabled: false, scale_v_div: 1.0, offset_v: 0, coupling: "DC", probe_attenuation: 1 },
+    1: { ...DEFAULT_CHANNEL_CFG, enabled: true },
+    2: { ...DEFAULT_CHANNEL_CFG },
+    3: { ...DEFAULT_CHANNEL_CFG },
+    4: { ...DEFAULT_CHANNEL_CFG },
   });
   const [timebaseSettings, setTimebaseSettings] = useState<
     Omit<TimebaseConfig, "sample_rate">
   >({ scale_s_div: 1e-3, offset_s: 0 });
   const [triggerSettings, setTriggerSettings] = useState<TriggerConfig>({
-    source: "CH1", level_v: 0.0, slope: "RISE", mode: "AUTO",
+    source: "CH1",
+    level_v: 0.0,
+    slope: "RISE",
+    mode: "AUTO",
   });
 
-  // Applied (what the scope actually has) — used to detect dirty state
+  // Applied state (what the scope actually has) — for dirty detection
   const [appliedChannels, setAppliedChannels] = useState<
     Record<number, ChannelConfig>
   >({});
-  const [appliedTimebase, setAppliedTimebase] = useState<
-    Omit<TimebaseConfig, "sample_rate"> | null
-  >(null);
-  const [appliedTrigger, setAppliedTrigger] = useState<TriggerConfig | null>(null);
+  const [appliedTimebase, setAppliedTimebase] = useState<Omit<
+    TimebaseConfig,
+    "sample_rate"
+  > | null>(null);
+  const [appliedTrigger, setAppliedTrigger] = useState<TriggerConfig | null>(
+    null,
+  );
 
-  // Apply-in-progress and per-panel errors
   const [applyingChannels, setApplyingChannels] = useState(false);
   const [applyingTimebase, setApplyingTimebase] = useState(false);
   const [applyingTrigger, setApplyingTrigger] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
 
-  // Derive dirty flags from shallow comparison
+  // Derived state
+  const isLocked = !!sessionId;
+
+  // Dirty flags
   const channelsDirty = Object.keys(channelSettings).some((k) => {
     const ch = Number(k);
     const p = channelSettings[ch];
@@ -187,7 +223,6 @@ export function OscilloscopeControl() {
     triggerSettings.slope !== appliedTrigger.slope ||
     triggerSettings.mode !== appliedTrigger.mode;
 
-  // enabledChannels derived from channelSettings (for WaveformPlot)
   const enabledChannels = {
     ch1: channelSettings[1]?.enabled ?? false,
     ch2: channelSettings[2]?.enabled ?? false,
@@ -195,7 +230,7 @@ export function OscilloscopeControl() {
     ch4: channelSettings[4]?.enabled ?? false,
   };
 
-  // Fetch settings from scope and populate both pending and applied state
+  // Fetch settings and populate both pending and applied state
   const loadSettings = useCallback(async () => {
     if (!token || !deviceId) return;
     try {
@@ -206,7 +241,10 @@ export function OscilloscopeControl() {
       }
       setChannelSettings(chMap);
       setAppliedChannels(chMap);
-      const tb = { scale_s_div: s.timebase.scale_s_div, offset_s: s.timebase.offset_s };
+      const tb = {
+        scale_s_div: s.timebase.scale_s_div,
+        offset_s: s.timebase.offset_s,
+      };
       setTimebaseSettings(tb);
       setAppliedTimebase(tb);
       setTriggerSettings(s.trigger);
@@ -222,11 +260,9 @@ export function OscilloscopeControl() {
     getDevice(token, deviceId)
       .then((d) => {
         setDevice(d);
-        // Reclaim control after logout/login with same credentials
         if (d.lock?.is_mine && d.lock.session_id && !sessionId) {
           setSessionId(d.lock.session_id);
         }
-        // Always sync controls with the scope's actual state on page load
         loadSettings();
       })
       .catch((err) =>
@@ -234,23 +270,20 @@ export function OscilloscopeControl() {
           err instanceof Error ? err.message : "Failed to load device",
         ),
       );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, deviceId]);
 
   // Heartbeat: renew lock every 4 min while we hold it
   useEffect(() => {
     if (!sessionId || !token || !deviceId) return;
-
     heartbeatRef.current = setInterval(async () => {
       try {
         await sendHeartbeat(token, deviceId, sessionId);
       } catch {
-        // If heartbeat fails the lock has likely expired — clear local state
         setSessionId(null);
         setLockError("Lock expired. Please re-acquire.");
       }
     }, HEARTBEAT_INTERVAL_MS);
-
     return () => {
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
     };
@@ -267,7 +300,6 @@ export function OscilloscopeControl() {
     try {
       const res = await acquireLock(token, deviceId);
       setSessionId(res.control_session_id);
-      // Refresh device to show LOCKED state and sync controls with scope
       const updated = await getDevice(token, deviceId);
       setDevice(updated);
       await loadSettings();
@@ -313,7 +345,9 @@ export function OscilloscopeControl() {
       }
       setAppliedChannels({ ...channelSettings });
     } catch (err) {
-      setApplyError(err instanceof Error ? err.message : "Failed to apply channel settings");
+      setApplyError(
+        err instanceof Error ? err.message : "Failed to apply channel settings",
+      );
     } finally {
       setApplyingChannels(false);
     }
@@ -327,7 +361,9 @@ export function OscilloscopeControl() {
       await setTimebase(token, deviceId, sessionId, timebaseSettings);
       setAppliedTimebase({ ...timebaseSettings });
     } catch (err) {
-      setApplyError(err instanceof Error ? err.message : "Failed to apply timebase");
+      setApplyError(
+        err instanceof Error ? err.message : "Failed to apply timebase",
+      );
     } finally {
       setApplyingTimebase(false);
     }
@@ -341,11 +377,30 @@ export function OscilloscopeControl() {
       await setTrigger(token, deviceId, sessionId, triggerSettings);
       setAppliedTrigger({ ...triggerSettings });
     } catch (err) {
-      setApplyError(err instanceof Error ? err.message : "Failed to apply trigger");
+      setApplyError(
+        err instanceof Error ? err.message : "Failed to apply trigger",
+      );
     } finally {
       setApplyingTrigger(false);
     }
   };
+
+  // In restricted mode, auto-apply channel settings whenever they change
+  const restrictedApplyingRef = useRef(false);
+  useEffect(() => {
+    if (
+      expertMode ||
+      !isLocked ||
+      !channelsDirty ||
+      restrictedApplyingRef.current
+    )
+      return;
+    restrictedApplyingRef.current = true;
+    handleApplyChannels().finally(() => {
+      restrictedApplyingRef.current = false;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channelSettings, expertMode, isLocked]);
 
   // ---------------------------------------------------------------------------
   // Instrument commands (require lock)
@@ -372,28 +427,42 @@ export function OscilloscopeControl() {
       setIsRunning(false);
     });
 
-  const handleAcquire = async () => {
+  const handleAcquire = useCallback(async () => {
     if (!token || !deviceId || !sessionId) return;
+    if (isAcquiringRef.current) return; // prevent overlapping requests
+    isAcquiringRef.current = true;
     setIsAcquiring(true);
     setCmdError(null);
     try {
       await acquireWaveforms(token, deviceId, sessionId);
-
-      // Fetch data for all channels; skip any that have no trace yet
       const channelDataMap: Record<number, WaveformData> = {};
-
       for (let ch = 1; ch <= 4; ch++) {
+        if (!channelSettings[ch]?.enabled) continue; // only fetch enabled channels
         try {
-          const data = await getChannelData(token, deviceId, ch, sessionId);
-          channelDataMap[ch] = data;
+          channelDataMap[ch] = await getChannelData(
+            token,
+            deviceId,
+            ch,
+            sessionId,
+          );
         } catch {
-          // 404 = channel was not enabled / no data — skip silently
+          // 404 = no trace yet — skip silently
         }
       }
+      const plot = buildPlotData(channelDataMap);
+      setWaveformData(plot);
 
-      setWaveformData(buildPlotData(channelDataMap));
+      // Store scope-window extent for zoom reset (based on settings, not data extremes)
+      if (plot.length > 0) {
+        const tStart = plot[0].time;
+        fullXDomainRef.current = [
+          tStart,
+          tStart + timebaseSettings.scale_s_div * 10,
+        ];
+        // Preserve any active zoom; only keep null if already unzoomed
+        setXDomain((prev) => (prev === null ? null : prev));
+      }
 
-      // Update readouts from the first available channel's preamble
       const firstData = Object.values(channelDataMap)[0];
       if (firstData && firstData.time_s.length >= 2) {
         const xInc = firstData.time_s[1] - firstData.time_s[0];
@@ -401,14 +470,93 @@ export function OscilloscopeControl() {
         setSampleRateLabel(`Sample rate: ${formatSampleRate(sr)}`);
         const totalTime =
           firstData.time_s[firstData.time_s.length - 1] - firstData.time_s[0];
-        setSampleRateLabel(`Sample rate: ${formatSampleRate(sr)}`);
         setTimebaseLabel(`Timebase: ${formatTimebase(totalTime / 10)}`);
       }
     } catch (err) {
       setCmdError(err instanceof ApiError ? err.message : "Acquire failed");
     } finally {
+      isAcquiringRef.current = false;
       setIsAcquiring(false);
     }
+  }, [token, deviceId, sessionId, channelSettings]);
+
+  // Continuous acquisition loop — runs while isRunning is true
+  useEffect(() => {
+    if (!isRunning || !sessionId) {
+      if (runLoopRef.current) {
+        clearInterval(runLoopRef.current);
+        runLoopRef.current = null;
+      }
+      return;
+    }
+    // Immediate first frame, then repeat at selected FPS
+    handleAcquire();
+    runLoopRef.current = setInterval(handleAcquire, 1000 / fps);
+    return () => {
+      if (runLoopRef.current) {
+        clearInterval(runLoopRef.current);
+        runLoopRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRunning, fps, sessionId]);
+
+  // ---------------------------------------------------------------------------
+  // Zoom helpers
+  // ---------------------------------------------------------------------------
+
+  const handleZoomIn = () => {
+    const full = fullXDomainRef.current;
+    if (!full) return;
+    setXDomain((prev) => {
+      const [lo, hi] = prev ?? full;
+      const mid = (lo + hi) / 2;
+      const half = ((hi - lo) / 2) * (1 - ZOOM_STEP);
+      return [mid - half, mid + half];
+    });
+  };
+
+  const handleZoomOut = () => {
+    const full = fullXDomainRef.current;
+    if (!full) return;
+    setXDomain((prev) => {
+      const [lo, hi] = prev ?? full;
+      const mid = (lo + hi) / 2;
+      const half = ((hi - lo) / 2) * (1 + ZOOM_STEP);
+      // Clamp to full data range
+      const newLo = Math.max(full[0], mid - half);
+      const newHi = Math.min(full[1], mid + half);
+      // If we've zoomed all the way out, go back to auto
+      if (newLo <= full[0] && newHi >= full[1]) return null;
+      return [newLo, newHi];
+    });
+  };
+
+  const handleZoomReset = () => setXDomain(null);
+
+  // ---------------------------------------------------------------------------
+  // CSV download
+  // ---------------------------------------------------------------------------
+
+  const handleDownloadCsv = () => {
+    if (!waveformData.length) return;
+    const channels = (["ch1", "ch2", "ch3", "ch4"] as const).filter(
+      (ch) => waveformData[0][ch] !== undefined,
+    );
+    const header = ["time_s", ...channels].join(",");
+    const rows = waveformData.map((pt) =>
+      [pt.time, ...channels.map((ch) => pt[ch] ?? "")].join(","),
+    );
+    const csv = [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `waveform_${deviceId}_${Date.now()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const handleScreenshot = async () => {
@@ -433,7 +581,6 @@ export function OscilloscopeControl() {
   // Render
   // ---------------------------------------------------------------------------
 
-  const isLocked = !!sessionId;
   const canCommand = isLocked && device?.state !== "OFFLINE";
 
   if (deviceError) {
@@ -463,14 +610,34 @@ export function OscilloscopeControl() {
           </div>
         </div>
 
-        <button
-          onClick={() => sessionId && navigate(`/archive/${sessionId}`)}
-          disabled={!sessionId}
-          className="flex items-center gap-2 px-3 py-1.5 border-2 border-(--lab-border) text-sm text-(--lab-text-secondary) hover:text-(--lab-text-primary) hover:bg-(--lab-panel) rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <Database className="w-4 h-4" />
-          Data Archive
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleExpertMode}
+            title={
+              expertMode ? "Switch to restricted mode" : "Switch to expert mode"
+            }
+            className={`flex items-center gap-2 px-3 py-1.5 border-2 text-sm rounded transition-colors ${
+              expertMode
+                ? "border-(--lab-accent) text-(--lab-accent) bg-white hover:bg-(--lab-accent) hover:text-white"
+                : "border-(--lab-border) text-(--lab-text-secondary) bg-white hover:bg-(--lab-panel) hover:text-(--lab-text-primary)"
+            }`}
+          >
+            {expertMode ? (
+              <Settings className="w-4 h-4" />
+            ) : (
+              <EyeOff className="w-4 h-4" />
+            )}
+            {expertMode ? "Expert" : "Restricted"}
+          </button>
+          <button
+            onClick={() => sessionId && navigate(`/archive/${sessionId}`)}
+            disabled={!sessionId}
+            className="flex items-center gap-2 px-3 py-1.5 border-2 border-(--lab-border) text-sm text-(--lab-text-secondary) hover:text-(--lab-text-primary) hover:bg-(--lab-panel) rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Database className="w-4 h-4" />
+            Data Archive
+          </button>
+        </div>
       </header>
 
       {/* Main layout */}
@@ -508,7 +675,7 @@ export function OscilloscopeControl() {
             )}
           </div>
 
-          {/* Acquisition buttons */}
+          {/* Acquisition */}
           <div className="space-y-2">
             <h3 className="text-xs font-medium text-(--lab-text-secondary) uppercase">
               Acquisition
@@ -516,6 +683,11 @@ export function OscilloscopeControl() {
             <button
               onClick={handleRun}
               disabled={!canCommand}
+              aria-label={
+                isRunning
+                  ? "Running (continuous)"
+                  : "Start continuous acquisition"
+              }
               className={`w-full flex items-center justify-center gap-2 py-3 px-4 border-2 rounded font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                 isRunning
                   ? "bg-(--lab-success) border-(--lab-success) text-white"
@@ -525,9 +697,29 @@ export function OscilloscopeControl() {
               <Play className="w-5 h-5" />
               {isRunning ? "RUNNING" : "RUN"}
             </button>
+
+            {/* FPS slider — visible when running */}
+            {isRunning && (
+              <div className="flex items-center gap-2 px-1">
+                <span className="text-xs text-(--lab-text-secondary) shrink-0">
+                  {fps} FPS
+                </span>
+                <input
+                  type="range"
+                  min={1}
+                  max={10}
+                  value={fps}
+                  onChange={(e) => setFps(Number(e.target.value))}
+                  className="flex-1 accent-(--lab-accent)"
+                  aria-label="Acquisition frame rate"
+                />
+              </div>
+            )}
+
             <button
               onClick={handleStop}
               disabled={!canCommand}
+              aria-label="Stop acquisition"
               className="w-full flex items-center justify-center gap-2 py-3 px-4 border-2 rounded font-semibold bg-white border-(--lab-danger) text-(--lab-danger) hover:bg-(--lab-danger) hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Square className="w-5 h-5" />
@@ -548,7 +740,6 @@ export function OscilloscopeControl() {
             <button
               onClick={() =>
                 withCmdError(async () => {
-                  // Force trigger = stop then run (no dedicated API endpoint)
                   await stopDevice(token!, deviceId!, sessionId!);
                   await runDevice(token!, deviceId!, sessionId!);
                 })
@@ -581,7 +772,7 @@ export function OscilloscopeControl() {
           </div>
 
           {cmdError && (
-            <p className="text-xs text-(--lab-danger) break-words">
+            <p className="text-xs text-(--lab-danger) wrap-break-word">
               {cmdError}
             </p>
           )}
@@ -594,26 +785,40 @@ export function OscilloscopeControl() {
               Waveform Display
             </h2>
             <div className="flex items-center gap-1">
-              {(
-                [
-                  [ZoomIn, "Zoom in"],
-                  [ZoomOut, "Zoom out"],
-                  [Move, "Pan"],
-                  [RotateCcw, "Reset"],
-                ] as const
-              ).map(([Icon, label]) => (
-                <button
-                  key={label}
-                  title={label}
-                  className="p-1.5 border-2 border-(--lab-border) hover:bg-(--lab-panel) rounded text-(--lab-text-secondary) hover:text-(--lab-text-primary)"
-                >
-                  <Icon className="w-4 h-4" />
-                </button>
-              ))}
+              <button
+                title="Zoom in"
+                aria-label="Zoom in"
+                onClick={handleZoomIn}
+                disabled={!waveformData.length}
+                className="p-1.5 border-2 border-(--lab-border) hover:bg-(--lab-panel) rounded text-(--lab-text-secondary) hover:text-(--lab-text-primary) disabled:opacity-40"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </button>
+              <button
+                title="Zoom out"
+                aria-label="Zoom out"
+                onClick={handleZoomOut}
+                disabled={!waveformData.length}
+                className="p-1.5 border-2 border-(--lab-border) hover:bg-(--lab-panel) rounded text-(--lab-text-secondary) hover:text-(--lab-text-primary) disabled:opacity-40"
+              >
+                <ZoomOut className="w-4 h-4" />
+              </button>
+              <button
+                title="Reset zoom"
+                aria-label="Reset zoom"
+                onClick={handleZoomReset}
+                disabled={!xDomain}
+                className="p-1.5 border-2 border-(--lab-border) hover:bg-(--lab-panel) rounded text-(--lab-text-secondary) hover:text-(--lab-text-primary) disabled:opacity-40"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
               <div className="w-0.5 h-4 bg-(--lab-border) mx-1" />
               <button
                 title="Download CSV"
-                className="p-1.5 border-2 border-(--lab-border) hover:bg-(--lab-panel) rounded text-(--lab-text-secondary) hover:text-(--lab-text-primary)"
+                aria-label="Download waveform as CSV"
+                onClick={handleDownloadCsv}
+                disabled={!waveformData.length}
+                className="p-1.5 border-2 border-(--lab-border) hover:bg-(--lab-panel) rounded text-(--lab-text-secondary) hover:text-(--lab-text-primary) disabled:opacity-40"
               >
                 <Download className="w-4 h-4" />
               </button>
@@ -623,12 +828,14 @@ export function OscilloscopeControl() {
             </div>
           </div>
 
-          <div className="flex-1">
+          <div className="flex-1 relative">
             {waveformData.length === 0 ? (
               <div className="w-full h-full border-2 border-(--lab-border) rounded flex items-center justify-center">
                 <p className="text-sm text-(--lab-text-secondary)">
                   {isLocked
-                    ? "Press ACQUIRE to capture waveform data"
+                    ? isRunning
+                      ? "Starting acquisition…"
+                      : "Press RUN or ACQUIRE to capture waveform data"
                     : "Acquire a lock to start"}
                 </p>
               </div>
@@ -636,10 +843,27 @@ export function OscilloscopeControl() {
               <WaveformPlot
                 data={waveformData}
                 enabledChannels={enabledChannels}
+                channelScales={Object.fromEntries(
+                  Object.entries(channelSettings).map(([k, v]) => [
+                    Number(k),
+                    v.scale_v_div,
+                  ]),
+                )}
                 triggerLevel={triggerSettings.level_v}
                 timebase={timebaseLabel}
                 sampleRate={sampleRateLabel}
+                timebaseScaleSDiv={timebaseSettings.scale_s_div}
+                xDomain={xDomain ?? undefined}
               />
+            )}
+            {/* Live indicator */}
+            {isRunning && (
+              <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-white/80 px-2 py-0.5 rounded border border-(--lab-success) pointer-events-none">
+                <span className="w-2 h-2 rounded-full bg-(--lab-success) animate-pulse" />
+                <span className="text-xs font-mono text-(--lab-success)">
+                  LIVE
+                </span>
+              </div>
             )}
           </div>
         </main>
@@ -652,13 +876,19 @@ export function OscilloscopeControl() {
               {(
                 [
                   ["channels", channelsDirty],
-                  ["timebase", timebaseDirty],
-                  ["trigger", triggerDirty],
-                ] as const
+                  ...(expertMode
+                    ? [
+                        ["timebase", timebaseDirty],
+                        ["trigger", triggerDirty],
+                      ]
+                    : []),
+                ] as [string, boolean][]
               ).map(([tab, dirty]) => (
                 <button
                   key={tab}
-                  onClick={() => setActiveTab(tab)}
+                  onClick={() =>
+                    setActiveTab(tab as "channels" | "timebase" | "trigger")
+                  }
                   className={`flex-1 py-3 text-sm font-medium capitalize transition-colors relative ${
                     activeTab === tab
                       ? "text-(--lab-text-primary) border-b-2 border-(--lab-accent)"
@@ -666,7 +896,7 @@ export function OscilloscopeControl() {
                   }`}
                 >
                   {tab}
-                  {dirty && isLocked && (
+                  {dirty && isLocked && expertMode && (
                     <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-(--lab-warning)" />
                   )}
                 </button>
@@ -675,285 +905,42 @@ export function OscilloscopeControl() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* ── Channels ── */}
             {activeTab === "channels" && (
-              <>
-                {([1, 2, 3, 4] as const).map((ch) => {
-                  const color = `var(--ch${ch}-color)`;
-                  const cfg = channelSettings[ch];
-                  if (!cfg) return null;
-                  const probeLabel = cfg.probe_attenuation === 1 ? "1×"
-                    : cfg.probe_attenuation === 10 ? "10×" : "100×";
-
-                  return (
-                    <div
-                      key={ch}
-                      className="border-2 border-(--lab-border) rounded overflow-hidden bg-white"
-                    >
-                      <button
-                        onClick={() =>
-                          setChannelSettings((prev) => ({
-                            ...prev,
-                            [ch]: { ...prev[ch], enabled: !prev[ch].enabled },
-                          }))
-                        }
-                        className="w-full flex items-center justify-between p-3 hover:bg-(--lab-panel) transition-colors"
-                      >
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-3 h-3 rounded-full border-2"
-                            style={{
-                              backgroundColor: cfg.enabled ? color : "#FFFFFF",
-                              borderColor: color,
-                            }}
-                          />
-                          <span className="font-medium text-sm text-(--lab-text-primary)">
-                            CH{ch}
-                          </span>
-                        </div>
-                        <label className="flex items-center gap-2 text-xs text-(--lab-text-secondary)">
-                          <input
-                            type="checkbox"
-                            checked={cfg.enabled}
-                            onChange={() =>
-                              setChannelSettings((prev) => ({
-                                ...prev,
-                                [ch]: { ...prev[ch], enabled: !prev[ch].enabled },
-                              }))
-                            }
-                            className="w-4 h-4 accent-(--lab-accent)"
-                          />
-                          Enable
-                        </label>
-                      </button>
-
-                      {cfg.enabled && (
-                        <div className="px-3 pb-3 space-y-3 border-t-2 border-(--lab-border)">
-                          <div className="pt-3">
-                            <label className="block text-xs text-(--lab-text-secondary) mb-1">
-                              Vertical Scale
-                            </label>
-                            <NumericInput
-                              value={cfg.scale_v_div}
-                              unit="V/div"
-                              onChange={(val) =>
-                                setChannelSettings((prev) => ({
-                                  ...prev,
-                                  [ch]: { ...prev[ch], scale_v_div: val },
-                                }))
-                              }
-                              step={0.5}
-                              min={0.001}
-                              max={10}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-(--lab-text-secondary) mb-1">
-                              Offset
-                            </label>
-                            <NumericInput
-                              value={cfg.offset_v}
-                              unit="V"
-                              onChange={(val) =>
-                                setChannelSettings((prev) => ({
-                                  ...prev,
-                                  [ch]: { ...prev[ch], offset_v: val },
-                                }))
-                              }
-                              step={0.1}
-                              min={-10}
-                              max={10}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-(--lab-text-secondary) mb-1">
-                              Coupling
-                            </label>
-                            <SegmentedControl
-                              options={["AC", "DC", "GND"]}
-                              value={cfg.coupling}
-                              onChange={(val) =>
-                                setChannelSettings((prev) => ({
-                                  ...prev,
-                                  [ch]: { ...prev[ch], coupling: val as "AC" | "DC" | "GND" },
-                                }))
-                              }
-                              className="w-full"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-(--lab-text-secondary) mb-1">
-                              Probe
-                            </label>
-                            <SegmentedControl
-                              options={["1×", "10×", "100×"]}
-                              value={probeLabel}
-                              onChange={(val) =>
-                                setChannelSettings((prev) => ({
-                                  ...prev,
-                                  [ch]: {
-                                    ...prev[ch],
-                                    probe_attenuation:
-                                      val === "1×" ? 1 : val === "10×" ? 10 : 100,
-                                  },
-                                }))
-                              }
-                              className="w-full"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-
-                <button
-                  onClick={handleApplyChannels}
-                  disabled={!isLocked || applyingChannels || !channelsDirty}
-                  className="w-full py-2 px-4 border-2 rounded font-medium text-sm transition-colors border-(--lab-accent) text-(--lab-accent) bg-white hover:bg-(--lab-accent) hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {applyingChannels ? "Applying…" : "Apply Channels"}
-                </button>
-              </>
+              <ChannelsPanel
+                channelSettings={channelSettings}
+                setChannelSettings={setChannelSettings}
+                isLocked={isLocked}
+                applyingChannels={applyingChannels}
+                channelsDirty={channelsDirty}
+                onApply={handleApplyChannels}
+                restrictedMode={!expertMode}
+              />
             )}
-
-            {/* ── Timebase ── */}
             {activeTab === "timebase" && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs text-(--lab-text-secondary) mb-2">
-                    Horizontal Scale
-                  </label>
-                  <select
-                    value={timebaseSettings.scale_s_div}
-                    onChange={(e) =>
-                      setTimebaseSettings((prev) => ({
-                        ...prev,
-                        scale_s_div: Number(e.target.value),
-                      }))
-                    }
-                    className="w-full bg-white border-2 border-(--lab-border) text-(--lab-text-primary) px-3 py-2 text-sm rounded focus:outline-none focus:border-(--lab-accent)"
-                  >
-                    {[
-                      [5e-9,   "5 ns/div"],
-                      [10e-9,  "10 ns/div"],
-                      [20e-9,  "20 ns/div"],
-                      [50e-9,  "50 ns/div"],
-                      [100e-9, "100 ns/div"],
-                      [1e-6,   "1 µs/div"],
-                      [10e-6,  "10 µs/div"],
-                      [100e-6, "100 µs/div"],
-                      [1e-3,   "1 ms/div"],
-                      [10e-3,  "10 ms/div"],
-                      [100e-3, "100 ms/div"],
-                      [1,      "1 s/div"],
-                    ].map(([v, label]) => (
-                      <option key={String(v)} value={Number(v)}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs text-(--lab-text-secondary) mb-1">
-                    Horizontal Offset
-                  </label>
-                  <NumericInput
-                    value={timebaseSettings.offset_s}
-                    unit="s"
-                    onChange={(val) =>
-                      setTimebaseSettings((prev) => ({ ...prev, offset_s: val }))
-                    }
-                    step={0.001}
-                  />
-                </div>
-
-                <button
-                  onClick={handleApplyTimebase}
-                  disabled={!isLocked || applyingTimebase || !timebaseDirty}
-                  className="w-full py-2 px-4 border-2 rounded font-medium text-sm transition-colors border-(--lab-accent) text-(--lab-accent) bg-white hover:bg-(--lab-accent) hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {applyingTimebase ? "Applying…" : "Apply Timebase"}
-                </button>
-              </div>
+              <TimebasePanel
+                timebaseSettings={timebaseSettings}
+                setTimebaseSettings={setTimebaseSettings}
+                isLocked={isLocked}
+                applyingTimebase={applyingTimebase}
+                timebaseDirty={timebaseDirty}
+                onApply={handleApplyTimebase}
+              />
             )}
-
-            {/* ── Trigger ── */}
             {activeTab === "trigger" && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs text-(--lab-text-secondary) mb-2">
-                    Mode
-                  </label>
-                  <SegmentedControl
-                    options={["AUTO", "NORMAL", "SINGLE"]}
-                    value={triggerSettings.mode}
-                    onChange={(val) =>
-                      setTriggerSettings((prev) => ({
-                        ...prev,
-                        mode: val as TriggerConfig["mode"],
-                      }))
-                    }
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-(--lab-text-secondary) mb-2">
-                    Source
-                  </label>
-                  <SegmentedControl
-                    options={["CH1", "CH2", "CH3", "CH4"]}
-                    value={triggerSettings.source}
-                    onChange={(val) =>
-                      setTriggerSettings((prev) => ({ ...prev, source: val }))
-                    }
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-(--lab-text-secondary) mb-2">
-                    Slope
-                  </label>
-                  <SegmentedControl
-                    options={["RISE", "FALL", "EITHER"]}
-                    value={triggerSettings.slope}
-                    onChange={(val) =>
-                      setTriggerSettings((prev) => ({
-                        ...prev,
-                        slope: val as TriggerConfig["slope"],
-                      }))
-                    }
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-(--lab-text-secondary) mb-1">
-                    Level
-                  </label>
-                  <NumericInput
-                    value={triggerSettings.level_v}
-                    unit="V"
-                    onChange={(val) =>
-                      setTriggerSettings((prev) => ({ ...prev, level_v: val }))
-                    }
-                    step={0.1}
-                    min={-10}
-                    max={10}
-                  />
-                </div>
-
-                <button
-                  onClick={handleApplyTrigger}
-                  disabled={!isLocked || applyingTrigger || !triggerDirty}
-                  className="w-full py-2 px-4 border-2 rounded font-medium text-sm transition-colors border-(--lab-accent) text-(--lab-accent) bg-white hover:bg-(--lab-accent) hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {applyingTrigger ? "Applying…" : "Apply Trigger"}
-                </button>
-              </div>
+              <TriggerPanel
+                triggerSettings={triggerSettings}
+                setTriggerSettings={setTriggerSettings}
+                isLocked={isLocked}
+                applyingTrigger={applyingTrigger}
+                triggerDirty={triggerDirty}
+                onApply={handleApplyTrigger}
+              />
             )}
 
             {applyError && (
-              <p className="text-xs text-(--lab-danger) break-words">{applyError}</p>
+              <p className="text-xs text-(--lab-danger) wrap-break-word">
+                {applyError}
+              </p>
             )}
           </div>
         </aside>

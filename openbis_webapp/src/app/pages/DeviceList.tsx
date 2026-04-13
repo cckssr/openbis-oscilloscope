@@ -83,6 +83,17 @@ export function DeviceList() {
           </div>
         )}
 
+        {isLoading && devices.length === 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-28 border-2 border-(--lab-border) rounded bg-white animate-pulse"
+              />
+            ))}
+          </div>
+        )}
+
         {!isLoading && devices.length === 0 && !error && (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <p className="text-(--lab-text-secondary)">No devices available</p>

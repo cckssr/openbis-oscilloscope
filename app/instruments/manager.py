@@ -161,10 +161,6 @@ class InstrumentManager:
         for item in raw.get("oscilloscopes", []):
             driver_path = item.get("driver", "mock")
 
-            # In DEBUG mode, always use mock driver
-            if settings.DEBUG:
-                driver_path = "mock"
-
             cfg = DeviceConfig(
                 id=item["id"],
                 ip=item["ip"],

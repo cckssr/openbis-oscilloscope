@@ -1,5 +1,7 @@
 """API endpoints for device listing, lock management, and instrument commands."""
 
+import asyncio
+import time
 import uuid
 
 from fastapi import APIRouter, Depends, Request
@@ -799,3 +801,99 @@ async def get_screenshot(
 
     png_bytes = await manager.execute_command(device_id, _screenshot, timeout=15.0)
     return Response(content=png_bytes, media_type="image/png")
+
+
+@router.get("/{device_id}/probe", response_model=dict)
+async def probe_device(
+    device_id: str,
+    request: Request,
+    user: UserInfo = Depends(get_current_user),
+) -> dict:
+    """Run a step-by-step connectivity diagnostic for a device.
+
+    Does **not** require holding the lock and does not affect device state.
+    Tests TCP reachability, driver instantiation, and ``*IDN?`` identification
+    in sequence and reports the result (and any error) for each step.
+
+    Args:
+        device_id: Path parameter identifying the target device.
+        request: The current HTTP request.
+        user: The authenticated user.
+
+    Returns:
+        A dict with fields:
+
+        - ``device_id``, ``ip``, ``port``, ``driver_class``, ``current_state``
+        - ``tcp_reachable`` (bool), ``tcp_latency_ms`` (float or null)
+        - ``driver_connect`` (bool or null), ``driver_connect_error`` (str or null)
+        - ``identify`` (bool or null), ``identify_result`` (str or null), ``identify_error`` (str or null)
+
+    Raises:
+        DeviceNotFoundError: If ``device_id`` is not registered.
+    """
+    from app.instruments.manager import _load_driver_class
+
+    manager, _ = _get_services(request)
+    try:
+        entry = manager.get_device(device_id)
+    except KeyError as e:
+        raise DeviceNotFoundError(device_id) from e
+
+    result: dict = {
+        "device_id": device_id,
+        "ip": entry.config.ip,
+        "port": entry.config.port,
+        "driver_class": entry.config.driver_class_path,
+        "current_state": entry.state.value,
+        "tcp_reachable": None,
+        "tcp_latency_ms": None,
+        "tcp_error": None,
+        "driver_connect": None,
+        "driver_connect_error": None,
+        "identify": None,
+        "identify_result": None,
+        "identify_error": None,
+    }
+
+    # Step 1 — TCP reachability
+    t0 = time.monotonic()
+    try:
+        _, writer = await asyncio.wait_for(
+            asyncio.open_connection(entry.config.ip, entry.config.port),
+            timeout=5.0,
+        )
+        writer.close()
+        await writer.wait_closed()
+        result["tcp_reachable"] = True
+        result["tcp_latency_ms"] = round((time.monotonic() - t0) * 1000, 1)
+    except Exception as exc:
+        result["tcp_reachable"] = False
+        result["tcp_error"] = str(exc)
+        return result
+
+    # Step 2 — Driver connect (temporary driver; does not touch entry.driver)
+    try:
+        driver_class = _load_driver_class(entry.config.driver_class_path)
+        tmp_driver = driver_class(ip=entry.config.ip, port=entry.config.port)
+        tmp_driver.connect()
+        result["driver_connect"] = True
+    except Exception as exc:
+        result["driver_connect"] = False
+        result["driver_connect_error"] = str(exc)
+        return result
+
+    # Step 3 — *IDN?
+    try:
+        info = tmp_driver.identify()
+        result["identify"] = True
+        result["identify_result"] = info.idn
+    except Exception as exc:
+        result["identify"] = False
+        result["identify_error"] = str(exc)
+    finally:
+        try:
+            tmp_driver.disconnect()
+        except Exception:
+            pass
+
+    return result

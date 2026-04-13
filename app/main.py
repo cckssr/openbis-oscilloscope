@@ -74,10 +74,12 @@ async def lifespan(app: FastAPI):
     buffer_service = BufferService()
     openbis_client = OpenBISClient()
 
-    # In DEBUG mode pre-connect mock drivers
-    if settings.DEBUG:
-        await instrument_manager.startup()
-        for device_id, _ in instrument_manager.devices.items():
+    await instrument_manager.startup()
+
+    # Pre-connect mock devices immediately (they have no real network endpoint,
+    # so the health monitor skips them; we set them ONLINE here instead).
+    for device_id, entry in instrument_manager.devices.items():
+        if entry.config.driver_class_path == "mock":
             try:
                 driver = instrument_manager.instantiate_driver(device_id)
                 driver.connect()
@@ -85,13 +87,12 @@ async def lifespan(app: FastAPI):
                 logger.info("Mock device %s connected", device_id)
             except Exception as exc:
                 logger.error("Failed to init mock device %s: %s", device_id, exc)
-    else:
-        await instrument_manager.startup()
 
-    # Health monitor
+    # Health monitor — always started; skips mock devices internally.
+    # Real devices are checked via TCP even in DEBUG mode so their state
+    # reflects actual hardware reachability.
     health_monitor = HealthMonitor(instrument_manager)
-    if not settings.DEBUG:
-        await health_monitor.start()
+    await health_monitor.start()
 
     # Scheduler
     scheduler = create_scheduler(lock_service, instrument_manager)

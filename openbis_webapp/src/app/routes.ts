@@ -12,8 +12,15 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return createElement(
       "div",
-      { className: "min-h-screen bg-(--lab-bg) flex items-center justify-center" },
-      createElement("span", { className: "text-sm text-(--lab-text-secondary)" }, "Loading…"),
+      {
+        className:
+          "min-h-screen bg-(--lab-bg) flex items-center justify-center",
+      },
+      createElement(
+        "span",
+        { className: "text-sm text-(--lab-text-secondary)" },
+        "Loading…",
+      ),
     );
   }
   if (!token) return createElement(Navigate, { to: "/login", replace: true });
@@ -31,7 +38,11 @@ export const router = createBrowserRouter([
   },
   {
     path: "/device/:deviceId",
-    element: createElement(RequireAuth, null, createElement(OscilloscopeControl)),
+    element: createElement(
+      RequireAuth,
+      null,
+      createElement(OscilloscopeControl),
+    ),
   },
   {
     path: "/archive/:sessionId",

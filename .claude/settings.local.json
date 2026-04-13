@@ -2,6 +2,7 @@
   "permissions": {
     "allow": [
       "Bash(python3 -m py_compile:*)",
+      "Bash(source .venv/bin/activate:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(.venv/bin/pytest:*)",

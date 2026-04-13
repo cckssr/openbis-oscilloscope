@@ -58,16 +58,18 @@ class HealthMonitor:
                 pass
 
     async def _run(self) -> None:
-        """Main loop: sleep then check every device in sequence.
+        """Main loop: check every device immediately, then repeat on interval.
 
         Runs indefinitely until cancelled. Any unexpected exception inside
         :meth:`_check_device` is caught and logged so the loop keeps running.
+        The first pass runs without delay so real devices show their actual
+        state as soon as the application is ready.
         """
         while True:
             try:
-                await asyncio.sleep(settings.HEALTH_CHECK_INTERVAL_SECONDS)
                 for device_id in list(self._manager.devices.keys()):
                     await self._check_device(device_id)
+                await asyncio.sleep(settings.HEALTH_CHECK_INTERVAL_SECONDS)
             except asyncio.CancelledError:
                 break
             except Exception as exc:
@@ -87,11 +89,22 @@ class HealthMonitor:
         if entry is None:
             return
 
+        # Mock devices are always considered connected — skip health check
+        if entry.config.driver_class_path == "mock":
+            return
+
         # Skip if actively busy — don't interfere with ongoing commands
         if entry.state == DeviceState.BUSY:
             return
 
         reachable = await self._tcp_reachable(entry.config.ip, entry.config.port)
+        logger.debug(
+            "TCP check %s:%d → %s (state=%s)",
+            entry.config.ip,
+            entry.config.port,
+            "reachable" if reachable else "unreachable",
+            entry.state.value,
+        )
         prev_state = entry.state
 
         if reachable:
@@ -135,7 +148,7 @@ class HealthMonitor:
                 self._manager.update_state(device_id, DeviceState.OFFLINE)
 
     @staticmethod
-    async def _tcp_reachable(ip: str, port: int, timeout: float = 2.0) -> bool:
+    async def _tcp_reachable(ip: str, port: int, timeout: float | None = None) -> bool:
         """Attempt a TCP connection to test whether a host is reachable.
 
         Args:
@@ -147,9 +160,10 @@ class HealthMonitor:
             ``True`` if the connection was established (and then immediately
             closed), ``False`` if it timed out or raised any exception.
         """
+        effective_timeout = timeout if timeout is not None else settings.HEALTH_CHECK_TCP_TIMEOUT_SECONDS
         try:
             _, writer = await asyncio.wait_for(
-                asyncio.open_connection(ip, port), timeout=timeout
+                asyncio.open_connection(ip, port), timeout=effective_timeout
             )
             writer.close()
             await writer.wait_closed()

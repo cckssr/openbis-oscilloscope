@@ -6,9 +6,9 @@ oscilloscopes:
     label: "Mock Scope (debug)"
     driver: "mock"
 
-  # Rigol DS1000Z series over LAN – uncomment and set the correct IP to use real hardware
-  # - id: "rigol-01"
-  #   ip: "192.168.1.100"
-  #   port: 5025
-  #   label: "Rigol DS1054Z"
-  #   driver: "drivers.RigolDS1000.RigolDS1000"
+  # Rigol DS1000Z series over LAN
+  - id: "E59240"
+    ip: "141.23.109.35"
+    port: 111
+    label: "Rigol DS1104Z-Plus (E59240)"
+    driver: "drivers.RigolDS1000.RigolDS1000Driver"

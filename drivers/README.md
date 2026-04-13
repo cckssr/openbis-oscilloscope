@@ -4,10 +4,10 @@ This directory contains the custom driver(s) for your oscilloscope model. Driver
 
 ## Available drivers
 
-| File                 | Class         | Hardware                                                                                                                    |
-| -------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `RigolDS1000.py`     | `RigolDS1000` | Rigol DS1000Z series (DS1054Z, DS1074Z, DS1104Z, MSO variants). Uses PyMeasure's `RigolDS1000ZSeries` over TCP socket VISA. |
-| `my_oscilloscope.py` | —             | Annotated stub — copy this to add a new driver.                                                                             |
+| File                 | Class         | Hardware                                                                                                                                    |
+| -------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RigolDS1000.py`     | `RigolDS1000` | Rigol DS1000Z series (DS1054Z, DS1074Z, DS1104Z, MSO variants). Full read/write driver using PyMeasure over VXI-11 (`TCPIP::ip::INSTR`). Set `port: 111` in the YAML (VXI-11 portmapper). |
+| `my_oscilloscope.py` | —             | Annotated stub — copy this to add a new driver.                                                                                             |
 
 ---
 
