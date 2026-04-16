@@ -4,7 +4,7 @@ import asyncio
 import time
 import uuid
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import Response
 
 from app.core.dependencies import get_current_user
@@ -381,6 +381,7 @@ async def acquire(
     device_id: str,
     session_id: str,
     request: Request,
+    channels: list[int] | None = Query(default=None),
     user: UserInfo = Depends(get_current_user),
 ) -> dict:
     """Acquire waveforms from all enabled channels and capture a screenshot.
@@ -422,36 +423,51 @@ async def acquire(
     driver = entry.driver
 
     async def _acquire():
-        meta = driver.get_all_settings()
         artifact_ids = []
+        acquired_channels = []
 
-        # Acquire all enabled channels
-        for ch in range(1, 5):
+        channel_list = channels if channels else range(1, 5)
+        for ch in channel_list:
             try:
-                cfg = driver.get_channel_config(ch)
-                if not cfg.enabled:
+                # Fast pre-screen: single DISPlay? query (1 SCPI round-trip).
+                # Skips the 4 extra queries that get_channel_config() would make
+                # for channels that are disabled on the scope.
+                if not driver.get_channel_enabled(ch):
                     continue
+                cfg = driver.get_channel_config(ch)
+                waveform = driver.acquire_waveform(ch)
             except Exception:
                 continue
 
-            waveform = driver.acquire_waveform(ch)
+            meta = {
+                "channel": waveform.channel,
+                "sample_rate": waveform.sample_rate,
+                "record_length": waveform.record_length,
+                "unit_x": waveform.unit_x,
+                "unit_y": waveform.unit_y,
+                "scale_v_div": cfg.scale_v_div,
+            }
             art_id = buffer_service.store_waveform(
                 device_id, session_id, waveform, meta
             )
             artifact_ids.append(art_id)
+            acquired_channels.append({
+                "channel": ch,
+                "enabled": cfg.enabled,
+                "scale_v_div": cfg.scale_v_div,
+                "offset_v": cfg.offset_v,
+                "coupling": cfg.coupling,
+                "probe_attenuation": cfg.probe_attenuation,
+            })
 
-        # Also capture screenshot
-        try:
-            png_bytes = driver.get_screenshot()
-            shot_id = buffer_service.store_screenshot(device_id, session_id, png_bytes)
-            artifact_ids.append(shot_id)
-        except Exception:
-            pass
+        return {"artifact_ids": artifact_ids, "channels": acquired_channels}
 
-        return artifact_ids
-
-    artifact_ids = await manager.execute_command(device_id, _acquire, timeout=60.0)
-    return {"artifact_ids": artifact_ids, "session_id": session_id}
+    result = await manager.execute_command(device_id, _acquire, timeout=60.0)
+    return {
+        "artifact_ids": result["artifact_ids"],
+        "session_id": session_id,
+        "channels": result["channels"],
+    }
 
 
 @router.get("/{device_id}/channels/{channel}/data", response_model=dict)

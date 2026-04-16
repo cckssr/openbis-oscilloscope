@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     BUFFER_DIR: str = "./buffer"
     OSCILLOSCOPES_CONFIG: str = "./config/oscilloscopes.yaml"
     LOCK_TTL_SECONDS: int = 1800
-    HEALTH_CHECK_INTERVAL_SECONDS: int = 5
+    HEALTH_CHECK_INTERVAL_SECONDS: int = 20
     HEALTH_CHECK_TCP_TIMEOUT_SECONDS: float = 2.0
     TOKEN_CACHE_SECONDS: int = 60
     EOD_RESET_TIMEZONE: str = "Europe/Berlin"

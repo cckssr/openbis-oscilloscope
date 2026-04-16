@@ -136,6 +136,22 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
         """
         return self.instrument.get_display_data()
 
+    def get_channel_enabled(self, channel: int) -> bool:
+        """Return whether a channel is enabled using a single SCPI query.
+
+        Overrides the base-class default to avoid reading scale, offset,
+        coupling, and probe — saving four round-trips per disabled channel
+        during acquire pre-screening.
+
+        Args:
+            channel: 1-based channel number (1–4).
+
+        Returns:
+            ``True`` if the channel display is on, ``False`` otherwise.
+        """
+        ch = getattr(self.instrument, f"ch{channel}")
+        return bool(ch.is_enabled)
+
     def get_channel_config(self, channel: int) -> ChannelConfig:
         """Return the current configuration for the specified input channel.
 

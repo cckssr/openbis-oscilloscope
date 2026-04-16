@@ -21,7 +21,9 @@ Abstract base class every driver must subclass, plus the data classes used as re
 **Abstract methods every driver must implement:**
 `connect()`, `disconnect()`, `identify()`, `run()`, `stop()`, `acquire_waveform(channel)`, `get_screenshot()`, `get_channel_config(channel)`, `get_timebase()`, `get_trigger()`, `set_channel_config(channel, config)`, `set_timebase(config)`, `set_trigger(config)`
 
-`get_all_settings()` is provided by the base class — it assembles a metadata dict from the above methods automatically.
+**Non-abstract methods provided by the base class:**
+- `get_all_settings()` — assembles a full metadata dict from the abstract methods above.
+- `get_channel_enabled(channel) -> bool` — default calls `get_channel_config()`. Override in hardware drivers with a single lightweight query (e.g. `:CHANnelN:DISPlay?`) to avoid 4 unnecessary SCPI round-trips per disabled channel during acquire pre-screening.
 
 ---
 

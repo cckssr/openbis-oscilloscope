@@ -23,7 +23,7 @@ All FastAPI routers. Each file is a single router mounted in `app/main.py`.
 | POST   | `/devices/{device_id}/heartbeat`          | Bearer | Own lock    | Renew lock TTL (`?session_id=`).                                   |
 | POST   | `/devices/{device_id}/run`                | Bearer | Own lock    | Start continuous acquisition (`?session_id=`).                     |
 | POST   | `/devices/{device_id}/stop`               | Bearer | Own lock    | Stop acquisition (`?session_id=`).                                 |
-| POST   | `/devices/{device_id}/acquire`            | Bearer | Own lock    | Capture all enabled channels + screenshot. Returns `artifact_ids`. |
+| POST   | `/devices/{device_id}/acquire`            | Bearer | Own lock    | Capture waveforms. Optional `?channels=1&channels=3` limits which channels are queried; omit to probe all four. Returns `artifact_ids`, `session_id`, and `channels` (list of `{channel, enabled, scale_v_div, offset_v, coupling, probe_attenuation}` for each acquired channel). |
 | GET    | `/devices/{device_id}/channels/{ch}/data` | Bearer | Own lock    | Latest waveform for channel as JSON `{time_s, voltage_V}` arrays.  |
 | GET    | `/devices/{device_id}/screenshot`         | Bearer | Own lock    | Live screenshot as `image/png`.                                    |
 | GET    | `/devices/{device_id}/settings`           | Bearer | —           | All channel configs, timebase, and trigger as a single snapshot.   |
