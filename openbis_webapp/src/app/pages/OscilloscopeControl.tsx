@@ -28,6 +28,7 @@ import type {
   ChannelConfig,
   TimebaseConfig,
   TriggerConfig,
+  AcquiredChannel,
 } from "../../api/types";
 import {
   ArrowLeft,
@@ -35,9 +36,6 @@ import {
   Square,
   Zap,
   Camera,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw,
   Download,
   Lock,
   Unlock,
@@ -101,9 +99,6 @@ function formatTimebase(sPerDiv: number): string {
 
 const HEARTBEAT_INTERVAL_MS = 4 * 60 * 1000;
 
-/** Zoom step: each click shrinks/expands the visible window by this fraction. */
-const ZOOM_STEP = 0.25;
-
 const DEFAULT_CHANNEL_CFG: ChannelConfig = {
   enabled: false,
   scale_v_div: 1.0,
@@ -130,16 +125,20 @@ export function OscilloscopeControl() {
   const [isAcquiring, setIsAcquiring] = useState(false); // for UI rendering only
   const [cmdError, setCmdError] = useState<string | null>(null);
   const [waveformData, setWaveformData] = useState<PlotPoint[]>([]);
+  // Full channel configs from the last acquire response — drives UI sync and plot
+  const [acquiredChannels, setAcquiredChannels] = useState<AcquiredChannel[]>([]);
+  // Which acquired channels are currently visible in the plot (independent of scope enable state)
+  const [visibleChannels, setVisibleChannels] = useState<Set<number>>(new Set());
   const [timebaseLabel, setTimebaseLabel] = useState("Timebase: —");
   const [sampleRateLabel, setSampleRateLabel] = useState("Sample rate: —");
+  const [actualTimebaseScaleSDiv, setActualTimebaseScaleSDiv] = useState<number>(1e-3);
 
   // Continuous acquisition: interval handle and user-selected FPS (1–10)
   const runLoopRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [fps, setFps] = useState(2);
 
-  // Zoom domain: null = full scope window
-  const [xDomain, setXDomain] = useState<[number, number] | null>(null);
-  const fullXDomainRef = useRef<[number, number] | null>(null); // scope-window extent for zoom reset
+  // tStart of the most recently acquired waveform (kept for reference)
+  const tStartRef = useRef<number>(0);
 
   const [activeTab, setActiveTab] = useState<
     "channels" | "timebase" | "trigger"
@@ -385,23 +384,6 @@ export function OscilloscopeControl() {
     }
   };
 
-  // In restricted mode, auto-apply channel settings whenever they change
-  const restrictedApplyingRef = useRef(false);
-  useEffect(() => {
-    if (
-      expertMode ||
-      !isLocked ||
-      !channelsDirty ||
-      restrictedApplyingRef.current
-    )
-      return;
-    restrictedApplyingRef.current = true;
-    handleApplyChannels().finally(() => {
-      restrictedApplyingRef.current = false;
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channelSettings, expertMode, isLocked]);
-
   // ---------------------------------------------------------------------------
   // Instrument commands (require lock)
   // ---------------------------------------------------------------------------
@@ -434,33 +416,54 @@ export function OscilloscopeControl() {
     setIsAcquiring(true);
     setCmdError(null);
     try {
-      await acquireWaveforms(token, deviceId, sessionId);
-      const channelDataMap: Record<number, WaveformData> = {};
+      // Let the scope decide which channels are enabled — don't filter by UI state
+      const acquireResp = await acquireWaveforms(token, deviceId, sessionId);
+      setAcquiredChannels(acquireResp.channels);
+
+      // Sync channelSettings from scope's actual state (scope is authoritative).
+      // Start by marking all channels as disabled, then overlay what was acquired.
+      // This ensures channels absent from the acquire response (disabled on scope)
+      // are correctly reflected in the UI even if they were enabled in the old state.
+      const acquiredNums = new Set(acquireResp.channels.map((c) => c.channel));
+      const syncedSettings: Record<number, ChannelConfig> = {};
       for (let ch = 1; ch <= 4; ch++) {
-        if (!channelSettings[ch]?.enabled) continue; // only fetch enabled channels
-        try {
-          channelDataMap[ch] = await getChannelData(
-            token,
-            deviceId,
-            ch,
-            sessionId,
-          );
-        } catch {
-          // 404 = no trace yet — skip silently
-        }
+        syncedSettings[ch] = {
+          ...(channelSettings[ch] ?? DEFAULT_CHANNEL_CFG),
+          enabled: acquiredNums.has(ch),
+        };
       }
+      for (const ac of acquireResp.channels) {
+        syncedSettings[ac.channel] = {
+          enabled: ac.enabled,
+          scale_v_div: ac.scale_v_div,
+          offset_v: ac.offset_v,
+          coupling: ac.coupling,
+          probe_attenuation: ac.probe_attenuation,
+        };
+      }
+      setChannelSettings(syncedSettings);
+      setAppliedChannels(syncedSettings);
+
+      // Show all acquired channels; user can hide individual ones without re-acquiring
+      setVisibleChannels(new Set(acquireResp.channels.map((c) => c.channel)));
+
+      // Fetch all channel waveforms in parallel
+      const results = await Promise.all(
+        acquireResp.channels.map(({ channel: ch }) =>
+          getChannelData(token, deviceId, ch, sessionId).catch(() => null),
+        ),
+      );
+      const channelDataMap: Record<number, WaveformData> = {};
+      for (let i = 0; i < acquireResp.channels.length; i++) {
+        const d = results[i];
+        if (d) channelDataMap[acquireResp.channels[i].channel] = d;
+      }
+
       const plot = buildPlotData(channelDataMap);
       setWaveformData(plot);
 
-      // Store scope-window extent for zoom reset (based on settings, not data extremes)
       if (plot.length > 0) {
-        const tStart = plot[0].time;
-        fullXDomainRef.current = [
-          tStart,
-          tStart + timebaseSettings.scale_s_div * 10,
-        ];
-        // Preserve any active zoom; only keep null if already unzoomed
-        setXDomain((prev) => (prev === null ? null : prev));
+        tStartRef.current = plot[0].time;
       }
 
       const firstData = Object.values(channelDataMap)[0];
@@ -470,7 +473,9 @@ export function OscilloscopeControl() {
         setSampleRateLabel(`Sample rate: ${formatSampleRate(sr)}`);
         const totalTime =
           firstData.time_s[firstData.time_s.length - 1] - firstData.time_s[0];
-        setTimebaseLabel(`Timebase: ${formatTimebase(totalTime / 10)}`);
+        const actualScale = totalTime / 10;
+        setActualTimebaseScaleSDiv(actualScale);
+        setTimebaseLabel(`Timebase: ${formatTimebase(actualScale)}`);
       }
     } catch (err) {
       setCmdError(err instanceof ApiError ? err.message : "Acquire failed");
@@ -502,37 +507,15 @@ export function OscilloscopeControl() {
   }, [isRunning, fps, sessionId]);
 
   // ---------------------------------------------------------------------------
-  // Zoom helpers
+  // Channel visibility (hide/show trace without touching scope state)
   // ---------------------------------------------------------------------------
 
-  const handleZoomIn = () => {
-    const full = fullXDomainRef.current;
-    if (!full) return;
-    setXDomain((prev) => {
-      const [lo, hi] = prev ?? full;
-      const mid = (lo + hi) / 2;
-      const half = ((hi - lo) / 2) * (1 - ZOOM_STEP);
-      return [mid - half, mid + half];
+  const toggleChannelVisibility = (ch: number) =>
+    setVisibleChannels((prev) => {
+      const next = new Set(prev);
+      next.has(ch) ? next.delete(ch) : next.add(ch);
+      return next;
     });
-  };
-
-  const handleZoomOut = () => {
-    const full = fullXDomainRef.current;
-    if (!full) return;
-    setXDomain((prev) => {
-      const [lo, hi] = prev ?? full;
-      const mid = (lo + hi) / 2;
-      const half = ((hi - lo) / 2) * (1 + ZOOM_STEP);
-      // Clamp to full data range
-      const newLo = Math.max(full[0], mid - half);
-      const newHi = Math.min(full[1], mid + half);
-      // If we've zoomed all the way out, go back to auto
-      if (newLo <= full[0] && newHi >= full[1]) return null;
-      return [newLo, newHi];
-    });
-  };
-
-  const handleZoomReset = () => setXDomain(null);
 
   // ---------------------------------------------------------------------------
   // CSV download
@@ -784,35 +767,39 @@ export function OscilloscopeControl() {
             <h2 className="text-sm font-medium text-(--lab-text-secondary)">
               Waveform Display
             </h2>
-            <div className="flex items-center gap-1">
-              <button
-                title="Zoom in"
-                aria-label="Zoom in"
-                onClick={handleZoomIn}
-                disabled={!waveformData.length}
-                className="p-1.5 border-2 border-(--lab-border) hover:bg-(--lab-panel) rounded text-(--lab-text-secondary) hover:text-(--lab-text-primary) disabled:opacity-40"
-              >
-                <ZoomIn className="w-4 h-4" />
-              </button>
-              <button
-                title="Zoom out"
-                aria-label="Zoom out"
-                onClick={handleZoomOut}
-                disabled={!waveformData.length}
-                className="p-1.5 border-2 border-(--lab-border) hover:bg-(--lab-panel) rounded text-(--lab-text-secondary) hover:text-(--lab-text-primary) disabled:opacity-40"
-              >
-                <ZoomOut className="w-4 h-4" />
-              </button>
-              <button
-                title="Reset zoom"
-                aria-label="Reset zoom"
-                onClick={handleZoomReset}
-                disabled={!xDomain}
-                className="p-1.5 border-2 border-(--lab-border) hover:bg-(--lab-panel) rounded text-(--lab-text-secondary) hover:text-(--lab-text-primary) disabled:opacity-40"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
-              <div className="w-0.5 h-4 bg-(--lab-border) mx-1" />
+            <div className="flex items-center gap-2">
+              {/* Per-channel visibility toggles — shown once data is acquired */}
+              {acquiredChannels.length > 0 && (
+                <div className="flex items-center gap-1">
+                  {acquiredChannels.map((ac) => {
+                    const isVisible = visibleChannels.has(ac.channel);
+                    const colors = ["#FACC15", "#00BFFF", "#FF6B6B", "#7CFC00"];
+                    const color = colors[ac.channel - 1] ?? "#6B7280";
+                    return (
+                      <button
+                        key={ac.channel}
+                        title={`${isVisible ? "Hide" : "Show"} CH${ac.channel}`}
+                        aria-label={`${isVisible ? "Hide" : "Show"} channel ${ac.channel}`}
+                        onClick={() => toggleChannelVisibility(ac.channel)}
+                        className="flex items-center gap-1 px-1.5 py-1 border-2 border-(--lab-border) rounded text-xs font-mono hover:bg-(--lab-panel) transition-colors"
+                        style={{ opacity: isVisible ? 1 : 0.4 }}
+                      >
+                        <span
+                          className="w-2.5 h-2.5 rounded-full inline-block"
+                          style={{ backgroundColor: color }}
+                        />
+                        {isVisible ? (
+                          <EyeOff className="w-3 h-3 text-(--lab-text-secondary)" />
+                        ) : (
+                          <EyeOff className="w-3 h-3 text-(--lab-text-secondary)" />
+                        )}
+                        CH{ac.channel}
+                      </button>
+                    );
+                  })}
+                  <div className="w-0.5 h-4 bg-(--lab-border) mx-0.5" />
+                </div>
+              )}
               <button
                 title="Download CSV"
                 aria-label="Download waveform as CSV"
@@ -822,9 +809,7 @@ export function OscilloscopeControl() {
               >
                 <Download className="w-4 h-4" />
               </button>
-              <span className="text-xs text-(--lab-text-secondary) ml-1">
-                CSV
-              </span>
+              <span className="text-xs text-(--lab-text-secondary)">CSV</span>
             </div>
           </div>
 
@@ -842,18 +827,20 @@ export function OscilloscopeControl() {
             ) : (
               <WaveformPlot
                 data={waveformData}
-                enabledChannels={enabledChannels}
+                enabledChannels={{
+                  ch1: visibleChannels.has(1),
+                  ch2: visibleChannels.has(2),
+                  ch3: visibleChannels.has(3),
+                  ch4: visibleChannels.has(4),
+                }}
                 channelScales={Object.fromEntries(
-                  Object.entries(channelSettings).map(([k, v]) => [
-                    Number(k),
-                    v.scale_v_div,
-                  ]),
+                  acquiredChannels.map((c) => [c.channel, c.scale_v_div]),
                 )}
                 triggerLevel={triggerSettings.level_v}
+                triggerTime={timebaseSettings.offset_s}
                 timebase={timebaseLabel}
                 sampleRate={sampleRateLabel}
-                timebaseScaleSDiv={timebaseSettings.scale_s_div}
-                xDomain={xDomain ?? undefined}
+                timebaseScaleSDiv={actualTimebaseScaleSDiv}
               />
             )}
             {/* Live indicator */}

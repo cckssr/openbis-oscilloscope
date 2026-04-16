@@ -1,12 +1,10 @@
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-} from "recharts";
+import PlotlyReact from "react-plotly.js";
+// react-plotly.js ships CJS; under Vite's ESM transform the component may land
+// on `.default` depending on how the bundle is pre-optimised.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const Plot = ((PlotlyReact as any).default ??
+  PlotlyReact) as typeof PlotlyReact;
+import type { Layout, Shape, Data } from "plotly.js";
 
 interface WaveformPlotProps {
   data: Array<{
@@ -22,18 +20,18 @@ interface WaveformPlotProps {
     ch3: boolean;
     ch4: boolean;
   };
-  channelScales?: Record<number, number>; // scale_v_div per channel
+  channelScales?: Record<number, number>;
   triggerLevel?: number;
+  triggerTime?: number;
   timebase: string;
   sampleRate: string;
-  /** Timebase setting from the scope in seconds/division. Used to compute grid. */
   timebaseScaleSDiv: number;
-  /** Current x-axis domain [min, max] for zoom; undefined = full scope window */
-  xDomain?: [number, number];
 }
 
-const NUM_X_DIVS = 10; // oscilloscope horizontal divisions
-const NUM_Y_DIVS = 8;  // oscilloscope vertical divisions
+const NUM_X_DIVS = 10;
+const NUM_Y_DIVS = 8;
+
+const CHANNEL_COLORS = ["#FACC15", "#00BFFF", "#FF6B6B", "#7CFC00"];
 
 function formatTimeLabel(s: number): string {
   const abs = Math.abs(s);
@@ -49,165 +47,171 @@ export function WaveformPlot({
   enabledChannels,
   channelScales,
   triggerLevel,
+  triggerTime,
   timebase,
   sampleRate,
   timebaseScaleSDiv,
-  xDomain,
 }: WaveformPlotProps) {
-  const channelColors = [
-    "var(--ch1-color)",
-    "var(--ch2-color)",
-    "var(--ch3-color)",
-    "var(--ch4-color)",
-  ];
   const channels = ["ch1", "ch2", "ch3", "ch4"] as const;
 
-  // --- X axis: scope-driven, always 10 divisions wide ---
-  // Anchor to the first data point so the grid stays locked to the waveform.
+  // --- X axis: full scope window ---
   const tStart = data.length ? data[0].time : 0;
   const tEnd = tStart + timebaseScaleSDiv * NUM_X_DIVS;
-  // 11 tick lines at each division boundary (0, 1×, 2×, ..., 10×)
-  const xTicksFull = Array.from(
+  const xRange: [number, number] = [tStart, tEnd];
+  const xStep = (xRange[1] - xRange[0]) / NUM_X_DIVS;
+  const xTicks = Array.from(
     { length: NUM_X_DIVS + 1 },
-    (_, i) => tStart + i * timebaseScaleSDiv,
+    (_, i) => xRange[0] + i * xStep,
   );
-  // Zoomed domain or full scope window; recharts auto-filters xTicksFull to the visible range
-  const xDomainResolved: [number, number] = xDomain ?? [tStart, tEnd];
 
-  // --- Y axis: scope-driven, 8 divisions centred on 0 V ---
-  // Use the largest enabled channel's V/div so the grid covers all traces.
+  // --- Y axis: 8 divisions centred on 0 V ---
   const enabledScales = Object.entries(channelScales ?? {})
     .filter(([k]) => enabledChannels[`ch${k}` as keyof typeof enabledChannels])
     .map(([, v]) => v);
   const maxScale = enabledScales.length ? Math.max(...enabledScales) : 1.0;
-  const yHalf = (NUM_Y_DIVS / 2) * maxScale; // 4 × maxScale
+  const yHalf = (NUM_Y_DIVS / 2) * maxScale;
   const yMin = -yHalf;
   const yMax = yHalf;
-  // 9 tick lines: -4div, -3div, ..., 0, ..., +4div
+  const yStep = (yMax - yMin) / NUM_Y_DIVS;
   const yTicks = Array.from(
     { length: NUM_Y_DIVS + 1 },
-    (_, i) => yMin + i * maxScale,
+    (_, i) => yMin + i * yStep,
   );
 
-  const lines = channels
-    .map((channel, index) => {
-      if (!enabledChannels[channel]) return null;
-      return (
-        <Line
-          key={channel}
-          type="monotone"
-          dataKey={channel}
-          stroke={channelColors[index]}
-          strokeWidth={2}
-          dot={false}
-          isAnimationActive={false}
-        />
-      );
+  // Build one Plotly trace per enabled channel
+  const traces: Data[] = channels
+    .map((ch, i): Data | null => {
+      if (!enabledChannels[ch]) return null;
+      const xs: number[] = [];
+      const ys: number[] = [];
+      const timeLabels: string[] = [];
+      for (const pt of data) {
+        const v = pt[ch];
+        if (v === undefined) continue;
+        xs.push(pt.time);
+        ys.push(v);
+        timeLabels.push(formatTimeLabel(pt.time));
+      }
+      return {
+        x: xs,
+        y: ys,
+        customdata: timeLabels,
+        type: "scatter",
+        mode: "lines",
+        name: `CH${i + 1}`,
+        line: { color: CHANNEL_COLORS[i], width: 2 },
+        hovertemplate: `<b>CH${i + 1}</b><br>%{y:.4f} V<extra></extra>`,
+      } as Data;
     })
-    .filter(Boolean);
+    .filter((t): t is Data => t !== null);
+
+  // Trigger reference lines as Plotly shapes
+  const shapes: Partial<Shape>[] = [];
+  if (triggerLevel !== undefined) {
+    shapes.push({
+      type: "line",
+      xref: "paper",
+      yref: "y",
+      x0: 0,
+      x1: 1,
+      y0: triggerLevel,
+      y1: triggerLevel,
+      line: { color: "#F59E0B", width: 1, dash: "dash" },
+    });
+  }
+  if (triggerTime !== undefined) {
+    shapes.push({
+      type: "line",
+      xref: "x",
+      yref: "paper",
+      x0: triggerTime,
+      x1: triggerTime,
+      y0: 0,
+      y1: 1,
+      line: { color: "#F59E0B", width: 1, dash: "dash" },
+    });
+  }
+
+  const layout: Partial<Layout> = {
+    paper_bgcolor: "white",
+    plot_bgcolor: "white",
+    margin: { t: 36, r: 20, b: 48, l: 64 },
+    xaxis: {
+      range: xRange,
+      tickvals: xTicks,
+      ticktext: xTicks.map(formatTimeLabel),
+      gridcolor: "#E5E7EB",
+      gridwidth: 1,
+      zeroline: false,
+      tickfont: {
+        family: "JetBrains Mono, monospace",
+        size: 10,
+        color: "#6B7280",
+      },
+      title: { text: "Time (s)", font: { size: 11, color: "#6B7280" } },
+      fixedrange: false,
+    },
+    yaxis: {
+      range: [yMin, yMax],
+      tickvals: yTicks,
+      ticktext: yTicks.map((v) => v.toFixed(2)),
+      gridcolor: "#E5E7EB",
+      gridwidth: 1,
+      zeroline: true,
+      zerolinecolor: "#D1D5DB",
+      zerolinewidth: 1,
+      tickfont: {
+        family: "JetBrains Mono, monospace",
+        size: 10,
+        color: "#6B7280",
+      },
+      title: { text: "V", font: { size: 11, color: "#6B7280" } },
+      fixedrange: false,
+    },
+    legend: {
+      orientation: "v",
+      x: 1.02,
+      y: 1,
+      font: { family: "JetBrains Mono, monospace", size: 11 },
+      bgcolor: "rgba(255,255,255,0.8)",
+    },
+    shapes,
+    annotations: [
+      {
+        xref: "paper",
+        yref: "paper",
+        x: 0.01,
+        y: 1.02,
+        xanchor: "left",
+        yanchor: "bottom",
+        text: `${timebase}   ${sampleRate}`,
+        showarrow: false,
+        font: {
+          family: "JetBrains Mono, monospace",
+          size: 11,
+          color: "#6B7280",
+        },
+      },
+    ],
+    dragmode: "zoom",
+    hovermode: "x unified",
+    autosize: true,
+  };
 
   return (
-    <div className="relative w-full h-full bg-white border-2 border-(--lab-border) rounded">
-      {/* Readouts overlay */}
-      <div className="absolute top-2 left-16 z-10 font-mono text-xs text-(--lab-text-secondary) pointer-events-none">
-        {timebase} &nbsp;&nbsp; {sampleRate}
-      </div>
-
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart
-          data={data}
-          margin={{ top: 32, right: 20, bottom: 28, left: 56 }}
-        >
-          <CartesianGrid stroke="#E5E7EB" strokeWidth={1} />
-          <XAxis
-            dataKey="time"
-            type="number"
-            scale="linear"
-            domain={xDomainResolved}
-            ticks={xTicksFull}
-            tickFormatter={formatTimeLabel}
-            stroke="#6B7280"
-            tick={{
-              fill: "#6B7280",
-              fontSize: 10,
-              fontFamily: "JetBrains Mono",
-            }}
-            label={{
-              value: "Time (s)",
-              position: "insideBottom",
-              offset: -12,
-              fill: "#6B7280",
-              fontSize: 11,
-            }}
-          />
-          <YAxis
-            domain={[yMin, yMax]}
-            ticks={yTicks}
-            tickFormatter={(v: number) => v.toFixed(2)}
-            stroke="#6B7280"
-            tick={{
-              fill: "#6B7280",
-              fontSize: 10,
-              fontFamily: "JetBrains Mono",
-            }}
-            label={{
-              value: "V",
-              angle: -90,
-              position: "insideLeft",
-              offset: 10,
-              fill: "#6B7280",
-              fontSize: 11,
-            }}
-          />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: "#FFFFFF",
-              border: "2px solid #D1D5DB",
-              borderRadius: "4px",
-              fontFamily: "JetBrains Mono",
-              fontSize: "12px",
-            }}
-            labelStyle={{ color: "#111827" }}
-            labelFormatter={(v) => `t = ${formatTimeLabel(v as number)} s`}
-            formatter={(v) => {
-              if (v === undefined || v === null) return "";
-              return [(v as number).toFixed(4) + " V"];
-            }}
-          />
-          {triggerLevel !== undefined && (
-            <Line
-              data={[
-                { time: xDomainResolved[0], _trigger: triggerLevel },
-                { time: xDomainResolved[1], _trigger: triggerLevel },
-              ]}
-              type="linear"
-              dataKey="_trigger"
-              stroke="#F59E0B"
-              strokeWidth={1}
-              strokeDasharray="4 2"
-              dot={false}
-              isAnimationActive={false}
-            />
-          )}
-          {lines}
-        </LineChart>
-      </ResponsiveContainer>
-
-      {/* Per-channel scale readouts */}
-      <div className="absolute top-2 right-4 font-mono text-xs space-y-0.5 text-right pointer-events-none">
-        {channels.map((ch, i) => {
-          const n = i + 1;
-          if (!enabledChannels[ch]) return null;
-          const scale = channelScales?.[n];
-          const label =
-            scale !== undefined ? `CH${n} ${scale.toFixed(2)} V/div` : `CH${n}`;
-          return (
-            <div key={ch} style={{ color: channelColors[i] }}>
-              {label}
-            </div>
-          );
-        })}
-      </div>
+    <div className="relative w-full h-full bg-white border-2 border-(--lab-border) rounded overflow-hidden">
+      <Plot
+        data={traces}
+        layout={layout}
+        style={{ width: "100%", height: "100%" }}
+        useResizeHandler
+        config={{
+          displaylogo: false,
+          modeBarButtonsToRemove: ["select2d", "lasso2d", "toImage"],
+          scrollZoom: true,
+          responsive: true,
+        }}
+      />
     </div>
   );
 }

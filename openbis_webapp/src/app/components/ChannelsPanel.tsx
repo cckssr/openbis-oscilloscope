@@ -43,13 +43,19 @@ export function ChannelsPanel({
             className="border-2 border-(--lab-border) rounded overflow-hidden bg-white"
           >
             <button
-              onClick={() =>
+              onClick={() => {
+                if (restrictedMode) return;
                 setChannelSettings((prev) => ({
                   ...prev,
                   [ch]: { ...prev[ch], enabled: !prev[ch].enabled },
-                }))
-              }
-              className="w-full flex items-center justify-between p-3 hover:bg-(--lab-panel) transition-colors"
+                }));
+              }}
+              disabled={restrictedMode}
+              className={`w-full flex items-center justify-between p-3 transition-colors ${
+                restrictedMode
+                  ? "cursor-default"
+                  : "hover:bg-(--lab-panel) cursor-pointer"
+              }`}
             >
               <div className="flex items-center gap-2">
                 <div
@@ -62,21 +68,28 @@ export function ChannelsPanel({
                 <span className="font-medium text-sm text-(--lab-text-primary)">
                   CH{ch}
                 </span>
+                {restrictedMode && (
+                  <span className="text-xs text-(--lab-text-secondary) font-mono">
+                    {cfg.enabled ? "ON" : "OFF"}
+                  </span>
+                )}
               </div>
-              <label className="flex items-center gap-2 text-xs text-(--lab-text-secondary)">
-                <input
-                  type="checkbox"
-                  checked={cfg.enabled}
-                  onChange={() =>
-                    setChannelSettings((prev) => ({
-                      ...prev,
-                      [ch]: { ...prev[ch], enabled: !prev[ch].enabled },
-                    }))
-                  }
-                  className="w-4 h-4 accent-(--lab-accent)"
-                />
-                Enable
-              </label>
+              {!restrictedMode && (
+                <label className="flex items-center gap-2 text-xs text-(--lab-text-secondary) cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={cfg.enabled}
+                    onChange={() =>
+                      setChannelSettings((prev) => ({
+                        ...prev,
+                        [ch]: { ...prev[ch], enabled: !prev[ch].enabled },
+                      }))
+                    }
+                    className="w-4 h-4 accent-(--lab-accent)"
+                  />
+                  Enable
+                </label>
+              )}
             </button>
 
             {/* Expert mode: full channel controls when enabled */}

@@ -37,9 +37,19 @@ export interface LockResponse {
   device_id: string;
 }
 
+export interface AcquiredChannel {
+  channel: number;
+  enabled: boolean;
+  scale_v_div: number;
+  offset_v: number;
+  coupling: "DC" | "AC" | "GND";
+  probe_attenuation: number;
+}
+
 export interface AcquireResponse {
   artifact_ids: string[];
   session_id: string;
+  channels: AcquiredChannel[];
 }
 
 export interface WaveformData {
