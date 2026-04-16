@@ -78,7 +78,7 @@ export function WaveformPlot({
     (_, i) => yMin + i * yStep,
   );
 
-  // Build one Plotly trace per enabled channel
+  // Build one Plotly trace per enabled channel that has actual data.
   const traces: Data[] = channels
     .map((ch, i): Data | null => {
       if (!enabledChannels[ch]) return null;
@@ -92,6 +92,7 @@ export function WaveformPlot({
         ys.push(v);
         timeLabels.push(formatTimeLabel(pt.time));
       }
+      if (xs.length === 0) return null;
       return {
         x: xs,
         y: ys,

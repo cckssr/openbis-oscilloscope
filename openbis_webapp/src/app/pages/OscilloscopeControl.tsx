@@ -416,8 +416,17 @@ export function OscilloscopeControl() {
     setIsAcquiring(true);
     setCmdError(null);
     try {
-      // Let the scope decide which channels are enabled — don't filter by UI state
-      const acquireResp = await acquireWaveforms(token, deviceId, sessionId);
+      // Pass the channels the user has enabled in the UI so every enabled channel
+      // is acquired, not just whatever the scope happens to report first.
+      const enabledNums = Object.entries(channelSettings)
+        .filter(([, cfg]) => cfg.enabled)
+        .map(([k]) => Number(k));
+      const acquireResp = await acquireWaveforms(
+        token,
+        deviceId,
+        sessionId,
+        enabledNums.length > 0 ? enabledNums : undefined,
+      );
       setAcquiredChannels(acquireResp.channels);
 
       // Sync channelSettings from scope's actual state (scope is authoritative).
@@ -856,7 +865,7 @@ export function OscilloscopeControl() {
         </main>
 
         {/* Right settings panel */}
-        <aside className="w-80 bg-(--lab-panel) border-l-2 border-(--lab-border) flex flex-col">
+        <aside className="w-50 bg-(--lab-panel) border-l-2 border-(--lab-border) flex flex-col">
           {/* Tab bar */}
           <div className="border-b-2 border-(--lab-border)">
             <div className="flex">

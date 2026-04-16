@@ -22,6 +22,7 @@ Abstract base class every driver must subclass, plus the data classes used as re
 `connect()`, `disconnect()`, `identify()`, `run()`, `stop()`, `acquire_waveform(channel)`, `get_screenshot()`, `get_channel_config(channel)`, `get_timebase()`, `get_trigger()`, `set_channel_config(channel, config)`, `set_timebase(config)`, `set_trigger(config)`
 
 **Non-abstract methods provided by the base class:**
+
 - `get_all_settings()` — assembles a full metadata dict from the abstract methods above.
 - `get_available_channels() -> list[int]` — returns sorted list of enabled channel numbers by calling `get_channel_enabled()` for 1–4. Override if the instrument supports a batch query.
 - `get_channel_enabled(channel) -> bool` — default calls `get_channel_config()`. Override in hardware drivers with a single lightweight query (e.g. `:CHANnelN:DISPlay?`) to avoid 4 unnecessary SCPI round-trips per disabled channel.
@@ -85,19 +86,19 @@ The monitor is **always started**, including in `DEBUG=True` mode. Devices confi
 
 `RigolDS1000Driver` — concrete `BaseOscilloscopeDriver` for the Rigol DS1000Z family. Wraps `RigolDS1000ZSeries` from `pymeasure_rigol_ds1000.py` and adapts it to the project driver interface.
 
-| Method                       | Implementation notes                                                                                                                         |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `connect()` / `disconnect()` | Delegates to `instrument.adapter.open()` / `.close()`. pymeasure opens the adapter at construction. `connect()` wraps `open()` in a `ConnectionError` on failure. |
-| `identify()`                 | Returns `InstrumentInfo` from `*IDN?`; firmware is the 4th comma-separated field.                                                            |
-| `run()` / `stop()`           | Direct pass-through to `instrument.run()` / `.stop()`.                                                                                       |
-| `acquire_waveform(channel)`  | Validates channel 1–4. Sets source to `CHAN{n}`, reads RAW/BYTE waveform; time array built as `xorigin + (arange(n) - xreference) * xincrement` (xreference is a sample index). Calls `run()` after read to restart acquisition. Raises `ValueError` if channel out of range or xincrement ≤ 0. |
-| `get_screenshot()`           | Returns raw image bytes from `instrument.get_display_data()`.                                                                                |
-| `get_channel_config(ch)`     | Reads `ch{n}.scale`, `.offset`, `.coupling`, `.probe_ratio`, `.is_enabled`.                                                                  |
-| `get_timebase()`             | Reads `timebase_scale`, `timebase_offset`, `acq_sample_rate`.                                                                                |
-| `get_trigger()`              | Reads edge trigger properties; maps slopes (`POS`→`RISE`, `NEG`→`FALL`, `RFAL`→`EITHER`) and sweep modes (`NORM`→`NORMAL`, `SING`→`SINGLE`). |
-| `set_channel_config(ch, cfg)`| Writes `ch{n}.is_enabled`, `.scale`, `.offset`, `.coupling`, `.probe_ratio`.                                                                 |
-| `set_timebase(cfg)`          | Writes `timebase_scale` and `timebase_offset`. `sample_rate` is read-only on the instrument and is ignored.                                  |
-| `set_trigger(cfg)`           | Reverse-maps slope/mode to SCPI values; normalises `CH1` → `CHAN1`; writes edge source, level, slope, and sweep mode.                        |
+| Method                        | Implementation notes                                                                                                                                                                                                                                                                            |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `connect()` / `disconnect()`  | Delegates to `instrument.adapter.open()` / `.close()`. pymeasure opens the adapter at construction. `connect()` wraps `open()` in a `ConnectionError` on failure.                                                                                                                               |
+| `identify()`                  | Returns `InstrumentInfo` from `*IDN?`; firmware is the 4th comma-separated field.                                                                                                                                                                                                               |
+| `run()` / `stop()`            | Direct pass-through to `instrument.run()` / `.stop()`.                                                                                                                                                                                                                                          |
+| `acquire_waveform(channel)`   | Validates channel 1–4. Sets source to `CHAN{n}`, reads RAW/BYTE waveform; time array built as `xorigin + (arange(n) - xreference) * xincrement` (xreference is a sample index). Calls `run()` after read to restart acquisition. Raises `ValueError` if channel out of range or xincrement ≤ 0. |
+| `get_screenshot()`            | Returns raw image bytes from `instrument.get_display_data()`.                                                                                                                                                                                                                                   |
+| `get_channel_config(ch)`      | Reads `ch{n}.scale`, `.offset`, `.coupling`, `.probe_ratio`, `.is_enabled`.                                                                                                                                                                                                                     |
+| `get_timebase()`              | Reads `timebase_scale`, `timebase_offset`, `acq_sample_rate`.                                                                                                                                                                                                                                   |
+| `get_trigger()`               | Reads edge trigger properties; maps slopes (`POS`→`RISE`, `NEG`→`FALL`, `RFAL`→`EITHER`) and sweep modes (`NORM`→`NORMAL`, `SING`→`SINGLE`).                                                                                                                                                    |
+| `set_channel_config(ch, cfg)` | Writes `ch{n}.is_enabled`, `.scale`, `.offset`, `.coupling`, `.probe_ratio`.                                                                                                                                                                                                                    |
+| `set_timebase(cfg)`           | Writes `timebase_scale` and `timebase_offset`. `sample_rate` is read-only on the instrument and is ignored.                                                                                                                                                                                     |
+| `set_trigger(cfg)`            | Reverse-maps slope/mode to SCPI values; normalises `CH1` → `CHAN1`; writes edge source, level, slope, and sweep mode.                                                                                                                                                                           |
 
 ---
 
@@ -115,6 +116,6 @@ Key properties exposed on `RigolDS1000ZSeries`:
 | `trigger_edge_source/slope/level`, `trigger_sweep` | Edge trigger settings                                                                      |
 | `waveform_source/mode/format`                      | Waveform readout configuration                                                             |
 | `get_waveform_preamble()`                          | Returns dict with `xincrement`, `xorigin`, `yincrement`, `yorigin`, `yreference`, `points` |
-| `get_waveform_data(raw=False)`                     | Returns voltage array (or raw bytes if `raw=True`)                                         |
+| `get_waveform_data(raw=False)`                     | Returns voltage array (or raw bytes if `raw=True`). Uses `adapter.connection.read_raw()` to avoid ASCII decode errors on binary BYTE/WORD payloads. |
 | `get_display_data()`                               | Returns screenshot bytes in the format set by `storage_image_type`                         |
 | `run()`, `stop()`                                  | Start / stop acquisition                                                                   |

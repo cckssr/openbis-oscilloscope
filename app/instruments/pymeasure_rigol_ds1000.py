@@ -769,35 +769,41 @@ class RigolDS1000ZSeries(SCPIMixin, Instrument):
             If raw=True: bytes object containing raw waveform data
             If raw=False: numpy array of voltage values (requires numpy)
         """
-        data = self.ask(":WAVeform:DATA?")
+        # Binary waveform data contains arbitrary byte values (0–255).  Using
+        # self.ask() would attempt an ASCII decode and raise UnicodeDecodeError
+        # for any byte ≥ 128.  Instead, write the query and read the response
+        # as raw bytes via the underlying VISA connection.
+        self.write(":WAVeform:DATA?")
+        raw_response: bytes = self.adapter.connection.read_raw()
 
-        # TMC data format: #<digit><length><data>
-        # First character is '#', second is number of digits in length field
-        header_len = int(data[1]) + 2
-        raw_data = data[header_len:-1]  # Remove header and trailing newline
+        # IEEE 488.2 / TMC block format: #<N><LLL…><data bytes><terminator>
+        #   '#'        – literal pound sign (0x23)
+        #   <N>        – single ASCII digit: number of decimal digits in length field
+        #   <LLL…>     – <N> ASCII decimal digits giving the byte count of <data>
+        #   <data>     – raw payload bytes
+        #   <terminator> – trailing '\n' (0x0A)
+        n_digits = raw_response[1] - ord("0")  # e.g. b'4' → 4
+        header_len = 2 + n_digits              # '#' + N-char + length digits
+        data_bytes = raw_response[header_len:].rstrip(b"\n\r")
 
         if raw:
-            return raw_data.encode("latin-1") if isinstance(raw_data, str) else raw_data
+            return data_bytes
 
         preamble = self.get_waveform_preamble()
 
-        # Convert based on format
+        # Convert raw bytes to numeric samples
         if self.waveform_format == "BYTE":
-            values = np.frombuffer(
-                raw_data.encode("latin-1") if isinstance(raw_data, str) else raw_data,
-                dtype=np.uint8,
-            )
+            values = np.frombuffer(data_bytes, dtype=np.uint8)
         elif self.waveform_format == "WORD":
-            values = np.frombuffer(
-                raw_data.encode("latin-1") if isinstance(raw_data, str) else raw_data,
-                dtype=np.uint16,
-            )
-        else:  # ASCII
-            values = np.array([float(v) for v in raw_data.split(",")])
+            values = np.frombuffer(data_bytes, dtype=np.uint16)
+        else:  # ASCII — safe to decode as text
+            values = np.array([float(v) for v in data_bytes.decode("ascii").split(",")])
 
-        # Convert to voltage
-        voltages = (values - preamble["yreference"]) * preamble["yincrement"] + preamble["yorigin"]
-
+        # Convert ADC counts → volts
+        voltages = (
+            (values - preamble["yreference"]) * preamble["yincrement"]
+            + preamble["yorigin"]
+        )
         return voltages
 
     # Display Subsystem

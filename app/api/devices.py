@@ -1,5 +1,6 @@
 """API endpoints for device listing, lock management, and instrument commands."""
 
+import logging
 import asyncio
 import time
 import uuid
@@ -26,6 +27,8 @@ from app.locks.service import LockService
 from app.openbis_client.client import UserInfo
 
 router = APIRouter(prefix="/devices", tags=["devices"])
+
+logger = logging.getLogger(__name__)
 
 
 def _get_services(request: Request) -> tuple[InstrumentManager, LockService]:
@@ -359,22 +362,26 @@ async def acquire(
         artifact_ids = []
         acquired_channels = []
 
-        # Ask the driver which channels are currently enabled on the scope.
-        # get_available_channels() uses one lightweight query per channel
-        # (DISPlay? only) rather than reading the full config for every channel.
-        # If the caller passed an explicit channel list, filter to those that
-        # are actually enabled so we never try to acquire a disabled channel.
-        enabled_on_scope = driver.get_available_channels()
-        channel_list = (
-            [ch for ch in channels if ch in enabled_on_scope]
-            if channels
-            else enabled_on_scope
+        # Use the caller-supplied channel list when provided.
+        # Fall back to querying the scope only when no list is given.
+        channel_list = channels if channels else driver.get_available_channels()
+        logger.debug(
+            "Acquiring channels %s on device %s for session %s",
+            channel_list,
+            device_id,
+            session_id,
         )
         for ch in channel_list:
             try:
                 cfg = driver.get_channel_config(ch)
                 waveform = driver.acquire_waveform(ch)
-            except (OSError, TimeoutError, ValueError, KeyError, RuntimeError):
+            except (OSError, TimeoutError, ValueError, KeyError, RuntimeError) as exc:
+                logger.error(
+                    "Failed to acquire channel %d on device %s; skipping channel. Error: %s",
+                    ch,
+                    device_id,
+                    exc,
+                )
                 continue
 
             meta = {
@@ -398,6 +405,12 @@ async def acquire(
                     "coupling": cfg.coupling,
                     "probe_attenuation": cfg.probe_attenuation,
                 }
+            )
+            logger.debug(
+                "Acquired channel %d on device %s with artifact ID %s",
+                ch,
+                device_id,
+                art_id,
             )
 
         return {"artifact_ids": artifact_ids, "channels": acquired_channels}

@@ -1,6 +1,7 @@
 """Openbis-compatible driver for Rigol DS1000 series oscilloscopes."""
 
 import numpy as np
+import logging
 
 from app.instruments.base_driver import (
     BaseOscilloscopeDriver,
@@ -15,6 +16,8 @@ from app.instruments.pymeasure_rigol_ds1000 import RigolDS1000ZSeries as _RigolD
 
 _SLOPE_MAP = {"POS": "RISE", "NEG": "FALL", "RFAL": "EITHER"}
 _SWEEP_MAP = {"AUTO": "AUTO", "NORM": "NORMAL", "SING": "SINGLE"}
+
+logger = logging.getLogger(__name__)
 
 
 class RigolDS1000Driver(BaseOscilloscopeDriver):
@@ -45,6 +48,7 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
         if hasattr(adapter, "open"):
             try:
                 adapter.open()
+                logger.info("Connected to Rigol DS1000 at %s:%d", self.ip, self.port)
             except Exception as exc:
                 raise ConnectionError(
                     f"Failed to open VISA adapter for {self.ip}:{self.port}: {exc}"
@@ -151,8 +155,8 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
             try:
                 if self.get_channel_enabled(ch):
                     enabled.append(ch)
-            except Exception:
-                pass  # Ignore errors and assume missing channels are disabled
+            except Exception as exc:
+                logger.error("Error occurred while checking channel %d: %s", ch, exc)
         return enabled
 
     def get_channel_enabled(self, channel: int) -> bool:
