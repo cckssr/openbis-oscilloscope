@@ -23,7 +23,8 @@ Abstract base class every driver must subclass, plus the data classes used as re
 
 **Non-abstract methods provided by the base class:**
 - `get_all_settings()` — assembles a full metadata dict from the abstract methods above.
-- `get_channel_enabled(channel) -> bool` — default calls `get_channel_config()`. Override in hardware drivers with a single lightweight query (e.g. `:CHANnelN:DISPlay?`) to avoid 4 unnecessary SCPI round-trips per disabled channel during acquire pre-screening.
+- `get_available_channels() -> list[int]` — returns sorted list of enabled channel numbers by calling `get_channel_enabled()` for 1–4. Override if the instrument supports a batch query.
+- `get_channel_enabled(channel) -> bool` — default calls `get_channel_config()`. Override in hardware drivers with a single lightweight query (e.g. `:CHANnelN:DISPlay?`) to avoid 4 unnecessary SCPI round-trips per disabled channel.
 
 ---
 
@@ -70,6 +71,7 @@ The monitor is **always started**, including in `DEBUG=True` mode. Devices confi
 
 `MockOscilloscopeDriver` — a fully functional `BaseOscilloscopeDriver` that returns synthetic sine-wave data without real hardware. Used automatically in `DEBUG=True` mode and in tests.
 
+- All four channels are enabled by default so every acquire in `DEBUG=True` mode returns CH1–CH4 without any extra configuration.
 - When `run()` is called, `acquire_waveform()` uses `time.time()` as a phase offset so successive calls return different waveform snapshots (simulates a live scope).
 - When `stop()` is called, the stop timestamp is recorded and all subsequent `acquire_waveform()` calls return the same frozen waveform until `run()` is called again.
 - The waveform window respects the stored `_timebase.scale_s_div` (10 divisions wide), so applying a new timebase from the UI is reflected in subsequent acquisitions.

@@ -136,6 +136,25 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
         """
         return self.instrument.get_display_data()
 
+    def get_available_channels(self):
+        """Return a list of available channels on the instrument.
+
+        This implementation assumes all four channels are always present. If
+        the instrument model supports fewer channels, this method should be
+        overridden to query the actual number of channels.
+
+        Returns:
+            List of 1-based channel numbers (e.g. [1, 2, 3, 4]).
+        """
+        enabled = []
+        for ch in range(1, 5):
+            try:
+                if self.get_channel_enabled(ch):
+                    enabled.append(ch)
+            except Exception:
+                pass  # Ignore errors and assume missing channels are disabled
+        return enabled
+
     def get_channel_enabled(self, channel: int) -> bool:
         """Return whether a channel is enabled using a single SCPI query.
 

@@ -101,7 +101,7 @@ class MockOscilloscopeDriver(BaseOscilloscopeDriver):
         self._channels: dict[int, ChannelConfig] = {
             ch: ChannelConfig(
                 channel=ch,
-                enabled=(ch == 1),
+                enabled=True,
                 scale_v_div=1.0,
                 offset_v=0.0,
                 coupling="DC",

@@ -173,6 +173,25 @@ class BaseOscilloscopeDriver(ABC):
             Raw PNG image data as a :class:`bytes` object.
         """
 
+    def get_available_channels(self) -> list[int]:
+        """Return channel numbers that are currently enabled on the instrument.
+
+        Default implementation calls :meth:`get_channel_enabled` for channels
+        1–4 and returns those that are active.  Override in hardware drivers
+        if the instrument provides a faster batch query for all channel states.
+
+        Returns:
+            Sorted list of 1-based channel numbers that are currently enabled.
+        """
+        available = []
+        for ch in range(1, 5):
+            try:
+                if self.get_channel_enabled(ch):
+                    available.append(ch)
+            except Exception:
+                pass
+        return available
+
     def get_channel_enabled(self, channel: int) -> bool:
         """Return whether the specified channel is currently active/visible.
 
