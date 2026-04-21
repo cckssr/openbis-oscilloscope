@@ -171,8 +171,9 @@ export function WaveformPlot({
     },
     legend: {
       orientation: "v",
-      x: 1.02,
-      y: 1,
+      xanchor: "right",
+      x: 1.0,
+      y: 1.0,
       font: { family: "JetBrains Mono, monospace", size: 11 },
       bgcolor: "rgba(255,255,255,0.8)",
     },

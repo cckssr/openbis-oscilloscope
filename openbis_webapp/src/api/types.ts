@@ -48,6 +48,7 @@ export interface AcquiredChannel {
 
 export interface AcquireResponse {
   artifact_ids: string[];
+  acquisition_id: string;
   session_id: string;
   channels: AcquiredChannel[];
 }
@@ -69,6 +70,8 @@ export interface Artifact {
   persist: boolean;
   created_at: string;
   files: string[];
+  acquisition_id: string | null;
+  annotation: string | null;
 }
 
 export interface CommitResponse {

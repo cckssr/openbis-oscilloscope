@@ -257,7 +257,7 @@ export function setTrigger(
 }
 
 /**
- * Retrieves a screenshot from the device display.
+ * Retrieves a screenshot from the device display (live display, not saved to buffer).
  * @param token - The authentication bearer token
  * @param deviceId - The unique identifier of the device
  * @param sessionId - The session ID associated with the lock
@@ -271,5 +271,24 @@ export function getScreenshot(
   return apiFetch<Blob>(
     `/devices/${deviceId}/screenshot?session_id=${encodeURIComponent(sessionId)}`,
     token,
+  );
+}
+
+/**
+ * Captures a screenshot and saves it to the buffer.
+ * @param token - The authentication bearer token
+ * @param deviceId - The unique identifier of the device
+ * @param sessionId - The session ID associated with the lock
+ * @returns A promise resolving to the saved artifact ID
+ */
+export function saveScreenshot(
+  token: string,
+  deviceId: string,
+  sessionId: string,
+): Promise<{ artifact_id: string }> {
+  return apiFetch<{ artifact_id: string }>(
+    `/devices/${deviceId}/screenshot?session_id=${encodeURIComponent(sessionId)}`,
+    token,
+    { method: "POST" },
   );
 }

@@ -17,11 +17,13 @@ import {
   acquireWaveforms,
   getChannelData,
   getScreenshot,
+  saveScreenshot,
   getSettings,
   setChannelConfig,
   setTimebase,
   setTrigger,
 } from "../../api/devices";
+import { setAnnotation } from "../../api/sessions";
 import type {
   DeviceDetail,
   WaveformData,
@@ -123,6 +125,11 @@ export function OscilloscopeControl() {
   const [isRunning, setIsRunning] = useState(false);
   const isAcquiringRef = useRef(false); // synchronous guard for overlapping acquires
   const [isAcquiring, setIsAcquiring] = useState(false); // for UI rendering only
+  const [isScreenshotting, setIsScreenshotting] = useState(false);
+  const [lastAcquisitionId, setLastAcquisitionId] = useState<string | null>(null);
+  const [annotationText, setAnnotationText] = useState("");
+  const [annotationSaved, setAnnotationSaved] = useState(false);
+  const [isSavingAnnotation, setIsSavingAnnotation] = useState(false);
   const [cmdError, setCmdError] = useState<string | null>(null);
   const [waveformData, setWaveformData] = useState<PlotPoint[]>([]);
   // Full channel configs from the last acquire response — drives UI sync and plot
@@ -412,6 +419,8 @@ export function OscilloscopeControl() {
   const handleAcquire = useCallback(async () => {
     if (!token || !deviceId || !sessionId) return;
     if (isAcquiringRef.current) return; // prevent overlapping requests
+    const startTime = performance.now();
+    console.debug("Starting acquisition...");
     isAcquiringRef.current = true;
     setIsAcquiring(true);
     setCmdError(null);
@@ -428,6 +437,11 @@ export function OscilloscopeControl() {
         enabledNums.length > 0 ? enabledNums : undefined,
       );
       setAcquiredChannels(acquireResp.channels);
+      setLastAcquisitionId(acquireResp.acquisition_id);
+      setAnnotationText("");
+      setAnnotationSaved(false);
+      let elapsed = performance.now() - startTime;
+      console.debug(`Waveform acquired in ${elapsed.toFixed(2)}ms`);
 
       // Sync channelSettings from scope's actual state (scope is authoritative).
       // Start by marking all channels as disabled, then overlay what was acquired.
@@ -455,6 +469,8 @@ export function OscilloscopeControl() {
 
       // Show all acquired channels; user can hide individual ones without re-acquiring
       setVisibleChannels(new Set(acquireResp.channels.map((c) => c.channel)));
+      elapsed = performance.now() - startTime;
+      console.debug(`Current channels updated in ${elapsed.toFixed(2)}ms`);
 
       // Fetch all channel waveforms in parallel
       const results = await Promise.all(
@@ -467,6 +483,9 @@ export function OscilloscopeControl() {
         const d = results[i];
         if (d) channelDataMap[acquireResp.channels[i].channel] = d;
       }
+
+      elapsed = performance.now() - startTime;
+      console.debug(`Waveforms fetched int ${elapsed.toFixed(2)}ms`);
 
       const plot = buildPlotData(channelDataMap);
       setWaveformData(plot);
@@ -491,6 +510,8 @@ export function OscilloscopeControl() {
     } finally {
       isAcquiringRef.current = false;
       setIsAcquiring(false);
+      const elapsed = performance.now() - startTime;
+      console.debug(`Acquisition completed in ${elapsed.toFixed(2)}ms`);
     }
   }, [token, deviceId, sessionId, channelSettings]);
 
@@ -514,17 +535,6 @@ export function OscilloscopeControl() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRunning, fps, sessionId]);
-
-  // ---------------------------------------------------------------------------
-  // Channel visibility (hide/show trace without touching scope state)
-  // ---------------------------------------------------------------------------
-
-  const toggleChannelVisibility = (ch: number) =>
-    setVisibleChannels((prev) => {
-      const next = new Set(prev);
-      next.has(ch) ? next.delete(ch) : next.add(ch);
-      return next;
-    });
 
   // ---------------------------------------------------------------------------
   // CSV download
@@ -551,11 +561,31 @@ export function OscilloscopeControl() {
     URL.revokeObjectURL(url);
   };
 
+  const handleSaveAnnotation = async () => {
+    if (!token || !sessionId || !lastAcquisitionId || !annotationText.trim()) return;
+    setIsSavingAnnotation(true);
+    try {
+      await setAnnotation(token, sessionId, lastAcquisitionId, annotationText.trim());
+      setAnnotationSaved(true);
+    } catch (err) {
+      setCmdError(
+        err instanceof ApiError ? err.message : "Failed to save annotation",
+      );
+    } finally {
+      setIsSavingAnnotation(false);
+    }
+  };
+
   const handleScreenshot = async () => {
     if (!token || !deviceId || !sessionId) return;
     setCmdError(null);
+    setIsScreenshotting(true);
     try {
-      const blob = await getScreenshot(token, deviceId, sessionId);
+      // Capture live display for download AND save to buffer in parallel
+      const [blob] = await Promise.all([
+        getScreenshot(token, deviceId, sessionId),
+        saveScreenshot(token, deviceId, sessionId).catch(() => null),
+      ]);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -566,6 +596,8 @@ export function OscilloscopeControl() {
       URL.revokeObjectURL(url);
     } catch (err) {
       setCmdError(err instanceof ApiError ? err.message : "Screenshot failed");
+    } finally {
+      setIsScreenshotting(false);
     }
   };
 
@@ -753,13 +785,53 @@ export function OscilloscopeControl() {
             >
               {isAcquiring ? "Acquiring…" : "ACQUIRE"}
             </button>
+
+            {/* Annotation input — shown after each acquisition */}
+            {lastAcquisitionId && (
+              <div className="space-y-1 pt-1">
+                <label className="block text-xs text-(--lab-text-secondary)">
+                  Annotation
+                </label>
+                <input
+                  type="text"
+                  value={annotationText}
+                  onChange={(e) => {
+                    setAnnotationText(e.target.value);
+                    setAnnotationSaved(false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSaveAnnotation();
+                  }}
+                  placeholder="Label this acquisition…"
+                  className="w-full border-2 border-(--lab-border) rounded px-2 py-1 text-xs font-mono focus:outline-none focus:border-(--lab-accent)"
+                />
+                <button
+                  onClick={handleSaveAnnotation}
+                  disabled={
+                    !annotationText.trim() || isSavingAnnotation || annotationSaved
+                  }
+                  className="w-full py-1 px-2 border-2 rounded text-xs font-medium transition-colors border-(--lab-border) text-(--lab-text-secondary) hover:bg-(--lab-panel) disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {annotationSaved
+                    ? "Saved"
+                    : isSavingAnnotation
+                      ? "Saving…"
+                      : "Save label"}
+                </button>
+              </div>
+            )}
+
             <button
               onClick={handleScreenshot}
-              disabled={!canCommand}
+              disabled={!canCommand || isScreenshotting}
               className="w-full flex items-center justify-center gap-2 py-2 px-4 border-2 rounded font-medium text-sm bg-white border-(--lab-border) text-(--lab-text-primary) hover:bg-(--lab-panel) transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <Camera className="w-4 h-4" />
-              Screenshot
+              {isScreenshotting ? (
+                <span className="w-4 h-4 border-2 border-(--lab-text-secondary) border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Camera className="w-4 h-4" />
+              )}
+              {isScreenshotting ? "Capturing…" : "Screenshot"}
             </button>
           </div>
 
@@ -777,38 +849,6 @@ export function OscilloscopeControl() {
               Waveform Display
             </h2>
             <div className="flex items-center gap-2">
-              {/* Per-channel visibility toggles — shown once data is acquired */}
-              {acquiredChannels.length > 0 && (
-                <div className="flex items-center gap-1">
-                  {acquiredChannels.map((ac) => {
-                    const isVisible = visibleChannels.has(ac.channel);
-                    const colors = ["#FACC15", "#00BFFF", "#FF6B6B", "#7CFC00"];
-                    const color = colors[ac.channel - 1] ?? "#6B7280";
-                    return (
-                      <button
-                        key={ac.channel}
-                        title={`${isVisible ? "Hide" : "Show"} CH${ac.channel}`}
-                        aria-label={`${isVisible ? "Hide" : "Show"} channel ${ac.channel}`}
-                        onClick={() => toggleChannelVisibility(ac.channel)}
-                        className="flex items-center gap-1 px-1.5 py-1 border-2 border-(--lab-border) rounded text-xs font-mono hover:bg-(--lab-panel) transition-colors"
-                        style={{ opacity: isVisible ? 1 : 0.4 }}
-                      >
-                        <span
-                          className="w-2.5 h-2.5 rounded-full inline-block"
-                          style={{ backgroundColor: color }}
-                        />
-                        {isVisible ? (
-                          <EyeOff className="w-3 h-3 text-(--lab-text-secondary)" />
-                        ) : (
-                          <EyeOff className="w-3 h-3 text-(--lab-text-secondary)" />
-                        )}
-                        CH{ac.channel}
-                      </button>
-                    );
-                  })}
-                  <div className="w-0.5 h-4 bg-(--lab-border) mx-0.5" />
-                </div>
-              )}
               <button
                 title="Download CSV"
                 aria-label="Download waveform as CSV"

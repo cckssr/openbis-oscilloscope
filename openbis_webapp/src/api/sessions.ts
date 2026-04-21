@@ -1,5 +1,5 @@
 import { apiFetch } from "./client";
-import type { Artifact, CommitResponse } from "./types";
+import type { Artifact, CommitResponse, WaveformData } from "./types";
 
 export function listArtifacts(
   token: string,
@@ -18,6 +18,45 @@ export function flagArtifact(
     `/sessions/${sessionId}/artifacts/${artifactId}/flag?persist=${persist}`,
     token,
     { method: "POST" },
+  );
+}
+
+export function setAnnotation(
+  token: string,
+  sessionId: string,
+  acquisitionId: string,
+  annotation: string,
+): Promise<void> {
+  return apiFetch<void>(
+    `/sessions/${sessionId}/acquisitions/${acquisitionId}/annotation`,
+    token,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ annotation }),
+    },
+  );
+}
+
+export function getArtifactWaveform(
+  token: string,
+  sessionId: string,
+  artifactId: string,
+): Promise<WaveformData> {
+  return apiFetch<WaveformData>(
+    `/sessions/${sessionId}/artifacts/${artifactId}/data`,
+    token,
+  );
+}
+
+export function fetchArtifactScreenshot(
+  token: string,
+  sessionId: string,
+  artifactId: string,
+): Promise<Blob> {
+  return apiFetch<Blob>(
+    `/sessions/${sessionId}/artifacts/${artifactId}/image`,
+    token,
   );
 }
 
