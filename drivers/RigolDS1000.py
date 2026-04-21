@@ -102,8 +102,9 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
         self.instrument.waveform_mode = "RAW"
         self.instrument.waveform_format = "BYTE"
 
-        preamble = self.instrument.get_waveform_preamble()
-        voltages = self.instrument.get_waveform_data(raw=False)
+        voltages, preamble = self.instrument.get_waveform_data(
+            raw=False, return_preamble=True
+        )
 
         n_points = len(voltages)
         x_inc = preamble["xincrement"]

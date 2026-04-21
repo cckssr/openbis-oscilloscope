@@ -361,20 +361,22 @@ async def acquire(
     async def _acquire():
         artifact_ids = []
         acquired_channels = []
+        start_time = time.monotonic()
+        acquisition_id = str(uuid.uuid4())
 
         # Use the caller-supplied channel list when provided.
         # Fall back to querying the scope only when no list is given.
         channel_list = channels if channels else driver.get_available_channels()
-        logger.debug(
-            "Acquiring channels %s on device %s for session %s",
-            channel_list,
-            device_id,
-            session_id,
-        )
         for ch in channel_list:
             try:
                 cfg = driver.get_channel_config(ch)
+                elapsed = time.monotonic() - start_time
+                logger.debug("Acquiring channel %d after %.2f seconds", ch, elapsed)
                 waveform = driver.acquire_waveform(ch)
+                elapsed = time.monotonic() - start_time
+                logger.debug(
+                    "Acquired waveforms for channel %d after %.2f seconds", ch, elapsed
+                )
             except (OSError, TimeoutError, ValueError, KeyError, RuntimeError) as exc:
                 logger.error(
                     "Failed to acquire channel %d on device %s; skipping channel. Error: %s",
@@ -393,7 +395,7 @@ async def acquire(
                 "scale_v_div": cfg.scale_v_div,
             }
             art_id = buffer_service.store_waveform(
-                device_id, session_id, waveform, meta
+                device_id, session_id, waveform, meta, acquisition_id=acquisition_id
             )
             artifact_ids.append(art_id)
             acquired_channels.append(
@@ -406,18 +408,17 @@ async def acquire(
                     "probe_attenuation": cfg.probe_attenuation,
                 }
             )
-            logger.debug(
-                "Acquired channel %d on device %s with artifact ID %s",
-                ch,
-                device_id,
-                art_id,
-            )
 
-        return {"artifact_ids": artifact_ids, "channels": acquired_channels}
+        return {
+            "artifact_ids": artifact_ids,
+            "acquisition_id": acquisition_id,
+            "channels": acquired_channels,
+        }
 
     result = await manager.execute_command(device_id, _acquire, timeout=60.0)
     return {
         "artifact_ids": result["artifact_ids"],
+        "acquisition_id": result["acquisition_id"],
         "session_id": session_id,
         "channels": result["channels"],
     }
@@ -652,6 +653,32 @@ async def get_screenshot(
 
     png_bytes = await manager.execute_command(device_id, _screenshot, timeout=15.0)
     return Response(content=png_bytes, media_type="image/png")
+
+
+@router.post(
+    "/{device_id}/screenshot",
+    response_model=dict,
+    summary="Capture and save screenshot",
+    response_description="Artifact ID of the stored screenshot.",
+)
+async def save_screenshot(
+    request: Request,
+    device_id: str = Path(..., description="Device identifier."),
+    session_id: str = Query(..., description="Control session UUID returned by /lock."),
+    user: UserInfo = Depends(get_current_user),
+) -> dict:
+    """Capture a screenshot, save it to the buffer, and return its artifact ID."""
+    manager, driver = await _get_locked_online_driver(
+        request, device_id, user.user_id, session_id
+    )
+    buffer_service = request.app.state.buffer_service
+
+    async def _screenshot():
+        return driver.get_screenshot()
+
+    png_bytes = await manager.execute_command(device_id, _screenshot, timeout=15.0)
+    art_id = buffer_service.store_screenshot(device_id, session_id, png_bytes)
+    return {"artifact_id": art_id}
 
 
 @router.get(

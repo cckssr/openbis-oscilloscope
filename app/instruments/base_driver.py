@@ -183,6 +183,7 @@ class BaseOscilloscopeDriver(ABC):
         Returns:
             Sorted list of 1-based channel numbers that are currently enabled.
         """
+        return sorted(ch for ch in range(1, 5) if self.get_channel_enabled(ch))
 
     def get_channel_enabled(self, channel: int) -> bool:
         """Return whether the specified channel is currently active/visible.
