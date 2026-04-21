@@ -136,9 +136,11 @@ export function acquireWaveforms(
   deviceId: string,
   sessionId: string,
   channels?: number[],
+  runId?: string | null,
 ): Promise<AcquireResponse> {
   const params = new URLSearchParams({ session_id: sessionId });
   channels?.forEach((ch) => params.append("channels", String(ch)));
+  if (runId) params.set("run_id", runId);
   return apiFetch<AcquireResponse>(
     `/devices/${deviceId}/acquire?${params}`,
     token,

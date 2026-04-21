@@ -140,9 +140,9 @@ export function OscilloscopeControl() {
   const [sampleRateLabel, setSampleRateLabel] = useState("Sample rate: —");
   const [actualTimebaseScaleSDiv, setActualTimebaseScaleSDiv] = useState<number>(1e-3);
 
-  // Continuous acquisition: interval handle and user-selected FPS (1–10)
+  // Continuous acquisition: interval handle (fixed 1 Hz — acquisition takes ≥ 1 s)
   const runLoopRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [fps, setFps] = useState(2);
+  const runIdRef = useRef<string | null>(null);
 
   // tStart of the most recently acquired waveform (kept for reference)
   const tStartRef = useRef<number>(0);
@@ -407,12 +407,14 @@ export function OscilloscopeControl() {
   const handleRun = () =>
     withCmdError(async () => {
       await runDevice(token!, deviceId!, sessionId!);
+      runIdRef.current = crypto.randomUUID();
       setIsRunning(true);
     });
 
   const handleStop = () =>
     withCmdError(async () => {
       await stopDevice(token!, deviceId!, sessionId!);
+      runIdRef.current = null;
       setIsRunning(false);
     });
 
@@ -435,6 +437,7 @@ export function OscilloscopeControl() {
         deviceId,
         sessionId,
         enabledNums.length > 0 ? enabledNums : undefined,
+        runIdRef.current,
       );
       setAcquiredChannels(acquireResp.channels);
       setLastAcquisitionId(acquireResp.acquisition_id);
@@ -524,9 +527,9 @@ export function OscilloscopeControl() {
       }
       return;
     }
-    // Immediate first frame, then repeat at selected FPS
+    // Immediate first frame, then repeat at 1 Hz
     handleAcquire();
-    runLoopRef.current = setInterval(handleAcquire, 1000 / fps);
+    runLoopRef.current = setInterval(handleAcquire, 1000);
     return () => {
       if (runLoopRef.current) {
         clearInterval(runLoopRef.current);
@@ -534,7 +537,7 @@ export function OscilloscopeControl() {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRunning, fps, sessionId]);
+  }, [isRunning, sessionId]);
 
   // ---------------------------------------------------------------------------
   // CSV download
@@ -722,24 +725,6 @@ export function OscilloscopeControl() {
               {isRunning ? "RUNNING" : "RUN"}
             </button>
 
-            {/* FPS slider — visible when running */}
-            {isRunning && (
-              <div className="flex items-center gap-2 px-1">
-                <span className="text-xs text-(--lab-text-secondary) shrink-0">
-                  {fps} FPS
-                </span>
-                <input
-                  type="range"
-                  min={1}
-                  max={10}
-                  value={fps}
-                  onChange={(e) => setFps(Number(e.target.value))}
-                  className="flex-1 accent-(--lab-accent)"
-                  aria-label="Acquisition frame rate"
-                />
-              </div>
-            )}
-
             <button
               onClick={handleStop}
               disabled={!canCommand}
@@ -749,31 +734,35 @@ export function OscilloscopeControl() {
               <Square className="w-5 h-5" />
               STOP
             </button>
-            <button
-              onClick={() =>
-                withCmdError(async () => {
-                  await stopDevice(token!, deviceId!, sessionId!);
-                  setIsRunning(false);
-                })
-              }
-              disabled={!canCommand}
-              className="w-full flex items-center justify-center gap-2 py-2 px-4 border-2 rounded font-medium text-sm bg-white border-(--lab-border) text-(--lab-text-primary) hover:bg-(--lab-panel) transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              SINGLE
-            </button>
-            <button
-              onClick={() =>
-                withCmdError(async () => {
-                  await stopDevice(token!, deviceId!, sessionId!);
-                  await runDevice(token!, deviceId!, sessionId!);
-                })
-              }
-              disabled={!canCommand}
-              className="w-full flex items-center justify-center gap-2 py-2 px-4 border-2 rounded font-medium text-sm bg-white border-(--lab-border) text-(--lab-text-primary) hover:bg-(--lab-panel) transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Zap className="w-4 h-4" />
-              Force Trigger
-            </button>
+            {expertMode && (
+              <>
+                <button
+                  onClick={() =>
+                    withCmdError(async () => {
+                      await stopDevice(token!, deviceId!, sessionId!);
+                      setIsRunning(false);
+                    })
+                  }
+                  disabled={!canCommand}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-4 border-2 rounded font-medium text-sm bg-white border-(--lab-border) text-(--lab-text-primary) hover:bg-(--lab-panel) transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  SINGLE
+                </button>
+                <button
+                  onClick={() =>
+                    withCmdError(async () => {
+                      await stopDevice(token!, deviceId!, sessionId!);
+                      await runDevice(token!, deviceId!, sessionId!);
+                    })
+                  }
+                  disabled={!canCommand}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-4 border-2 rounded font-medium text-sm bg-white border-(--lab-border) text-(--lab-text-primary) hover:bg-(--lab-panel) transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Zap className="w-4 h-4" />
+                  Force Trigger
+                </button>
+              </>
+            )}
           </div>
 
           {/* Acquire */}
