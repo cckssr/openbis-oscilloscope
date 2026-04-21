@@ -1,0 +1,6 @@
+[Unit]
+Description=Restart OpenBIS Oscilloscope Service (apply nightly YAML sync)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl restart openbis-oscilloscope.service

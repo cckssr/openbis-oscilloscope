@@ -4,10 +4,10 @@ This is the root of the FastAPI application. `main.py` is the entry point; all o
 
 ## Files
 
-| File        | Role                                                                                                                                                                                                                                                                                                                                                |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `main.py`   | App factory (`create_app()`) and lifespan manager (`lifespan()`). Wires together all services at startup and tears them down on shutdown.                                                                                                                                                                                                           |
-| `config.py` | Pydantic `Settings` class. All environment variables are read here and nowhere else. Key settings: `REDIS_URL`, `OPENBIS_URL`, `OPENBIS_SPACE`, `BUFFER_DIR`, `OSCILLOSCOPES_CONFIG`, `LOCK_TTL_SECONDS`, `HEALTH_CHECK_INTERVAL_SECONDS`, `HEALTH_CHECK_TCP_TIMEOUT_SECONDS`, `TOKEN_CACHE_SECONDS`, `EOD_RESET_TIMEZONE`, `DEBUG`, `DEBUG_TOKEN`. |
+| File        | Role                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `main.py`   | App factory (`create_app()`) and lifespan manager (`lifespan()`). Wires together all services at startup and tears them down on shutdown.                                                                                                                                                                                                                                                                                                               |
+| `config.py` | Pydantic `Settings` class. All environment variables are read here and nowhere else. Key settings: `REDIS_URL`, `OPENBIS_URL`, `OPENBIS_SPACE`, `BUFFER_DIR`, `OSCILLOSCOPES_CONFIG`, `LOCK_TTL_SECONDS`, `HEALTH_CHECK_INTERVAL_SECONDS`, `HEALTH_CHECK_TCP_TIMEOUT_SECONDS`, `TOKEN_CACHE_SECONDS`, `EOD_RESET_TIMEZONE`, `DEBUG`, `DEBUG_TOKEN`, `OPENBIS_BOT_USER`, `OPENBIS_BOT_PASSWORD`, `DRIVER_MAPPING_CONFIG`, `OPENBIS_EQUIPMENT_IP_FILTER`. |
 
 ## Startup / shutdown order
 
@@ -18,7 +18,7 @@ Startup
   3. Load config/oscilloscopes.yaml → per-device asyncio worker tasks
   4. Pre-connect mock devices (driver: "mock") so they are immediately ONLINE
   5. HealthMonitor — always started; skips mock devices internally
-  6. APScheduler (end-of-day lock reset at 23:59)
+  6. APScheduler (OpenBIS oscilloscope sync at 23:55; end-of-day lock reset at 23:59)
   7. Attach everything to app.state for dependency injection
 
 Shutdown (reverse)

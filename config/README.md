@@ -27,6 +27,34 @@ oscilloscopes:
 
 **Port field:** used by the health monitor for TCP reachability checks. Use `111` for VXI-11 instruments (RPC portmapper), or `5025` for instruments with a raw LXI SCPI socket.
 
+---
+
+### `driver_mapping.yaml`
+
+Lookup table used by the nightly OpenBIS sync job (`eod_openbis_sync`). Maps `EQUIPMENT.ALTERNATIV_NAME` values from OpenBIS to the driver class path and VXI-11 port used by this service. Instruments whose `ALTERNATIV_NAME` is absent from this file are silently skipped by the sync job.
+
+**Schema:**
+
+```yaml
+driver_mapping:
+  "<ALTERNATIV_NAME>":
+    driver: "<dotted.import.Path>"
+    port: <int>
+```
+
+**Example:**
+
+```yaml
+driver_mapping:
+  "DS1104Z-Plus":
+    driver: "drivers.RigolDS1000.RigolDS1000Driver"
+    port: 111
+```
+
+To support a new instrument model: add an entry here, ensure the driver class exists under `drivers/`, and wait for the next nightly sync (or add the device to `oscilloscopes.yaml` manually).
+
+---
+
 ## Adding a new device
 
 1. Add an entry to `oscilloscopes.yaml`.

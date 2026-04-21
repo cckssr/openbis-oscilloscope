@@ -1,0 +1,10 @@
+[Unit]
+Description=Nightly restart of OpenBIS Oscilloscope Service at 00:05
+Requires=openbis-oscilloscope.service
+
+[Timer]
+OnCalendar=*-*-* 00:05:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

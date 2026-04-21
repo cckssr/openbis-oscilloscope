@@ -25,6 +25,13 @@ class Settings(BaseSettings):
             fake, so the service starts without any external dependencies.
         DEBUG_TOKEN: A fixed Bearer token accepted in ``DEBUG`` mode that bypasses OpenBIS
             validation. Ignored when ``DEBUG`` is ``False``.
+        OPENBIS_BOT_USER: OpenBIS username for the nightly sync bot. Leave empty to skip
+            the sync job entirely (safe in development).
+        OPENBIS_BOT_PASSWORD: Password for ``OPENBIS_BOT_USER``.
+        DRIVER_MAPPING_CONFIG: Path to the YAML file that maps ``EQUIPMENT.ALTERNATIV_NAME``
+            values to driver class paths and VXI-11 port numbers.
+        OPENBIS_EQUIPMENT_IP_FILTER: IP address pattern used to filter EQUIPMENT objects
+            from OpenBIS. Supports a trailing ``.*`` wildcard (e.g. ``"141.23.109.*"``).
     """
 
     model_config = SettingsConfigDict(
@@ -43,6 +50,10 @@ class Settings(BaseSettings):
     OPENBIS_SPACE: str = "GP_2025_WISE"
     DEBUG: bool = False
     DEBUG_TOKEN: str = "debug-token"
+    OPENBIS_BOT_USER: str = ""
+    OPENBIS_BOT_PASSWORD: str = ""
+    DRIVER_MAPPING_CONFIG: str = "./config/driver_mapping.yaml"
+    OPENBIS_EQUIPMENT_IP_FILTER: str = "141.23.109.*"
 
 
 settings = Settings()

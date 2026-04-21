@@ -1,0 +1,15 @@
+# Maps OpenBIS EQUIPMENT.ALTERNATIV_NAME values to driver configuration.
+# Models not listed here are skipped by the nightly sync job.
+#
+# Schema:
+#   driver_mapping:
+#     "<ALTERNATIV_NAME>":
+#       driver: "<dotted.import.Path>"
+#       port: <int>   # 111 for VXI-11/RPC, 5025 for raw LXI SCPI socket
+driver_mapping:
+  "DS1104Z-S Plus":
+    driver: "drivers.RigolDS1000.RigolDS1000Driver"
+    port: 111
+  "DS1054Z":
+    driver: "drivers.RigolDS1000.RigolDS1000Driver"
+    port: 111
