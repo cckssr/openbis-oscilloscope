@@ -160,7 +160,11 @@ class HealthMonitor:
             ``True`` if the connection was established (and then immediately
             closed), ``False`` if it timed out or raised any exception.
         """
-        effective_timeout = timeout if timeout is not None else settings.HEALTH_CHECK_TCP_TIMEOUT_SECONDS
+        effective_timeout = (
+            timeout
+            if timeout is not None
+            else settings.HEALTH_CHECK_TCP_TIMEOUT_SECONDS
+        )
         try:
             _, writer = await asyncio.wait_for(
                 asyncio.open_connection(ip, port), timeout=effective_timeout

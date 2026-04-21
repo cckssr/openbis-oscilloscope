@@ -31,6 +31,8 @@ dev = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+# Uncomment to run integration tests by default (set env vars for credentials):
+# addopts = "--openbis-url=openbis.physik.tu-berlin.de --openbis-token=${OPENBIS_TOKEN}"
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]

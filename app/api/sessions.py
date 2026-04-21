@@ -255,9 +255,7 @@ async def get_artifact_data(
     time_s, voltage_v = buffer_service.get_trace_data(session_id, artifact_id)
     # Resolve channel from the index
     artifacts = buffer_service.list_artifacts(session_id)
-    channel = next(
-        (a.channel for a in artifacts if a.artifact_id == artifact_id), None
-    )
+    channel = next((a.channel for a in artifacts if a.artifact_id == artifact_id), None)
     return {
         "artifact_id": artifact_id,
         "channel": channel,

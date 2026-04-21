@@ -298,17 +298,23 @@ class InstrumentManager:
         now = datetime.now(timezone.utc)
         statuses = []
         for e in self.devices.values():
-            uptime = (now - e.online_since).total_seconds() / 60 if e.online_since else None
-            statuses.append(DeviceStatus(
-                id=e.config.id,
-                label=e.config.label,
-                ip=e.config.ip,
-                port=e.config.port,
-                state=e.state,
-                last_error=e.last_error,
-                online_since_utc=e.online_since.isoformat() if e.online_since else None,
-                uptime_minutes=uptime,
-            ))
+            uptime = (
+                (now - e.online_since).total_seconds() / 60 if e.online_since else None
+            )
+            statuses.append(
+                DeviceStatus(
+                    id=e.config.id,
+                    label=e.config.label,
+                    ip=e.config.ip,
+                    port=e.config.port,
+                    state=e.state,
+                    last_error=e.last_error,
+                    online_since_utc=(
+                        e.online_since.isoformat() if e.online_since else None
+                    ),
+                    uptime_minutes=uptime,
+                )
+            )
         return statuses
 
     def get_device(self, device_id: str) -> DeviceEntry:

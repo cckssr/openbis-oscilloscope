@@ -83,7 +83,9 @@ def _extract_token(request: Request, credentials_token: str | None) -> str:
 @router.get("/projects", response_model=list[dict])
 async def list_projects(
     request: Request,
-    space: str = Query(default=None, description="Space code. Defaults to OPENBIS_SPACE setting."),
+    space: str = Query(
+        default=None, description="Space code. Defaults to OPENBIS_SPACE setting."
+    ),
     user: UserInfo = Depends(get_current_user),
 ) -> list[dict[str, Any]]:
     """Return all projects in the configured OpenBIS space.
@@ -100,7 +102,13 @@ async def list_projects(
         return _projects_cache[cache_key]
 
     if settings.DEBUG:
-        result = [{"code": "DEBUG_PROJECT", "display_name": "Debug Project", "semester": "WiSe 2025"}]
+        result = [
+            {
+                "code": "DEBUG_PROJECT",
+                "display_name": "Debug Project",
+                "semester": "WiSe 2025",
+            }
+        ]
         _projects_cache[cache_key] = result
         return result
 
@@ -119,7 +127,9 @@ async def list_projects(
         _projects_cache[cache_key] = result
         return result
     except Exception as exc:
-        logger.error("Failed to list OpenBIS projects for space %s: %s", space_code, exc)
+        logger.error(
+            "Failed to list OpenBIS projects for space %s: %s", space_code, exc
+        )
         raise OpenBISError(f"Failed to list projects: {exc}") from exc
 
 
@@ -127,7 +137,9 @@ async def list_projects(
 async def list_collections(
     request: Request,
     project: str = Query(..., description="Project code, e.g. DI_X_LOLOVIC."),
-    space: str = Query(default=None, description="Space code. Defaults to OPENBIS_SPACE setting."),
+    space: str = Query(
+        default=None, description="Space code. Defaults to OPENBIS_SPACE setting."
+    ),
     user: UserInfo = Depends(get_current_user),
 ) -> list[dict[str, Any]]:
     """Return all collections (experiments) within a project.
@@ -162,7 +174,11 @@ async def list_collections(
         prefix = f"{project}_"
         result = []
         for col in proj.get_collections():
-            display = col.code.removeprefix(prefix) if col.code.startswith(prefix) else col.code
+            display = (
+                col.code.removeprefix(prefix)
+                if col.code.startswith(prefix)
+                else col.code
+            )
             display = display.replace("_", " ")
             result.append({"code": col.code, "display_name": display})
 
@@ -176,8 +192,12 @@ async def list_collections(
 @router.get("/objects", response_model=list[dict])
 async def list_objects(
     request: Request,
-    collection: str = Query(..., description="Collection code, e.g. DI_X_LOLOVIC_EXP_10."),
-    space: str = Query(default=None, description="Space code. Defaults to OPENBIS_SPACE setting."),
+    collection: str = Query(
+        ..., description="Collection code, e.g. DI_X_LOLOVIC_EXP_10."
+    ),
+    space: str = Query(
+        default=None, description="Space code. Defaults to OPENBIS_SPACE setting."
+    ),
     user: UserInfo = Depends(get_current_user),
 ) -> list[dict[str, Any]]:
     """Return all objects (samples) within a collection.
@@ -195,7 +215,13 @@ async def list_objects(
         return _objects_cache[cache_key]
 
     if settings.DEBUG:
-        result = [{"code": "DEBUG_OBJ-001", "type": "GP_STANDARDVERSUCH", "identifier": f"/{space_code}/DEBUG_OBJ-001"}]
+        result = [
+            {
+                "code": "DEBUG_OBJ-001",
+                "type": "GP_STANDARDVERSUCH",
+                "identifier": f"/{space_code}/DEBUG_OBJ-001",
+            }
+        ]
         _objects_cache[cache_key] = result
         return result
 
@@ -216,11 +242,13 @@ async def list_objects(
 
         result = []
         for obj in target_col.get_objects():
-            result.append({
-                "code": obj.code,
-                "type": obj.type,
-                "identifier": obj.identifier,
-            })
+            result.append(
+                {
+                    "code": obj.code,
+                    "type": obj.type,
+                    "identifier": obj.identifier,
+                }
+            )
 
         _objects_cache[cache_key] = result
         return result

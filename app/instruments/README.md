@@ -35,10 +35,10 @@ Abstract base class every driver must subclass, plus the data classes used as re
 
 **Key types:**
 
-| Type           | Description                                                                                  |
-| -------------- | -------------------------------------------------------------------------------------------- |
-| `DeviceState`  | Enum: `OFFLINE`, `ONLINE`, `LOCKED`, `BUSY`, `ERROR`                                         |
-| `DeviceConfig` | Loaded from `oscilloscopes.yaml`: `id`, `ip`, `port`, `label`, `driver` (dotted import path) |
+| Type           | Description                                                                                         |
+| -------------- | --------------------------------------------------------------------------------------------------- |
+| `DeviceState`  | Enum: `OFFLINE`, `ONLINE`, `LOCKED`, `BUSY`, `ERROR`                                                |
+| `DeviceConfig` | Loaded from `oscilloscopes.yaml`: `id`, `ip`, `port`, `label`, `driver` (dotted import path)        |
 | `DeviceEntry`  | Runtime state: `config`, `state`, `driver` instance, `asyncio.Queue`, worker `Task`, `online_since` |
 | `DeviceStatus` | API response shape: includes `online_since_utc` (ISO-8601) and `uptime_minutes` (float or None)     |
 
@@ -108,14 +108,14 @@ PyMeasure-based SCPI driver for the Rigol DS1000Z family (`OscilloscopeChannel` 
 
 Key properties exposed on `RigolDS1000ZSeries`:
 
-| Property / Method                                  | Description                                                                                |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `ch1`–`ch4`                                        | `OscilloscopeChannel` instances (scale, offset, coupling, probe_ratio, is_enabled, …)      |
-| `timebase_scale`, `timebase_offset`                | Horizontal scale (s/div) and offset                                                        |
-| `acq_sample_rate`                                  | Current sample rate (read-only)                                                            |
-| `trigger_edge_source/slope/level`, `trigger_sweep` | Edge trigger settings                                                                      |
-| `waveform_source/mode/format`                      | Waveform readout configuration                                                             |
-| `get_waveform_preamble()`                          | Returns dict with `xincrement`, `xorigin`, `yincrement`, `yorigin`, `yreference`, `points` |
+| Property / Method                                  | Description                                                                                                                                         |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ch1`–`ch4`                                        | `OscilloscopeChannel` instances (scale, offset, coupling, probe_ratio, is_enabled, …)                                                               |
+| `timebase_scale`, `timebase_offset`                | Horizontal scale (s/div) and offset                                                                                                                 |
+| `acq_sample_rate`                                  | Current sample rate (read-only)                                                                                                                     |
+| `trigger_edge_source/slope/level`, `trigger_sweep` | Edge trigger settings                                                                                                                               |
+| `waveform_source/mode/format`                      | Waveform readout configuration                                                                                                                      |
+| `get_waveform_preamble()`                          | Returns dict with `xincrement`, `xorigin`, `yincrement`, `yorigin`, `yreference`, `points`                                                          |
 | `get_waveform_data(raw=False)`                     | Returns voltage array (or raw bytes if `raw=True`). Uses `adapter.connection.read_raw()` to avoid ASCII decode errors on binary BYTE/WORD payloads. |
-| `get_display_data()`                               | Returns screenshot bytes in the format set by `storage_image_type`                         |
-| `run()`, `stop()`                                  | Start / stop acquisition                                                                   |
+| `get_display_data()`                               | Returns screenshot bytes in the format set by `storage_image_type`                                                                                  |
+| `run()`, `stop()`                                  | Start / stop acquisition                                                                                                                            |

@@ -17,7 +17,8 @@
       "Bash(npm install *)",
       "Bash(npx tsc *)",
       "Bash(./node_modules/.bin/tsc --noEmit)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(git check-ignore *)"
     ]
   }
 }

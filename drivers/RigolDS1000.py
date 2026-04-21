@@ -135,11 +135,16 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
     def get_screenshot(self) -> bytes:
         """Capture the current oscilloscope display and return it as PNG bytes.
 
+        Stops acquisition to ensure a consistent screen image, then restarts it.
+
         Returns:
             Raw image bytes (format is determined by the instrument's storage
             image type setting — typically BMP or PNG).
         """
-        return self.instrument.get_display_data()
+        self.instrument.stop()
+        data = self.instrument.get_display_data()
+        self.instrument.run()
+        return data
 
     def get_available_channels(self):
         """Return a list of available channels on the instrument.

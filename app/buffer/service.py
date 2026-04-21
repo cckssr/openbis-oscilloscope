@@ -44,8 +44,8 @@ class ArtifactInfo:
     created_at: str
     files: list[str]
     acquisition_id: str | None = None  # groups channels acquired in one call
-    annotation: str | None = None      # user-supplied label for the acquisition
-    run_id: str | None = None          # groups acquisitions from one RUN press
+    annotation: str | None = None  # user-supplied label for the acquisition
+    run_id: str | None = None  # groups acquisitions from one RUN press
 
 
 class BufferService:
@@ -331,7 +331,18 @@ class BufferService:
                 acquisition_id=a.get("acquisition_id"),
                 annotation=a.get("annotation"),
                 run_id=a.get("run_id"),
-                **{k: a[k] for k in ("artifact_id", "artifact_type", "channel", "seq", "persist", "created_at", "files")},
+                **{
+                    k: a[k]
+                    for k in (
+                        "artifact_id",
+                        "artifact_type",
+                        "channel",
+                        "seq",
+                        "persist",
+                        "created_at",
+                        "files",
+                    )
+                },
             )
             for a in index["artifacts"]
         ]
@@ -592,7 +603,7 @@ class BufferService:
             h5f.attrs["device_id"] = device_id
 
             # Group artifacts by acquisition_id; ungrouped ones are stored flat.
-            grouped: dict[str, list[dict]] = {}   # acquisition_id -> [artifact, ...]
+            grouped: dict[str, list[dict]] = {}  # acquisition_id -> [artifact, ...]
             ungrouped: list[dict] = []
             for art_id in artifact_ids:
                 art = artifacts.get(art_id)

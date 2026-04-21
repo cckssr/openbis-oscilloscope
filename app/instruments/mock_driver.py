@@ -97,7 +97,9 @@ class MockOscilloscopeDriver(BaseOscilloscopeDriver):
         self._connected = False
         self._running = False
         self._stop_time: float = 0.0  # wall-clock time when stop() was last called
-        self._rng = np.random.default_rng(seed=42)  # shared RNG — not re-seeded per call
+        self._rng = np.random.default_rng(
+            seed=42
+        )  # shared RNG — not re-seeded per call
         self._channels: dict[int, ChannelConfig] = {
             ch: ChannelConfig(
                 channel=ch,
@@ -110,7 +112,9 @@ class MockOscilloscopeDriver(BaseOscilloscopeDriver):
             for ch in range(1, 5)
         }
         self._timebase = TimebaseConfig(scale_s_div=1e-6, offset_s=0.0, sample_rate=1e9)
-        self._trigger = TriggerConfig(source="CH1", level_v=0.0, slope="RISE", mode="AUTO")
+        self._trigger = TriggerConfig(
+            source="CH1", level_v=0.0, slope="RISE", mode="AUTO"
+        )
 
     def connect(self) -> None:
         """Mark the driver as connected (no-op for mock)."""

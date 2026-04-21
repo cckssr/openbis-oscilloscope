@@ -148,7 +148,9 @@ async def get_device(
         "last_error": entry.last_error,
         "lock": lock_info,
         "capabilities": capabilities,
-        "online_since_utc": entry.online_since.isoformat() if entry.online_since else None,
+        "online_since_utc": (
+            entry.online_since.isoformat() if entry.online_since else None
+        ),
         "uptime_minutes": uptime_minutes,
     }
 
@@ -409,7 +411,12 @@ async def acquire(
                 "scale_v_div": cfg.scale_v_div,
             }
             art_id = buffer_service.store_waveform(
-                device_id, session_id, waveform, meta, acquisition_id=acquisition_id, run_id=run_id
+                device_id,
+                session_id,
+                waveform,
+                meta,
+                acquisition_id=acquisition_id,
+                run_id=run_id,
             )
             artifact_ids.append(art_id)
             acquired_channels.append(

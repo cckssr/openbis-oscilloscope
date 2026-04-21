@@ -102,11 +102,11 @@ Certbot will patch the VirtualHost automatically and set up auto-renewal.
 
 The frontend reads an `openbis` cookie set by the OpenBIS server as a login shortcut (see `AuthContext.tsx`). For this to work, **both services must share a common parent domain**:
 
-| Scenario | Works? |
-|---|---|
-| oscilloscope.physik.tu-berlin.de + openbis.physik.tu-berlin.de | Yes — `Domain=.physik.tu-berlin.de` |
-| oscilloscope.example.org + openbis.other.org | No — different domains |
-| Same host, different paths (e.g., `/oscilloscope` and `/openbis`) | Yes |
+| Scenario                                                          | Works?                              |
+| ----------------------------------------------------------------- | ----------------------------------- |
+| oscilloscope.physik.tu-berlin.de + openbis.physik.tu-berlin.de    | Yes — `Domain=.physik.tu-berlin.de` |
+| oscilloscope.example.org + openbis.other.org                      | No — different domains              |
+| Same host, different paths (e.g., `/oscilloscope` and `/openbis`) | Yes                                 |
 
 If the OpenBIS server sets `SameSite=Strict`, the cookie will not be sent cross-origin. Ask your OpenBIS admin to set `SameSite=Lax; Domain=.physik.tu-berlin.de` on the session cookie.
 
@@ -134,10 +134,10 @@ ufw deny 8000/tcp   # backend reachable only from localhost via Apache
 
 ## Required Apache2 modules summary
 
-| Module | Purpose |
-|---|---|
-| `proxy` | Base proxy support |
-| `proxy_http` | HTTP reverse proxy |
-| `ssl` | HTTPS |
-| `rewrite` | SPA fallback + HTTP→HTTPS redirect |
-| `headers` | Security response headers |
+| Module       | Purpose                            |
+| ------------ | ---------------------------------- |
+| `proxy`      | Base proxy support                 |
+| `proxy_http` | HTTP reverse proxy                 |
+| `ssl`        | HTTPS                              |
+| `rewrite`    | SPA fallback + HTTP→HTTPS redirect |
+| `headers`    | Security response headers          |

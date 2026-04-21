@@ -8,7 +8,12 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 from app.buffer.service import BufferService
-from app.instruments.manager import DeviceConfig, DeviceEntry, DeviceState, InstrumentManager
+from app.instruments.manager import (
+    DeviceConfig,
+    DeviceEntry,
+    DeviceState,
+    InstrumentManager,
+)
 from app.instruments.mock_driver import MockOscilloscopeDriver
 from app.locks.service import LockService
 from app.openbis_client.client import OpenBISClient, UserInfo
@@ -22,7 +27,9 @@ async def setup(tmp_path):
     driver.connect()
 
     manager = InstrumentManager()
-    cfg = DeviceConfig(id="scope-01", ip="127.0.0.1", port=5025, label="Test", driver_class_path="mock")
+    cfg = DeviceConfig(
+        id="scope-01", ip="127.0.0.1", port=5025, label="Test", driver_class_path="mock"
+    )
     entry = DeviceEntry(config=cfg, state=DeviceState.ONLINE)
     entry.driver = driver
     manager.devices["scope-01"] = entry
@@ -30,6 +37,7 @@ async def setup(tmp_path):
     buf = BufferService(buffer_dir=str(tmp_path / "buffer"))
 
     from app.main import create_app
+
     app = create_app()
 
     ls = LockService(redis)
@@ -60,7 +68,9 @@ async def setup(tmp_path):
 @pytest.mark.asyncio
 async def test_list_devices(setup):
     app, ls, manager, buf, user = setup
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
         resp = await client.get("/devices", headers={"Authorization": "Bearer tok"})
     assert resp.status_code == 200
     data = resp.json()
@@ -72,8 +82,12 @@ async def test_list_devices(setup):
 @pytest.mark.asyncio
 async def test_get_device(setup):
     app, ls, manager, buf, user = setup
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp = await client.get("/devices/scope-01", headers={"Authorization": "Bearer tok"})
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        resp = await client.get(
+            "/devices/scope-01", headers={"Authorization": "Bearer tok"}
+        )
     assert resp.status_code == 200
     assert resp.json()["id"] == "scope-01"
 
@@ -81,17 +95,25 @@ async def test_get_device(setup):
 @pytest.mark.asyncio
 async def test_get_device_not_found(setup):
     app, ls, manager, buf, user = setup
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp = await client.get("/devices/nonexistent", headers={"Authorization": "Bearer tok"})
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        resp = await client.get(
+            "/devices/nonexistent", headers={"Authorization": "Bearer tok"}
+        )
     assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
 async def test_acquire_and_release_lock(setup):
     app, ls, manager, buf, user = setup
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
         # Acquire
-        resp = await client.post("/devices/scope-01/lock", headers={"Authorization": "Bearer tok"})
+        resp = await client.post(
+            "/devices/scope-01/lock", headers={"Authorization": "Bearer tok"}
+        )
         assert resp.status_code == 200
         session_id = resp.json()["control_session_id"]
         assert session_id
@@ -114,8 +136,12 @@ async def test_lock_conflict(setup):
     app, ls, manager, buf, user = setup
     await ls.acquire_lock("scope-01", "bob", "sess-bob")
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp = await client.post("/devices/scope-01/lock", headers={"Authorization": "Bearer tok"})
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        resp = await client.post(
+            "/devices/scope-01/lock", headers={"Authorization": "Bearer tok"}
+        )
     assert resp.status_code == 409
 
 
@@ -125,7 +151,9 @@ async def test_heartbeat(setup):
     session_id = str(uuid.uuid4())
     await ls.acquire_lock("scope-01", "alice", session_id)
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
         resp = await client.post(
             f"/devices/scope-01/heartbeat?session_id={session_id}",
             headers={"Authorization": "Bearer tok"},
@@ -140,7 +168,9 @@ async def test_acquire_waveform(setup):
     session_id = str(uuid.uuid4())
     await ls.acquire_lock("scope-01", "alice", session_id)
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
         resp = await client.post(
             f"/devices/scope-01/acquire?session_id={session_id}",
             headers={"Authorization": "Bearer tok"},
@@ -157,7 +187,9 @@ async def test_screenshot(setup):
     session_id = str(uuid.uuid4())
     await ls.acquire_lock("scope-01", "alice", session_id)
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
         resp = await client.get(
             f"/devices/scope-01/screenshot?session_id={session_id}",
             headers={"Authorization": "Bearer tok"},
@@ -170,7 +202,9 @@ async def test_screenshot(setup):
 async def test_command_without_lock_fails(setup):
     app, ls, manager, buf, user = setup
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
         resp = await client.post(
             "/devices/scope-01/acquire?session_id=wrong-session",
             headers={"Authorization": "Bearer tok"},
@@ -184,7 +218,9 @@ async def test_get_channel_data(setup):
     session_id = str(uuid.uuid4())
     await ls.acquire_lock("scope-01", "alice", session_id)
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
         # First acquire so there is waveform data buffered
         acq = await client.post(
             f"/devices/scope-01/acquire?session_id={session_id}",
@@ -212,7 +248,9 @@ async def test_get_channel_data_no_waveform(setup):
     session_id = str(uuid.uuid4())
     await ls.acquire_lock("scope-01", "alice", session_id)
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
         resp = await client.get(
             f"/devices/scope-01/channels/1/data?session_id={session_id}",
             headers={"Authorization": "Bearer tok"},
