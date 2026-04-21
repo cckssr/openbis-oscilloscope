@@ -14,7 +14,7 @@ async def get_me(user: UserInfo = Depends(get_current_user)) -> dict:
 
     Args:
         user: The authenticated user, injected by
-            :func:`~app.core.dependencies.get_current_user`.
+            `~app.core.dependencies.get_current_user`.
 
     Returns:
         A dict with ``user_id``, ``display_name``, and ``is_admin``.

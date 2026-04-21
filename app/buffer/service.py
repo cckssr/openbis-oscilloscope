@@ -43,6 +43,9 @@ class ArtifactInfo:
     persist: bool
     created_at: str
     files: list[str]
+    acquisition_id: str | None = None  # groups channels acquired in one call
+    annotation: str | None = None  # user-supplied label for the acquisition
+    run_id: str | None = None  # groups acquisitions from one RUN press
 
 
 class BufferService:
@@ -165,6 +168,8 @@ class BufferService:
         session_id: str,
         waveform: WaveformData,
         meta: dict,
+        acquisition_id: str | None = None,
+        run_id: str | None = None,
     ) -> str:
         """Persist a waveform acquisition as a CSV file plus a JSON metadata sidecar.
 
@@ -234,6 +239,9 @@ class BufferService:
                 "persist": False,
                 "created_at": now_iso,
                 "files": [csv_name, meta_name],
+                "acquisition_id": acquisition_id,
+                "annotation": None,
+                "run_id": run_id,
             }
         )
         self._save_index(device_id, session_id, index)
@@ -278,6 +286,8 @@ class BufferService:
                 "persist": False,
                 "created_at": now_iso,
                 "files": [png_name],
+                "acquisition_id": None,
+                "annotation": None,
             }
         )
         self._save_index(device_id, session_id, index)
@@ -316,7 +326,26 @@ class BufferService:
             return []
         _, device_id = result
         index = self._load_index(device_id, session_id)
-        return [ArtifactInfo(**a) for a in index["artifacts"]]
+        return [
+            ArtifactInfo(
+                acquisition_id=a.get("acquisition_id"),
+                annotation=a.get("annotation"),
+                run_id=a.get("run_id"),
+                **{
+                    k: a[k]
+                    for k in (
+                        "artifact_id",
+                        "artifact_type",
+                        "channel",
+                        "seq",
+                        "persist",
+                        "created_at",
+                        "files",
+                    )
+                },
+            )
+            for a in index["artifacts"]
+        ]
 
     def set_flag(self, session_id: str, artifact_id: str, persist: bool) -> None:
         """Set or clear the persist flag on an artifact.
@@ -357,6 +386,76 @@ class BufferService:
             A list of :class:`ArtifactInfo` instances where ``persist=True``.
         """
         return [a for a in self.list_artifacts(session_id) if a.persist]
+
+    def set_annotation(
+        self, session_id: str, acquisition_id: str, annotation: str
+    ) -> None:
+        """Set the annotation on every artifact belonging to an acquisition group.
+
+        Args:
+            session_id: Control session UUID containing the artifacts.
+            acquisition_id: UUID shared by all traces in one acquire call.
+            annotation: User-supplied label to store (e.g. ``"decay capacitor a"``).
+
+        Raises:
+            SessionNotFoundError: If the session directory does not exist.
+            ArtifactNotFoundError: If no artifact in the session has this acquisition ID.
+        """
+        result = self._find_session_dir(session_id)
+        if result is None:
+            raise SessionNotFoundError(session_id)
+        _, device_id = result
+        index = self._load_index(device_id, session_id)
+        matched = False
+        for artifact in index["artifacts"]:
+            if artifact.get("acquisition_id") == acquisition_id:
+                artifact["annotation"] = annotation
+                matched = True
+        if not matched:
+            raise ArtifactNotFoundError(acquisition_id)
+        self._save_index(device_id, session_id, index)
+
+    def get_trace_data(
+        self, session_id: str, artifact_id: str
+    ) -> tuple[list[float], list[float]]:
+        """Read time and voltage arrays for a stored trace artifact.
+
+        Args:
+            session_id: Control session UUID containing the artifact.
+            artifact_id: Unique trace artifact identifier.
+
+        Returns:
+            ``(time_values, voltage_values)`` as lists of floats.
+
+        Raises:
+            SessionNotFoundError: If the session directory does not exist.
+            ArtifactNotFoundError: If the artifact is not found or has no CSV.
+        """
+        paths = self.get_artifact_paths(session_id, artifact_id)
+        csv_file = next((p for p in paths if p.suffix == ".csv"), None)
+        if csv_file is None:
+            raise ArtifactNotFoundError(artifact_id)
+        return self.read_trace_csv(csv_file)
+
+    def get_screenshot_bytes(self, session_id: str, artifact_id: str) -> bytes:
+        """Return the raw PNG bytes for a stored screenshot artifact.
+
+        Args:
+            session_id: Control session UUID containing the artifact.
+            artifact_id: Unique screenshot artifact identifier.
+
+        Returns:
+            Raw PNG image bytes.
+
+        Raises:
+            SessionNotFoundError: If the session directory does not exist.
+            ArtifactNotFoundError: If the artifact is not found or has no PNG.
+        """
+        paths = self.get_artifact_paths(session_id, artifact_id)
+        png_file = next((p for p in paths if p.suffix == ".png"), None)
+        if png_file is None:
+            raise ArtifactNotFoundError(artifact_id)
+        return png_file.read_bytes()
 
     def get_artifact_paths(self, session_id: str, artifact_id: str) -> list[Path]:
         """Return the absolute file paths for all files belonging to an artifact.
@@ -424,7 +523,7 @@ class BufferService:
         )
         return csv_file, meta_file
 
-    def _read_trace_csv(self, csv_file: Path) -> tuple[list[float], list[float]]:
+    def read_trace_csv(self, csv_file: Path) -> tuple[list[float], list[float]]:
         """Read waveform arrays from a trace CSV file.
 
         Comment lines (prefixed by ``#``), header lines, and malformed rows are
@@ -503,19 +602,49 @@ class BufferService:
             h5f.attrs["session_id"] = session_id
             h5f.attrs["device_id"] = device_id
 
+            # Group artifacts by acquisition_id; ungrouped ones are stored flat.
+            grouped: dict[str, list[dict]] = {}  # acquisition_id -> [artifact, ...]
+            ungrouped: list[dict] = []
             for art_id in artifact_ids:
                 art = artifacts.get(art_id)
                 if art is None:
                     continue
+                acq_id = art.get("acquisition_id")
+                if acq_id:
+                    grouped.setdefault(acq_id, []).append(art)
+                else:
+                    ungrouped.append(art)
 
+            # Write grouped acquisitions: /{acquisition_id}/ch{N}
+            for acq_id, members in grouped.items():
+                acq_grp = h5f.create_group(acq_id)
+                # Attach annotation if present (same for all members in the group)
+                annotation = next(
+                    (m.get("annotation") for m in members if m.get("annotation")), None
+                )
+                if annotation:
+                    acq_grp.attrs["annotation"] = annotation
+                for art in members:
+                    trace_files = self._resolve_trace_files(session_dir, art)
+                    if trace_files is None:
+                        continue
+                    csv_file, meta_file = trace_files
+                    times, volts = self.read_trace_csv(csv_file)
+                    ch = art.get("channel")
+                    sub_name = f"ch{ch}" if ch is not None else art["artifact_id"]
+                    sub_grp = acq_grp.create_group(sub_name)
+                    sub_grp.create_dataset("time_s", data=np.array(times))
+                    sub_grp.create_dataset("voltage_V", data=np.array(volts))
+                    self._attach_scalar_metadata(sub_grp, meta_file)
+
+            # Write ungrouped traces flat (legacy behaviour)
+            for art in ungrouped:
                 trace_files = self._resolve_trace_files(session_dir, art)
                 if trace_files is None:
                     continue
                 csv_file, meta_file = trace_files
-
-                times, volts = self._read_trace_csv(csv_file)
-
-                grp = h5f.create_group(art_id)
+                times, volts = self.read_trace_csv(csv_file)
+                grp = h5f.create_group(art["artifact_id"])
                 grp.create_dataset("time_s", data=np.array(times))
                 grp.create_dataset("voltage_V", data=np.array(volts))
                 self._attach_scalar_metadata(grp, meta_file)

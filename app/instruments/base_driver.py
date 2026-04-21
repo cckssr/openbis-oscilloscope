@@ -173,6 +173,34 @@ class BaseOscilloscopeDriver(ABC):
             Raw PNG image data as a :class:`bytes` object.
         """
 
+    def get_available_channels(self) -> list[int]:
+        """Return channel numbers that are currently enabled on the instrument.
+
+        Default implementation calls :meth:`get_channel_enabled` for channels
+        1–4 and returns those that are active.  Override in hardware drivers
+        if the instrument provides a faster batch query for all channel states.
+
+        Returns:
+            Sorted list of 1-based channel numbers that are currently enabled.
+        """
+        return sorted(ch for ch in range(1, 5) if self.get_channel_enabled(ch))
+
+    def get_channel_enabled(self, channel: int) -> bool:
+        """Return whether the specified channel is currently active/visible.
+
+        Default implementation calls :meth:`get_channel_config` and reads the
+        ``enabled`` field.  Override in hardware drivers to issue a single
+        lightweight query (e.g. ``:CHANnelN:DISPlay?``) instead of reading the
+        full channel configuration.
+
+        Args:
+            channel: 1-based channel number to query.
+
+        Returns:
+            ``True`` if the channel is enabled, ``False`` otherwise.
+        """
+        return self.get_channel_config(channel).enabled
+
     @abstractmethod
     def get_channel_config(self, channel: int) -> ChannelConfig:
         """Return the current configuration for the specified input channel.
@@ -198,6 +226,34 @@ class BaseOscilloscopeDriver(ABC):
 
         Returns:
             A :class:`TriggerConfig` snapshot of source, level, slope, and mode.
+        """
+
+    @abstractmethod
+    def set_channel_config(self, channel: int, config: ChannelConfig) -> None:
+        """Apply the given channel configuration to the instrument.
+
+        Args:
+            channel: 1-based channel number to configure.
+            config: The :class:`ChannelConfig` values to apply.
+        """
+
+    @abstractmethod
+    def set_timebase(self, config: TimebaseConfig) -> None:
+        """Apply the given timebase configuration to the instrument.
+
+        The ``sample_rate`` field of *config* is read-only on most hardware and
+        is ignored by implementations that cannot set it directly.
+
+        Args:
+            config: The :class:`TimebaseConfig` values to apply.
+        """
+
+    @abstractmethod
+    def set_trigger(self, config: TriggerConfig) -> None:
+        """Apply the given trigger configuration to the instrument.
+
+        Args:
+            config: The :class:`TriggerConfig` values to apply.
         """
 
     def get_all_settings(self) -> dict:

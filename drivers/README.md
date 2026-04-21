@@ -4,10 +4,10 @@ This directory contains the custom driver(s) for your oscilloscope model. Driver
 
 ## Available drivers
 
-| File                 | Class         | Hardware                                                                                                                    |
-| -------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `RigolDS1000.py`     | `RigolDS1000` | Rigol DS1000Z series (DS1054Z, DS1074Z, DS1104Z, MSO variants). Uses PyMeasure's `RigolDS1000ZSeries` over TCP socket VISA. |
-| `my_oscilloscope.py` | —             | Annotated stub — copy this to add a new driver.                                                                             |
+| File                 | Class         | Hardware                                                                                                                                                                                  |
+| -------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RigolDS1000.py`     | `RigolDS1000` | Rigol DS1000Z series (DS1054Z, DS1074Z, DS1104Z, MSO variants). Full read/write driver using PyMeasure over VXI-11 (`TCPIP::ip::INSTR`). Set `port: 111` in the YAML (VXI-11 portmapper). |
+| `my_oscilloscope.py` | —             | Annotated stub — copy this to add a new driver.                                                                                                                                           |
 
 ---
 
@@ -36,7 +36,7 @@ Every driver must implement these abstract methods:
 | `get_timebase() -> TimebaseConfig`             | Query timebase settings                      |
 | `get_trigger() -> TriggerConfig`               | Query trigger settings                       |
 
-`get_all_settings()` is provided by the base class — it calls the above methods and assembles a metadata dict automatically.
+`get_all_settings()` and `get_channel_enabled(channel)` are provided by the base class. Override `get_channel_enabled()` with a single `:CHANnelN:DISPlay?` query to avoid reading the full config for disabled channels during acquire pre-screening — saves 4 round-trips per inactive channel.
 
 ## 3. LAN / SCPI connection
 

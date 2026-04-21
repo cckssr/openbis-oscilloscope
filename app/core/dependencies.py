@@ -1,6 +1,6 @@
 """Core dependencies for FastAPI routes, including authentication and lock verification."""
 
-from fastapi import Depends, Request
+from fastapi import Cookie, Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.core.exceptions import AdminRequiredError, LockRequiredError, AuthError
@@ -13,31 +13,33 @@ _bearer = HTTPBearer(auto_error=False)
 async def get_current_user(
     request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    openbis: str | None = Cookie(default=None),
 ) -> UserInfo:
     """Extract and validate the Bearer token from the request, returning the authenticated user.
 
-    Reads the ``Authorization: Bearer <token>`` header and delegates to the
-    OpenBIS client for token validation. The result is cached by the client
-    for ``TOKEN_CACHE_SECONDS`` to avoid repeated round-trips.
+    Checks the ``Authorization: Bearer <token>`` header first; falls back to
+    the ``openbis`` cookie (set by the OpenBIS web UI on the same domain) when
+    the header is absent. The result is cached by the client for
+    ``TOKEN_CACHE_SECONDS`` to avoid repeated round-trips.
 
     Args:
         request: The incoming HTTP request, used to access ``app.state.openbis_client``.
         credentials: HTTP Bearer credentials extracted by FastAPI's security scheme,
             or ``None`` when the header is absent.
+        openbis: Value of the ``openbis`` cookie, used as a fallback token.
 
     Returns:
         A :class:`~app.openbis_client.client.UserInfo` dataclass with the
         authenticated user's ID, display name, and admin flag.
 
     Raises:
-        AuthError: If the ``Authorization`` header is missing or the token is
-            rejected by OpenBIS.
+        AuthError: If neither the header nor the cookie is present, or the token
+            is rejected by OpenBIS.
     """
-    if credentials is None:
+    token = credentials.credentials if credentials else openbis
+    if not token:
         raise AuthError("Missing Authorization header")
-    return await request.app.state.openbis_client.validate_token(
-        credentials.credentials
-    )
+    return await request.app.state.openbis_client.validate_token(token)
 
 
 async def require_admin(user: UserInfo = Depends(get_current_user)) -> UserInfo:

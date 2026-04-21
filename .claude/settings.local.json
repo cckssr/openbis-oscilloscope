@@ -2,11 +2,23 @@
   "permissions": {
     "allow": [
       "Bash(python3 -m py_compile:*)",
+      "Bash(source .venv/bin/activate:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(.venv/bin/pytest:*)",
       "Skill(update-config)",
-      "Skill(update-config:*)"
+      "Skill(update-config:*)",
+      "Bash(python -m pytest tests/ -v --tb=short)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm audit:*)",
+      "Bash(npm info:*)",
+      "Bash(pnpm build:*)",
+      "Bash(python -m pytest tests/ -q)",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(npm run *)",
+      "Bash(git check-ignore *)"
     ]
   }
 }

@@ -23,6 +23,7 @@
 #
 
 import numpy as np
+import time
 from pymeasure.instruments import Instrument, Channel, SCPIMixin
 from pymeasure.instruments.validators import (
     truncated_discrete_set,
@@ -144,7 +145,24 @@ class OscilloscopeChannel(Channel):
         Valid values are 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500,
         and 1000. The probe ratio affects the vertical scale and offset ranges.""",
         validator=truncated_discrete_set,
-        values=[0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000],
+        values=[
+            0.01,
+            0.02,
+            0.05,
+            0.1,
+            0.2,
+            0.5,
+            1,
+            2,
+            5,
+            10,
+            20,
+            50,
+            100,
+            200,
+            500,
+            1000,
+        ],
     )
 
     units = Instrument.control(
@@ -321,7 +339,12 @@ class RigolDS1000ZSeries(SCPIMixin, Instrument):
         - PEAK: Signal maximum and minimum values within sample interval.
         - HRESOLUTION: Ultra-sampling with neighboring averages.""",
         validator=strict_discrete_set,
-        values={"NORMAL": "NORM", "AVERAGES": "AVER", "PEAK": "PEAK", "HRESOLUTION": "HRES"},
+        values={
+            "NORMAL": "NORM",
+            "AVERAGES": "AVER",
+            "PEAK": "PEAK",
+            "HRESOLUTION": "HRES",
+        },
     )
 
     acq_sample_rate = Instrument.measurement(
@@ -758,47 +781,107 @@ class RigolDS1000ZSeries(SCPIMixin, Instrument):
             "yreference": float(values[9]),
         }
 
-    def get_waveform_data(self, raw=False):
-        """Retrieve waveform data from the oscilloscope.
+    def get_waveform_data(self, raw=False, return_preamble=False):
+        """Retrieve waveform data from the oscilloscope in batches if necessary.
+
+        The Rigol DS1000Z can only transfer a maximum of 250,000 points per request.
+        This method automatically handles larger waveforms by fetching them in batches
+        and reassembling the complete data.
 
         Args:
             raw: If True, returns raw binary data. If False (default), converts to voltage values
                  using the preamble parameters.
+            return_preamble: If True, returns both the waveform data and the preamble parameters.
 
         Returns:
             If raw=True: bytes object containing raw waveform data
             If raw=False: numpy array of voltage values (requires numpy)
+            If return_preamble=True: tuple of (waveform_data, preamble)
         """
-        data = self.ask(":WAVeform:DATA?")
+        # Get preamble first to determine total points
+        preamble = self.get_waveform_preamble()
+        total_points = preamble["points"]
+        max_points_per_batch = 250_000
 
-        # TMC data format: #<digit><length><data>
-        # First character is '#', second is number of digits in length field
-        header_len = int(data[1]) + 2
-        raw_data = data[header_len:-1]  # Remove header and trailing newline
+        if total_points <= max_points_per_batch:
+            # Single batch — fetch directly
+            self.waveform_start = 1
+            self.write(":WAVeform:DATA?")
+            raw_response: bytes = self.adapter.connection.read_raw()
+            all_data_bytes = self._parse_tmc_response(raw_response)
+        else:
+            # Multiple batches: fetch sequentially without buffering
+            # This is more reliable than pipelining with some VISA implementations
+            num_batches = (
+                total_points + max_points_per_batch - 1
+            ) // max_points_per_batch
+
+            print(
+                f"Fetching {total_points} points in {num_batches} batches "
+                f"(max {max_points_per_batch} per batch)..."
+            )
+
+            all_data_bytes = b""
+            for batch_idx in range(num_batches):
+                start_point = batch_idx * max_points_per_batch + 1  # 1-indexed
+                end_point = min((batch_idx + 1) * max_points_per_batch, total_points)
+
+                # Set waveform start/stop for this batch
+                self.waveform_start = start_point
+                self.waveform_stop = end_point
+
+                # Request and read immediately (no buffering)
+                self.write(":WAVeform:DATA?")
+                raw_response: bytes = self.adapter.connection.read_raw()
+                batch_data = self._parse_tmc_response(raw_response)
+                all_data_bytes += batch_data
+
+                print(
+                    f"  Batch {batch_idx + 1}/{num_batches}: "
+                    f"points {start_point}-{end_point} ({len(batch_data)} bytes)"
+                )
 
         if raw:
-            return raw_data.encode("latin-1") if isinstance(raw_data, str) else raw_data
+            return all_data_bytes
 
-        preamble = self.get_waveform_preamble()
-
-        # Convert based on format
+        # Convert raw bytes to numeric samples
         if self.waveform_format == "BYTE":
-            values = np.frombuffer(
-                raw_data.encode("latin-1") if isinstance(raw_data, str) else raw_data,
-                dtype=np.uint8,
-            )
+            values = np.frombuffer(all_data_bytes, dtype=np.uint8)
         elif self.waveform_format == "WORD":
-            values = np.frombuffer(
-                raw_data.encode("latin-1") if isinstance(raw_data, str) else raw_data,
-                dtype=np.uint16,
+            values = np.frombuffer(all_data_bytes, dtype=np.uint16)
+        else:  # ASCII — safe to decode as text
+            values = np.array(
+                [float(v) for v in all_data_bytes.decode("ascii").split(",")]
             )
-        else:  # ASCII
-            values = np.array([float(v) for v in raw_data.split(",")])
 
-        # Convert to voltage
-        voltages = (values - preamble["yreference"]) * preamble["yincrement"] + preamble["yorigin"]
-
+        # Convert ADC counts → volts
+        voltages = (values - preamble["yreference"]) * preamble[
+            "yincrement"
+        ] + preamble["yorigin"]
+        if return_preamble:
+            return voltages, preamble
         return voltages
+
+    def _parse_tmc_response(self, raw_response: bytes) -> bytes:
+        """Parse IEEE 488.2 / TMC block format response.
+
+        Format: #<N><LLL…><data bytes><terminator>
+        - '#'        – literal pound sign (0x23)
+        - <N>        – single ASCII digit: number of decimal digits in length field
+        - <LLL…>     – <N> ASCII decimal digits giving the byte count of <data>
+        - <data>     – raw payload bytes
+        - <terminator> – trailing '\n' (0x0A)
+
+        Args:
+            raw_response: Raw VISA response bytes
+
+        Returns:
+            Extracted data bytes (without header and terminator)
+        """
+        n_digits = raw_response[1] - ord("0")  # e.g. b'4' → 4
+        header_len = 2 + n_digits  # '#' + N-char + length digits
+        data_bytes = raw_response[header_len:].rstrip(b"\n\r")
+        return data_bytes
 
     # Display Subsystem
     def display_clear(self):
@@ -877,7 +960,9 @@ class RigolDS1000ZSeries(SCPIMixin, Instrument):
 
         # Read binary data directly to avoid unicode decoding errors
         # For VISA connections, use read_raw() to get bytes without decoding
-        if hasattr(self.adapter, "connection") and hasattr(self.adapter.connection, "read_raw"):
+        if hasattr(self.adapter, "connection") and hasattr(
+            self.adapter.connection, "read_raw"
+        ):
             data_bytes = self.adapter.connection.read_raw()
         else:
             # Fallback: try to read as string and encode
@@ -2123,7 +2208,13 @@ class RigolDS1000ZSeries(SCPIMixin, Instrument):
         - F: Falling edge
         Example: \"HLXXRFXX\" for 8 channels.""",
         validator=strict_discrete_set,
-        values=["H", "L", "X", "R", "F"],  # This is simplified; actual implementation more complex
+        values=[
+            "H",
+            "L",
+            "X",
+            "R",
+            "F",
+        ],  # This is simplified; actual implementation more complex
     )
 
     trigger_pattern_level = Instrument.control(
@@ -3120,7 +3211,10 @@ class RigolDS1000ZSeries(SCPIMixin, Instrument):
 
         Returns a tuple of (int, str), e.g. (0, "No error") when no error has occurred.
         A non-zero error_code indicates an error condition.""",
-        cast=lambda v: (int(v.split(",", 1)[0].strip()), v.split(",", 1)[1].strip().strip('"')),
+        cast=lambda v: (
+            int(v.split(",", 1)[0].strip()),
+            v.split(",", 1)[1].strip().strip('"'),
+        ),
     )
 
     system_gam = Instrument.measurement(

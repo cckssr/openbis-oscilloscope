@@ -16,14 +16,17 @@ Thin wrapper around the `pybis` library. Handles token validation (with TTL cach
 
 **`OpenBISClient`** — methods:
 
-| Method                                          | Description                                                                                                                                                                                                                  |
-| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `validate_token(token) -> UserInfo`             | Calls `pybis.Openbis.login_with_token()` and queries the user's roles. Result is cached in a `TTLCache` for `TOKEN_CACHE_SECONDS` seconds to avoid hammering OpenBIS on every request. Raises `AuthError` on invalid tokens. |
-| `register_dataset(session_id, files, metadata)` | Creates a new OpenBIS dataset and uploads the list of file paths. Raises `OpenBISError` on failure.                                                                                                                          |
+| Method                                                           | Description                                                                                                                                                                       |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `validate_token(token) -> UserInfo`                              | Calls `pybis.Openbis.is_session_active()` and queries the user's roles. Result is cached in a `TTLCache` for `TOKEN_CACHE_SECONDS` seconds. Raises `AuthError` on invalid tokens. |
+| `create_dataset(token, experiment_id, files, properties) -> str` | Creates a new `RAW_DATA` OpenBIS dataset, uploads the file list, and attaches custom properties. Returns the `permId`. Raises `OpenBISError` on failure.                          |
 
 ## DEBUG mode
 
-When `DEBUG=True`, `validate_token()` accepts a fixed `DEBUG_TOKEN` string (set in `.env`) and returns a synthetic admin `UserInfo` without contacting OpenBIS. This allows full API testing with no external dependencies.
+When `DEBUG=True`:
+
+- `validate_token()` accepts the fixed `DEBUG_TOKEN` string and returns a synthetic admin `UserInfo` without contacting OpenBIS.
+- `create_dataset()` skips pybis entirely and returns a simulated `permId` (`"DEBUG-<hex>"`), so the full acquire → flag → commit workflow can be tested without an OpenBIS instance.
 
 ## Token caching
 

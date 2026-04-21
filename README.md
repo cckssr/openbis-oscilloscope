@@ -1,6 +1,6 @@
 # OpenBIS Oscilloscope Control Service
 
-A FastAPI service that acts as a control plane for LAN-connected oscilloscopes, consumed by the OpenBIS web UI. It manages exclusive device locks, buffers acquired waveform data on disk, and commits user-flagged acquisitions as OpenBIS datasets via pybis.
+A three-part system for remotely controlling LAN-connected oscilloscopes from a browser. A **Vite web UI** talks to a **FastAPI backend** (oscilloscope control, locking, buffering) which in turn connects to an external **OpenBIS server** for authentication and dataset archiving.
 
 ## Features
 
@@ -17,21 +17,26 @@ A FastAPI service that acts as a control plane for LAN-connected oscilloscopes, 
 
 ## Architecture
 
-```shell
-OpenBIS Web UI (JS)
-        │  Bearer token + REST
-        ▼
-FastAPI Service  ──► Redis (locks + TTL)
-        │
-        ├── InstrumentManager
-        │       └── per-device asyncio.Queue worker
-        │
-        ├── HealthMonitor  (background TCP check)
-        │
-        ├── BufferService  (CSV / PNG / HDF5 on disk)
-        │
-        └── OpenBISClient  (pybis + TTLCache)
 ```
+Browser
+  │
+  ▼
+Nginx (:80)  ─── /        → Vite UI (static files)
+             └── /api/    → FastAPI (:8000)
+                                │
+                                ├── Redis (locks + TTL)
+                                ├── InstrumentManager
+                                │     └── per-device asyncio.Queue worker
+                                ├── HealthMonitor (background TCP check)
+                                ├── BufferService (CSV / PNG / HDF5 on disk)
+                                └── OpenBISClient (pybis + TTLCache)
+                                          │
+                                          ▼
+                                   OpenBIS server (external)
+                                   token validation + dataset archiving
+```
+
+See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the full component breakdown, deployment guide, and API documentation reference.
 
 ## Quick start (Docker)
 
@@ -42,17 +47,19 @@ cp .env.example .env
 docker compose up
 ```
 
-The API is available at `http://localhost:8000`.
-Interactive docs: `http://localhost:8000/docs`
+The UI is available at `http://localhost:80`.
+Interactive API docs: `http://localhost:8000/docs` (also accessible via Nginx at `http://localhost/api/docs`).
 
 ## Development setup
 
 ```bash
+# Terminal 1 — FastAPI backend (mock hardware, no Redis or OpenBIS needed)
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-
-# Run with mock driver (no real oscilloscope needed)
 DEBUG=True uvicorn app.main:app --reload
+
+# Terminal 2 — Vite frontend (proxies /api/ to FastAPI automatically)
+cd openbis_webapp && pnpm install && pnpm dev
 ```
 
 ## Running tests
@@ -67,17 +74,18 @@ Tests use `fakeredis` and the mock driver — no Redis or hardware required.
 
 All settings are read from environment variables (or a `.env` file):
 
-| Variable                        | Default                       | Description                          |
-| ------------------------------- | ----------------------------- | ------------------------------------ |
-| `REDIS_URL`                     | `redis://localhost:6379`      | Redis connection URL                 |
-| `OPENBIS_URL`                   | _(required)_                  | OpenBIS server URL                   |
-| `BUFFER_DIR`                    | `./buffer`                    | Root directory for artifact storage  |
-| `OSCILLOSCOPES_CONFIG`          | `./config/oscilloscopes.yaml` | Device list                          |
-| `LOCK_TTL_SECONDS`              | `1800`                        | Lock expiry (seconds)                |
-| `HEALTH_CHECK_INTERVAL_SECONDS` | `5`                           | TCP health check interval            |
-| `TOKEN_CACHE_SECONDS`           | `60`                          | Token validation cache TTL           |
-| `EOD_RESET_TIMEZONE`            | `Europe/Berlin`               | Timezone for end-of-day reset        |
-| `DEBUG`                         | `False`                       | Use mock driver; skip health monitor |
+| Variable                        | Default                       | Description                                         |
+| ------------------------------- | ----------------------------- | --------------------------------------------------- |
+| `REDIS_URL`                     | `redis://localhost:6379`      | Redis connection URL                                |
+| `OPENBIS_URL`                   | _(required)_                  | OpenBIS server URL                                  |
+| `BUFFER_DIR`                    | `./buffer`                    | Root directory for artifact storage                 |
+| `OSCILLOSCOPES_CONFIG`          | `./config/oscilloscopes.yaml` | Device list                                         |
+| `LOCK_TTL_SECONDS`              | `1800`                        | Lock expiry (seconds)                               |
+| `HEALTH_CHECK_INTERVAL_SECONDS` | `5`                           | TCP health check interval                           |
+| `TOKEN_CACHE_SECONDS`           | `60`                          | Token validation cache TTL                          |
+| `EOD_RESET_TIMEZONE`            | `Europe/Berlin`               | Timezone for end-of-day reset                       |
+| `DEBUG`                         | `False`                       | Mock driver + fakeredis; bypass OpenBIS auth/commit |
+| `DEBUG_TOKEN`                   | `debug-token`                 | Bearer token accepted in `DEBUG` mode               |
 
 ## Registering oscilloscopes
 
@@ -85,14 +93,22 @@ Edit `config/oscilloscopes.yaml`:
 
 ```yaml
 oscilloscopes:
-  - id: "scope-01"
+  # Rigol DS1000Z series (DS1054Z, DS1074Z, DS1104Z, …)
+  - id: "rigol-01"
     ip: "192.168.1.100"
     port: 5025
-    label: "Lab Scope 1"
-    driver: "drivers.my_oscilloscope.MyOscilloscope"
+    label: "Rigol DS1054Z"
+    driver: "drivers.RigolDS1000.RigolDS1000"
+
+  # Mock device — no hardware required (always active in DEBUG=True mode)
+  - id: "scope-01"
+    ip: "127.0.0.1"
+    port: 5025
+    label: "Mock Scope"
+    driver: "mock"
 ```
 
-Set `driver: "mock"` to use the built-in mock driver for a specific device.
+Set `driver: "mock"` to use the built-in mock driver for a specific device regardless of `DEBUG` mode.
 
 ## Adding a real oscilloscope driver
 

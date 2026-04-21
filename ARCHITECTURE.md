@@ -82,17 +82,18 @@ Routes are registered from `app/api/` under their respective prefixes (`/auth`, 
 
 Uses `pydantic-settings` to load configuration from environment variables (or a `.env` file). All settings have documented defaults.
 
-| Variable                        | Default                       | Purpose                                        |
-| ------------------------------- | ----------------------------- | ---------------------------------------------- |
-| `REDIS_URL`                     | `redis://localhost:6379`      | Redis for distributed locks                    |
-| `OPENBIS_URL`                   | _(required)_                  | OpenBIS server base URL                        |
-| `BUFFER_DIR`                    | `./buffer`                    | Root directory for stored artifacts            |
-| `OSCILLOSCOPES_CONFIG`          | `./config/oscilloscopes.yaml` | Device inventory file                          |
-| `LOCK_TTL_SECONDS`              | `1800`                        | Lock expires after 30 min without heartbeat    |
-| `HEALTH_CHECK_INTERVAL_SECONDS` | `5`                           | How often to TCP-check each device             |
-| `TOKEN_CACHE_SECONDS`           | `60`                          | How long to cache a validated OpenBIS token    |
-| `EOD_RESET_TIMEZONE`            | `Europe/Berlin`               | Timezone for the 23:59 daily lock reset        |
-| `DEBUG`                         | `False`                       | If `True`, use the mock driver for all devices |
+| Variable                        | Default                       | Purpose                                             |
+| ------------------------------- | ----------------------------- | --------------------------------------------------- |
+| `REDIS_URL`                     | `redis://localhost:6379`      | Redis for distributed locks                         |
+| `OPENBIS_URL`                   | _(required)_                  | OpenBIS server base URL                             |
+| `BUFFER_DIR`                    | `./buffer`                    | Root directory for stored artifacts                 |
+| `OSCILLOSCOPES_CONFIG`          | `./config/oscilloscopes.yaml` | Device inventory file                               |
+| `LOCK_TTL_SECONDS`              | `1800`                        | Lock expires after 30 min without heartbeat         |
+| `HEALTH_CHECK_INTERVAL_SECONDS` | `5`                           | How often to TCP-check each device                  |
+| `TOKEN_CACHE_SECONDS`           | `60`                          | How long to cache a validated OpenBIS token         |
+| `EOD_RESET_TIMEZONE`            | `Europe/Berlin`               | Timezone for the 23:59 daily lock reset             |
+| `DEBUG`                         | `False`                       | Mock driver + fakeredis; bypass OpenBIS auth/commit |
+| `DEBUG_TOKEN`                   | `debug-token`                 | Bearer token accepted in `DEBUG` mode               |
 
 ---
 
@@ -112,11 +113,12 @@ Defines a hierarchy of typed exceptions, all subclassing `AppError`. Each carrie
 | `ArtifactNotFoundError` | 404    | Unknown artifact ID                      |
 | `SessionNotFoundError`  | 404    | Unknown session ID                       |
 | `OpenBISError`          | 502    | OpenBIS upstream call failed             |
+| `ValidationError`       | 400    | Semantically invalid request             |
 
-A global FastAPI exception handler catches any `AppError` and returns a consistent JSON response:
+A global FastAPI exception handler catches any `AppError` and returns a consistent JSON response. The `error` field is a snake_case machine-readable slug:
 
 ```json
-{ "error": "LOCK_CONFLICT", "detail": "Device is currently locked by user X" }
+{ "error": "lock_conflict", "detail": "Device is currently locked by user X" }
 ```
 
 ---
@@ -233,11 +235,11 @@ The central component for device lifecycle and command dispatch. At startup it r
 ```text
 OFFLINE  ──(TCP reachable)──► ONLINE ──(lock acquired)──► LOCKED
   ▲                              │                           │
-  │                         (command)                  (command)
+  │                          (command)                   (command)
   │                              ▼                           ▼
-  └──(TCP lost)──────────── BUSY ◄──────────────────── BUSY
+  └──(TCP lost)─────────────── BUSY ◄───────────────────── BUSY
                                  │
-                             (error)
+                              (error)
                                  ▼
                                ERROR
 ```
@@ -383,7 +385,7 @@ Command endpoints (`run`, `stop`, `acquire`, `data`, `screenshot`) require the c
 | `POST` | `/sessions/{id}/artifacts/{art}/flag` | Set `persist: true/false` to mark/unmark for commit     |
 | `POST` | `/sessions/{id}/commit`               | Upload flagged artifacts to OpenBIS; returns `permId`   |
 
-The `/commit` endpoint requires a JSON body with `experiment_id` (OpenBIS experiment identifier) and an optional `sample_id`.
+The `/commit` endpoint takes query parameters: `experiment_id` (required, an OpenBIS experiment identifier like `/SPACE/PROJECT/EXPERIMENT`) and `sample_id` (optional, to link the dataset to a specific sample). In `DEBUG` mode the upload is simulated and a fake `permId` of the form `DEBUG-<hex>` is returned.
 
 ---
 
@@ -425,9 +427,9 @@ The `/commit` endpoint requires a JSON body with `experiment_id` (OpenBIS experi
 6. POST /sessions/{session_id}/artifacts/{id}/flag  { persist: true }
    → Sets persist flag in index.json
 
-7. POST /sessions/{session_id}/commit  { experiment_id: "/SPACE/PROJ/EXP" }
+7. POST /sessions/{session_id}/commit?experiment_id=/SPACE/PROJ/EXP
    → Collects flagged artifact files
-   → pybis creates RAW_DATA dataset in OpenBIS
+   → pybis creates RAW_DATA dataset in OpenBIS (or simulated permId in DEBUG mode)
    → Returns permId
 
 8. POST /devices/{id}/unlock  { session_id }
@@ -441,18 +443,216 @@ If the client disappears without calling `/unlock`, the Redis key expires after 
 
 ### Adding a Real Oscilloscope Driver
 
-1. Copy `drivers/my_oscilloscope.py`, rename it, and implement all abstract methods using the instrument's communication protocol (SCPI over TCP/socket, vendor SDK, etc.).
+1. Copy `drivers/my_oscilloscope.py`, rename it, and implement all abstract methods using the instrument's communication protocol (SCPI over TCP/socket, vendor SDK via `pymeasure`, etc.). `drivers/RigolDS1000.py` is a worked example using `pymeasure` for a Rigol DS1000Z-series scope.
 2. Add the device to `config/oscilloscopes.yaml`:
 
    ```yaml
    oscilloscopes:
-     - id: "scope-lab3"
+     - id: "rigol-01"
        ip: "192.168.1.105"
        port: 5025
-       label: "Keysight DSOX3034T"
-       driver: "drivers.my_oscilloscope.MyOscilloscope"
+       label: "Rigol DS1054Z"
+       driver: "drivers.RigolDS1000.RigolDS1000"
    ```
 
-3. Restart the service. The `InstrumentManager` dynamically imports the driver class by path.
+3. Restart the service. The `InstrumentManager` dynamically imports the driver class by the dotted path in the `driver` field. The special value `"mock"` (also the default in the shipped YAML) uses the in-memory `MockOscilloscopeDriver`, which is what lets the whole service run with `DEBUG=True` without any hardware.
 
-In `DEBUG=True` mode the driver field is ignored and the `MockOscilloscopeDriver` is always used.
+---
+
+## Deployment
+
+The system has three distinct parts. OpenBIS is an external institutional server you do not run yourself. The FastAPI backend and the Vite frontend are both yours, run together via Docker Compose.
+
+### System overview
+
+```
+                    ┌─────────────────────────────────┐
+                    │         docker-compose          │
+                    │                                 │
+Browser ────────────┤  Nginx (:80)                    │
+                    │    /        → Vite dist (static)│
+                    │    /api/    → FastAPI (:8000)   │
+                    │                                 │
+                    │  FastAPI (:8000)                │
+                    │    ↓                            │
+                    │  Redis (:6379)                  │
+                    └──────────────┬──────────────────┘
+                                   │ token validation
+                                   │ dataset archiving
+                    ┌──────────────▼──────────────────┐
+                    │  OpenBIS server (external /      │
+                    │  institutional)                  │
+                    └─────────────────────────────────┘
+```
+
+Nginx acts as a reverse proxy. Everything is reachable on a single domain and port — the browser never talks to FastAPI directly, which avoids all CORS configuration.
+
+| Part             | Role                                                      | Runs where                    |
+| ---------------- | --------------------------------------------------------- | ----------------------------- |
+| **OpenBIS**      | Bearer token validation, dataset archiving                | External institutional server |
+| **FastAPI**      | Oscilloscope control, Redis locks, buffer, OpenBIS client | Your Docker Compose           |
+| **Nginx + Vite** | UI served as static files; proxies `/api/` to FastAPI     | Your Docker Compose           |
+| **Redis**        | Distributed device locks with TTL                         | Your Docker Compose           |
+
+---
+
+### Docker Compose
+
+**`docker-compose.yml`**
+
+```yaml
+services:
+  api:
+    build: .
+    environment:
+      - OPENBIS_URL=${OPENBIS_URL}
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+
+  webapp:
+    build: ./openbis_webapp
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+```
+
+No ports are exposed for `api` or `redis` — they are only reachable inside the Compose network. Only Nginx (the `webapp` service) is exposed to the outside.
+
+---
+
+### Nginx configuration
+
+**`openbis_webapp/nginx.conf`**
+
+```nginx
+server {
+  listen 80;
+
+  # API — proxied to the FastAPI container
+  location /api/ {
+    proxy_pass http://api:8000/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+  }
+
+  # SPA — serve static files with fallback for client-side routing
+  location / {
+    root /usr/share/nginx/html;
+    try_files $uri $uri/ /index.html;
+  }
+}
+```
+
+`api` resolves to the FastAPI container via Docker's internal DNS. The trailing slash on `proxy_pass` strips the `/api` prefix before forwarding, so `GET /api/devices` reaches FastAPI as `GET /devices`.
+
+---
+
+### Webapp Dockerfile
+
+**`openbis_webapp/Dockerfile`**
+
+```dockerfile
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY . .
+RUN npm install -g pnpm && pnpm install && pnpm build
+
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+```
+
+A two-stage build: Node compiles the Vite app to `dist/`, the final Nginx image copies only the static output — no Node runtime in production.
+
+---
+
+### Development workflow
+
+No Docker needed during development. Run FastAPI and the Vite dev server directly:
+
+```bash
+# Terminal 1 — FastAPI with mock hardware and in-memory Redis
+DEBUG=True uvicorn app.main:app --reload
+
+# Terminal 2 — Vite dev server
+cd openbis_webapp && pnpm dev
+```
+
+The Vite dev server proxies `/api/` calls to FastAPI. Add this to `openbis_webapp/vite.config.ts`:
+
+```ts
+server: {
+  proxy: {
+    '/api': {
+      target: 'http://localhost:8000',
+      rewrite: (path) => path.replace(/^\/api/, ''),
+    },
+  },
+},
+```
+
+With this proxy the frontend code always calls `/api/devices`, `/api/sessions/...`, etc. — the same paths that work in production through Nginx — so no environment-specific URL configuration is needed in the Vite app.
+
+---
+
+## API Documentation
+
+FastAPI generates interactive API documentation automatically from the source code. No separate documentation files need to be maintained.
+
+### Where to find it
+
+| URL                                  | Tool       | Use                                                |
+| ------------------------------------ | ---------- | -------------------------------------------------- |
+| `http://localhost:8000/docs`         | Swagger UI | Interactive — try requests directly in the browser |
+| `http://localhost:8000/redoc`        | ReDoc      | Readable reference — better for sharing            |
+| `http://localhost:8000/openapi.json` | Raw schema | Machine-readable OpenAPI 3.x JSON                  |
+
+These are available whenever the FastAPI server is running, including in `DEBUG=True` mode.
+
+### How FastAPI builds the schema
+
+FastAPI inspects the Python source at startup and generates the full OpenAPI schema automatically. No annotation is manual — it is derived from:
+
+| Source in code                                  | What it produces in the docs                             |
+| ----------------------------------------------- | -------------------------------------------------------- |
+| `@router.get("/devices")`                       | HTTP method and path                                     |
+| Function parameter types (`str`, `int`, `UUID`) | Query/path parameter types and whether they are required |
+| `Body(...)` / Pydantic model as parameter       | Request body schema with field names and types           |
+| `response_model=DeviceStatus`                   | Response body schema                                     |
+| `status_code=201`                               | Documented response code                                 |
+| `summary="Acquire lock"` on the decorator       | Short title in the UI                                    |
+| Docstring of the route function                 | Long description shown in the UI                         |
+| `responses={409: {"model": ErrorResponse}}`     | Additional response codes and their shapes               |
+
+Example — this route definition:
+
+```python
+@router.post(
+    "/{device_id}/lock",
+    response_model=LockResponse,
+    status_code=200,
+    summary="Acquire exclusive lock",
+    responses={409: {"model": ErrorResponse}},
+)
+async def acquire_lock(
+    device_id: str,
+    user: UserInfo = Depends(get_current_user),
+) -> LockResponse:
+    """Acquire an exclusive lock on the device.
+
+    Returns a `control_session_id` that must be passed to all subsequent
+    command endpoints. Raises 409 if the device is already locked.
+    """
+```
+
+…automatically produces a documented endpoint with: path parameter `device_id`, Bearer auth requirement, `LockResponse` schema for 200, `ErrorResponse` schema for 409, and the docstring as the description.
+
+### Authentication in the docs
+
+The Swagger UI has an **Authorize** button (top right). Enter your OpenBIS Bearer token there once and every "Try it out" request will include the `Authorization: Bearer <token>` header automatically.
+
+In `DEBUG=True` mode the accepted token is the value of `DEBUG_TOKEN` (default: `debug-token`). Enter that in the Authorize dialog to use the interactive docs without a live OpenBIS connection.

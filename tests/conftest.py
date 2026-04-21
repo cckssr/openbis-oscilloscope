@@ -1,4 +1,5 @@
 import asyncio
+import os
 from unittest.mock import AsyncMock, MagicMock
 
 import fakeredis.aioredis as fakeredis
@@ -7,15 +8,121 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 from app.buffer.service import BufferService
-from app.instruments.manager import DeviceConfig, DeviceEntry, DeviceState, InstrumentManager
+from app.instruments.manager import (
+    DeviceConfig,
+    DeviceEntry,
+    DeviceState,
+    InstrumentManager,
+)
 from app.instruments.mock_driver import MockOscilloscopeDriver
 from app.locks.service import LockService
 from app.openbis_client.client import OpenBISClient, UserInfo
 
 
 # ---------------------------------------------------------------------------
+# CLI options for OpenBIS integration tests
+# ---------------------------------------------------------------------------
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--openbis-url", default=None, help="OpenBIS server URL for integration tests"
+    )
+    parser.addoption(
+        "--openbis-token",
+        default=None,
+        help="Valid OpenBIS session token for integration tests",
+    )
+    parser.addoption(
+        "--openbis-space", default=None, help="OpenBIS space code (e.g. GP_2025_WISE)"
+    )
+    parser.addoption(
+        "--openbis-project", default=None, help="OpenBIS project code (e.g. DI_X_SMITH)"
+    )
+    parser.addoption(
+        "--openbis-collection",
+        default=None,
+        help="OpenBIS collection code (e.g. DI_X_SMITH_EXP_10)",
+    )
+    parser.addoption(
+        "--openbis-experiment",
+        default=None,
+        help="OpenBIS experiment identifier (/SPACE/PROJECT/EXP)",
+    )
+
+
+@pytest.fixture
+def openbis_url(request):
+    val = request.config.getoption("--openbis-url")
+    if not val:
+        val = os.environ.get("OPENBIS_TEST_URL")
+    if not val:
+        pytest.skip(
+            "pass --openbis-url or set OPENBIS_TEST_URL to run OpenBIS integration tests"
+        )
+    return val
+
+
+@pytest.fixture
+def openbis_token(request):
+    val = request.config.getoption("--openbis-token")
+    if not val:
+        val = os.environ.get("OPENBIS_TEST_TOKEN") or os.environ.get("OPENBIS_TOKEN")
+    if not val:
+        pytest.skip(
+            "pass --openbis-token or set OPENBIS_TEST_TOKEN to run OpenBIS integration tests"
+        )
+    return val
+
+
+@pytest.fixture
+def openbis_space(request):
+    val = request.config.getoption("--openbis-space")
+    if not val:
+        val = os.environ.get("OPENBIS_TEST_SPACE")
+    return val
+
+
+@pytest.fixture
+def openbis_project(request):
+    val = request.config.getoption("--openbis-project")
+    if not val:
+        val = os.environ.get("OPENBIS_TEST_PROJECT")
+    if not val:
+        pytest.skip(
+            "pass --openbis-project or set OPENBIS_TEST_PROJECT to run this integration test"
+        )
+    return val
+
+
+@pytest.fixture
+def openbis_collection(request):
+    val = request.config.getoption("--openbis-collection")
+    if not val:
+        val = os.environ.get("OPENBIS_TEST_COLLECTION")
+    if not val:
+        pytest.skip(
+            "pass --openbis-collection or set OPENBIS_TEST_COLLECTION to run this integration test"
+        )
+    return val
+
+
+@pytest.fixture
+def openbis_experiment(request):
+    val = request.config.getoption("--openbis-experiment")
+    if not val:
+        val = os.environ.get("OPENBIS_TEST_EXPERIMENT")
+    if not val:
+        pytest.skip(
+            "pass --openbis-experiment or set OPENBIS_TEST_EXPERIMENT to run this integration test"
+        )
+    return val
+
+
+# ---------------------------------------------------------------------------
 # Redis
 # ---------------------------------------------------------------------------
+
 
 @pytest_asyncio.fixture
 async def fake_redis():
@@ -31,6 +138,7 @@ async def lock_service(fake_redis):
 # Users
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def regular_user():
     return UserInfo(user_id="alice", display_name="Alice", is_admin=False)
@@ -44,6 +152,7 @@ def admin_user():
 # ---------------------------------------------------------------------------
 # Mock driver + InstrumentManager
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def mock_driver():
@@ -72,6 +181,7 @@ def instrument_manager(mock_driver):
 # Buffer service
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def buffer_service(tmp_path):
     return BufferService(buffer_dir=str(tmp_path / "buffer"))
@@ -80,6 +190,7 @@ def buffer_service(tmp_path):
 # ---------------------------------------------------------------------------
 # Full app fixture (with worker tasks running)
 # ---------------------------------------------------------------------------
+
 
 @pytest_asyncio.fixture
 async def app(fake_redis, instrument_manager, buffer_service, regular_user):
@@ -117,5 +228,7 @@ async def app(fake_redis, instrument_manager, buffer_service, regular_user):
 
 @pytest_asyncio.fixture
 async def async_client(app):
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
         yield client

@@ -139,6 +139,17 @@ class OpenBISError(AppError):
         super().__init__(502, detail, "openbis_error")
 
 
+class ValidationError(AppError):
+    """Raised when a request is syntactically valid but semantically incorrect (HTTP 400).
+
+    Args:
+        detail: Human-readable description of what is wrong with the request.
+    """
+
+    def __init__(self, detail: str):
+        super().__init__(400, detail, "validation_error")
+
+
 class AdminRequiredError(AppError):
     """Raised when an endpoint that requires admin privileges is accessed by a
     regular user (HTTP 403).

@@ -6,27 +6,36 @@ Persists waveforms, screenshots, and HDF5 exports to the local file system and m
 
 ### `service.py`
 
-**`ArtifactInfo`** — metadata entry in `index.json`:
+**`ArtifactInfo`** — one entry per stored artifact, persisted in `index.json`:
 
-| Field         | Type          | Description                                                  |
-| ------------- | ------------- | ------------------------------------------------------------ |
-| `artifact_id` | `str`         | UUID for this artifact                                       |
-| `type`        | `str`         | `"trace"` or `"screenshot"`                                  |
-| `channel`     | `int \| None` | Channel number for traces; `None` for screenshots            |
-| `sequence`    | `int`         | Monotonically increasing counter within the session          |
-| `persist`     | `bool`        | If `True`, included in the next OpenBIS commit               |
-| `created_at`  | `datetime`    | Timestamp of acquisition                                     |
-| `files`       | `list[str]`   | Relative paths of stored files (CSV + metadata JSON, or PNG) |
+| Field            | Type          | Description                                                                                    |
+| ---------------- | ------------- | ---------------------------------------------------------------------------------------------- |
+| `artifact_id`    | `str`         | E.g. `"trace_0001_ch1"` or `"screenshot_0002"`                                                 |
+| `artifact_type`  | `str`         | `"trace"` or `"screenshot"`                                                                    |
+| `channel`        | `int \| None` | 1-based channel number for traces; `None` for screenshots                                      |
+| `seq`            | `int`         | Monotonically increasing sequence number within the session                                    |
+| `persist`        | `bool`        | `True` → included in the next OpenBIS commit                                                   |
+| `created_at`     | `str`         | ISO-8601 UTC timestamp                                                                         |
+| `files`          | `list[str]`   | Filenames relative to the session dir (e.g. `["trace_0001_ch1.csv", "trace_0001_meta.json"]`)  |
+| `acquisition_id` | `str \| None` | UUID shared by all channels captured in one `acquire` call; `None` for legacy/screenshots      |
+| `annotation`     | `str \| None` | User-supplied label for the acquisition group (e.g. `"decay capacitor a"`)                     |
+| `run_id`         | `str \| None` | UUID shared by all acquisitions from a single RUN press; `None` for manual/single acquisitions |
 
-**`BufferService`** — methods:
+**`BufferService`** — public methods:
 
-| Method                                                       | Description                                                                                                                                               |
-| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `store_waveform(device_id, session_id, waveform)`            | Writes `<artifact_id>.csv` (time, voltage columns) and `<artifact_id>_meta.json` (channel config, timebase, trigger, instrument). Returns `ArtifactInfo`. |
-| `store_screenshot(device_id, session_id, png_bytes)`         | Writes `<artifact_id>.png`. Returns `ArtifactInfo`.                                                                                                       |
-| `list_artifacts(device_id, session_id)`                      | Reads `index.json` and returns all `ArtifactInfo` entries for the session.                                                                                |
-| `flag_artifact(device_id, session_id, artifact_id, persist)` | Toggles the `persist` flag for a single artifact in `index.json`.                                                                                         |
-| `export_hdf5(device_id, session_id)`                         | Bundles all traces in the session into a single HDF5 file. Each channel is stored as a dataset with time and voltage arrays plus metadata attributes.     |
+| Method                                                                            | Returns              | Description                                                                                                                                                                                                                      |
+| --------------------------------------------------------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `store_waveform(device_id, session_id, waveform, meta, acquisition_id?, run_id?)` | `str`                | Writes CSV + JSON sidecar; registers in `index.json`. Pass `acquisition_id` to link channels from the same call; pass `run_id` to group acquisitions from one RUN press.                                                         |
+| `store_screenshot(device_id, session_id, png_bytes)`                              | `str`                | Writes PNG; registers in `index.json`. Returns `artifact_id`.                                                                                                                                                                    |
+| `list_artifacts(session_id)`                                                      | `list[ArtifactInfo]` | Returns all artifacts for the session. Searches across all device dirs. Empty list if not found.                                                                                                                                 |
+| `set_flag(session_id, artifact_id, persist)`                                      | `None`               | Toggle the `persist` flag. Raises `SessionNotFoundError` / `ArtifactNotFoundError`.                                                                                                                                              |
+| `set_annotation(session_id, acquisition_id, annotation)`                          | `None`               | Set annotation text on all artifacts sharing an `acquisition_id`. Raises `SessionNotFoundError` / `ArtifactNotFoundError`.                                                                                                       |
+| `get_trace_data(session_id, artifact_id)`                                         | `tuple[list, list]`  | Returns `(time_s, voltage_V)` for a trace artifact. Raises `SessionNotFoundError` / `ArtifactNotFoundError`.                                                                                                                     |
+| `get_screenshot_bytes(session_id, artifact_id)`                                   | `bytes`              | Returns raw PNG bytes for a screenshot artifact. Raises `SessionNotFoundError` / `ArtifactNotFoundError`.                                                                                                                        |
+| `get_flagged_artifacts(session_id)`                                               | `list[ArtifactInfo]` | Returns only artifacts where `persist=True`.                                                                                                                                                                                     |
+| `get_artifact_paths(session_id, artifact_id)`                                     | `list[Path]`         | Absolute paths of all files belonging to an artifact.                                                                                                                                                                            |
+| `read_trace_csv(csv_file)`                                                        | `tuple[list, list]`  | Parse a trace CSV, returning `(time_values, voltage_values)`. Skips `#` comment and header rows.                                                                                                                                 |
+| `export_hdf5(session_id, artifact_ids)`                                           | `Path`               | Bundle selected traces into a single `.h5` file. Channels sharing an `acquisition_id` are grouped under `/{acquisition_id}/ch{N}`; legacy ungrouped traces keep flat `/{artifact_id}` layout. Copies `unpack_hdf5.py` alongside. |
 
 ## Directory layout
 
@@ -34,11 +43,12 @@ Persists waveforms, screenshots, and HDF5 exports to the local file system and m
 {BUFFER_DIR}/
   {device_id}/
     {session_id}/
-      index.json                  ← registry of all artifacts in the session
-      {artifact_id}.csv           ← waveform data (time, voltage)
-      {artifact_id}_meta.json     ← acquisition metadata
-      {artifact_id}.png           ← screenshot
-      {session_id}.h5             ← HDF5 export (created on demand)
+      index.json               ← per-session artifact registry (persist flags, metadata)
+      trace_0001_ch1.csv       ← waveform data: 2 comment lines + header + time_s,voltage_V rows
+      trace_0001_meta.json     ← instrument settings snapshot at acquisition time
+      screenshot_0002.png      ← raw PNG from the oscilloscope display
+      export_{session_id}.h5   ← HDF5 bundle (created on demand by export_hdf5)
+      unpack_hdf5.py           ← self-contained extraction script (copied alongside .h5)
 ```
 
-`BUFFER_DIR` defaults to `./buffer_data` and is configurable via the environment.
+`BUFFER_DIR` defaults to `./buffer` and is set via the `BUFFER_DIR` environment variable.

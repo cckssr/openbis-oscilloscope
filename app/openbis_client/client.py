@@ -1,6 +1,7 @@
 """Client module for interacting with OpenBIS via the pybis library."""
 
 import logging
+import uuid
 from dataclasses import dataclass
 
 import cachetools
@@ -77,7 +78,9 @@ class OpenBISClient:
                 is not active. Also raised if the pybis call itself fails.
         """
         if settings.DEBUG and token == settings.DEBUG_TOKEN:
-            return UserInfo(user_id="debug-user", display_name="Debug User", is_admin=True)
+            return UserInfo(
+                user_id="debug-user", display_name="Debug User", is_admin=True
+            )
 
         if token in self._cache:
             return self._cache[token]
@@ -147,6 +150,11 @@ class OpenBISClient:
         Raises:
             OpenBISError: If the pybis call fails for any reason.
         """
+        if settings.DEBUG:
+            fake_id = f"DEBUG-{uuid.uuid4().hex[:12].upper()}"
+            logger.info("DEBUG mode: simulating OpenBIS dataset creation → %s", fake_id)
+            return fake_id
+
         try:
             o = self._get_openbis()
             o.set_token(token, save_token=False)

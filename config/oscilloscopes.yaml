@@ -1,13 +1,30 @@
 oscilloscopes:
+  # Mock scope – used in DEBUG=True mode and for local testing (no hardware required)
   - id: "scope-01"
-    ip: "192.168.1.100"
+    ip: "127.0.0.1"
     port: 5025
-    label: "Lab Scope 1"
-    driver: "drivers.my_oscilloscope.MyOscilloscope"
+    label: "Mock Scope (debug)"
+    driver: "mock"
 
-  # Add more oscilloscopes as needed:
-  # - id: "scope-02"
-  #   ip: "192.168.1.101"
-  #   port: 5025
-  #   label: "Lab Scope 2"
-  #   driver: "drivers.my_oscilloscope.MyOscilloscope"
+  # Rigol DS1000Z series over LAN
+  - id: "E56542"
+    ip: "141.23.109.30"
+    port: 111
+    label: "Rigol DS1104Z-Plus (E56542)"
+    driver: "drivers.RigolDS1000.RigolDS1000Driver"
+  - id: "E08889"
+    ip: "141.23.109.34"
+    port: 111
+    label: "Rigol DS1104Z-Plus (E08889)"
+    driver: "drivers.RigolDS1000.RigolDS1000Driver"
+  - id: "E59240"
+    ip: "141.23.109.35"
+    port: 111
+    label: "Rigol DS1104Z-Plus (E59240)"
+    driver: "drivers.RigolDS1000.RigolDS1000Driver"
+  - id: "E77097"
+    ip: "141.23.109.36"
+    port: 111
+    label: "Rigol DS1104Z-Plus (E77097)"
+    driver: "drivers.RigolDS1000.RigolDS1000Driver"
+  

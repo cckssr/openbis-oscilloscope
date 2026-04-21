@@ -94,6 +94,7 @@ def test_flag_unknown_artifact(svc):
     svc.store_waveform("scope-01", "sess-001", wf, meta={})
 
     from app.core.exceptions import ArtifactNotFoundError
+
     with pytest.raises(ArtifactNotFoundError):
         svc.set_flag("sess-001", "nonexistent_0099_ch1", persist=True)
 
@@ -124,6 +125,7 @@ def test_hdf5_export(svc):
     assert h5_path.exists()
 
     import h5py
+
     with h5py.File(h5_path, "r") as h5f:
         assert art_id in h5f
         grp = h5f[art_id]
