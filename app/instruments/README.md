@@ -39,15 +39,15 @@ Abstract base class every driver must subclass, plus the data classes used as re
 | -------------- | -------------------------------------------------------------------------------------------- |
 | `DeviceState`  | Enum: `OFFLINE`, `ONLINE`, `LOCKED`, `BUSY`, `ERROR`                                         |
 | `DeviceConfig` | Loaded from `oscilloscopes.yaml`: `id`, `ip`, `port`, `label`, `driver` (dotted import path) |
-| `DeviceEntry`  | Runtime state: `config`, `state`, `driver` instance, `asyncio.Queue`, worker `Task`          |
-| `DeviceStatus` | API response shape for a device (state, label, lock info, capabilities)                      |
+| `DeviceEntry`  | Runtime state: `config`, `state`, `driver` instance, `asyncio.Queue`, worker `Task`, `online_since` |
+| `DeviceStatus` | API response shape: includes `online_since_utc` (ISO-8601) and `uptime_minutes` (float or None)     |
 
 **Lifecycle:**
 
 - `startup()` — reads `oscilloscopes.yaml`, creates a `DeviceEntry` per device, spawns one `asyncio` worker task per device.
 - `execute_command(device_id, cmd, ...)` — enqueues a command; the per-device worker picks it up and calls the driver method. Commands to different devices run in parallel; commands to the same device are serialized.
 - `instantiate_driver(device_id)` — dynamically imports the driver class from the dotted path in config, or returns `MockOscilloscopeDriver` when `driver: "mock"`. Real drivers are always used regardless of `DEBUG` mode.
-- `update_state(device_id, state)` — called by the health monitor and the app on state changes.
+- `update_state(device_id, state)` — called by the health monitor and the app on state changes. Sets `entry.online_since` when transitioning to `ONLINE`; clears it on `OFFLINE`/`ERROR`.
 - `shutdown()` — cancels all worker tasks, disconnects all drivers.
 
 ---

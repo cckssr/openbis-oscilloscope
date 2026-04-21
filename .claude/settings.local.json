@@ -13,7 +13,11 @@
       "Bash(pnpm audit:*)",
       "Bash(npm info:*)",
       "Bash(pnpm build:*)",
-      "Bash(python -m pytest tests/ -q)"
+      "Bash(python -m pytest tests/ -q)",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(npm run *)"
     ]
   }
 }

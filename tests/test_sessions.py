@@ -100,7 +100,8 @@ async def test_flag_artifact_clear(app, async_client):
 async def test_commit_no_artifacts(async_client):
     """Session with no artifacts at all returns 404."""
     resp = await async_client.post(
-        "/sessions/nonexistent-sess/commit?experiment_id=/S/P/E",
+        "/sessions/nonexistent-sess/commit",
+        json={"experiment_id": "/S/P/E"},
         headers=HEADERS,
     )
     assert resp.status_code == 404
@@ -113,7 +114,8 @@ async def test_commit_no_flagged_artifacts(app, async_client):
     buf.store_waveform("scope-01", "sess-noflag", _make_waveform(), meta={})
 
     resp = await async_client.post(
-        "/sessions/sess-noflag/commit?experiment_id=/S/P/E",
+        "/sessions/sess-noflag/commit",
+        json={"experiment_id": "/S/P/E"},
         headers=HEADERS,
     )
     assert resp.status_code == 400
@@ -131,7 +133,8 @@ async def test_commit_success(app, async_client):
     app.state.openbis_client.create_dataset = AsyncMock(return_value="20230101-99999")
 
     resp = await async_client.post(
-        f"/sessions/{sess}/commit?experiment_id=/SPACE/PROJ/EXP",
+        f"/sessions/{sess}/commit",
+        json={"experiment_id": "/SPACE/PROJ/EXP"},
         headers=HEADERS,
     )
     assert resp.status_code == 200
@@ -155,7 +158,8 @@ async def test_commit_multiple_flagged(app, async_client):
     app.state.openbis_client.create_dataset = AsyncMock(return_value="20230101-11111")
 
     resp = await async_client.post(
-        f"/sessions/{sess}/commit?experiment_id=/SPACE/PROJ/EXP",
+        f"/sessions/{sess}/commit",
+        json={"experiment_id": "/SPACE/PROJ/EXP"},
         headers=HEADERS,
     )
     assert resp.status_code == 200

@@ -4,6 +4,7 @@ import asyncio
 import importlib
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Coroutine
@@ -75,6 +76,7 @@ class DeviceEntry:
     queue: asyncio.Queue = field(default_factory=asyncio.Queue)
     worker_task: asyncio.Task | None = None
     last_error: str | None = None
+    online_since: datetime | None = None  # set when device transitions to ONLINE
 
 
 @dataclass
@@ -88,6 +90,8 @@ class DeviceStatus:
         port: TCP port number.
         state: Current :class:`DeviceState`.
         last_error: Description of the most recent error, or ``None``.
+        online_since_utc: ISO-8601 UTC timestamp when the device last came ONLINE, or ``None``.
+        uptime_minutes: Minutes the device has been continuously ONLINE, or ``None``.
     """
 
     id: str
@@ -96,6 +100,8 @@ class DeviceStatus:
     port: int
     state: DeviceState
     last_error: str | None
+    online_since_utc: str | None = None
+    uptime_minutes: float | None = None
 
 
 def _load_driver_class(class_path: str) -> type:
@@ -289,17 +295,21 @@ class InstrumentManager:
             A list of :class:`DeviceStatus` instances, one per device, in
             insertion order.
         """
-        return [
-            DeviceStatus(
+        now = datetime.now(timezone.utc)
+        statuses = []
+        for e in self.devices.values():
+            uptime = (now - e.online_since).total_seconds() / 60 if e.online_since else None
+            statuses.append(DeviceStatus(
                 id=e.config.id,
                 label=e.config.label,
                 ip=e.config.ip,
                 port=e.config.port,
                 state=e.state,
                 last_error=e.last_error,
-            )
-            for e in self.devices.values()
-        ]
+                online_since_utc=e.online_since.isoformat() if e.online_since else None,
+                uptime_minutes=uptime,
+            ))
+        return statuses
 
     def get_device(self, device_id: str) -> DeviceEntry:
         """Return the :class:`DeviceEntry` for a registered device.
@@ -328,7 +338,12 @@ class InstrumentManager:
             state: The new :class:`DeviceState` to assign.
         """
         if device_id in self.devices:
-            self.devices[device_id].state = state
+            entry = self.devices[device_id]
+            entry.state = state
+            if state == DeviceState.ONLINE and entry.online_since is None:
+                entry.online_since = datetime.now(timezone.utc)
+            elif state in (DeviceState.OFFLINE, DeviceState.ERROR):
+                entry.online_since = None
 
     def instantiate_driver(self, device_id: str) -> BaseOscilloscopeDriver:
         """Create a new driver instance for a device and attach it to the entry.

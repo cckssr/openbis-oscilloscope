@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 import redis.asyncio as aioredis
 from fastapi import FastAPI
 
-from app.api import admin, auth, devices, sessions
+from app.api import admin, auth, devices, openbis_structure, sessions
 from app.buffer.service import BufferService
 from app.config import settings
 from app.core.exceptions import register_exception_handlers
@@ -150,6 +150,7 @@ def create_app() -> FastAPI:
     app.include_router(devices.router)
     app.include_router(sessions.router)
     app.include_router(admin.router)
+    app.include_router(openbis_structure.router)
 
     @app.get("/health")
     async def health_check():

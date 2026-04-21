@@ -10,7 +10,7 @@ FastAPI `Depends`-compatible callables injected into route handlers.
 
 | Function                                | Returns        | Description                                                                                                                                                                           |
 | --------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `get_current_user()`                    | `UserInfo`     | Extracts the `Authorization: Bearer <token>` header and validates it against OpenBIS. Raises `AuthError` (HTTP 401) if missing or invalid. Results are TTL-cached in `OpenBISClient`. |
+| `get_current_user()`                    | `UserInfo`     | Extracts the `Authorization: Bearer <token>` header and validates it against OpenBIS. Falls back to the `openbis` cookie when the header is absent. Raises `AuthError` (HTTP 401) if neither is present or the token is invalid. Results are TTL-cached in `OpenBISClient`. |
 | `require_admin()`                       | `UserInfo`     | Calls `get_current_user()` and raises `AdminRequiredError` (HTTP 403) unless the user holds an `INSTANCE_ADMIN` or `INSTANCE`-level `ADMIN` role in OpenBIS.                          |
 | `make_lock_dependency(device_id_param)` | `Depends(...)` | Factory that returns a dependency verifying the caller holds the active Redis lock for the requested device. Raises `LockRequiredError` or `LockConflictError` as appropriate.        |
 

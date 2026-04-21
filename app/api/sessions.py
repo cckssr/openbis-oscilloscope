@@ -59,6 +59,7 @@ async def list_artifacts(
             "files": a.files,
             "acquisition_id": a.acquisition_id,
             "annotation": a.annotation,
+            "run_id": a.run_id,
         }
         for a in artifacts
     ]
@@ -97,30 +98,39 @@ async def flag_artifact(
     return {"artifact_id": artifact_id, "persist": persist}
 
 
+class _CommitRequest(BaseModel):
+    experiment_id: str
+    sample_id: str | None = None
+    lab_course: str | None = None
+    exp_title: str | None = None
+    group_name: str | None = None
+    semester: str | None = None
+    exp_description: str | None = None
+    device_under_test: str | None = None
+    notes: str | None = None
+
+
 @router.post("/{session_id}/commit", response_model=dict)
 async def commit_session(
     session_id: str,
-    experiment_id: str,
+    body: _CommitRequest,
     request: Request,
     user: UserInfo = Depends(get_current_user),
-    sample_id: str | None = None,
 ) -> dict:
     """Upload all flagged artifacts to OpenBIS as a new RAW_DATA dataset.
 
     Collects every artifact whose ``persist`` flag is ``true``, resolves their
     file paths, and calls :meth:`~app.openbis_client.client.OpenBISClient.create_dataset`
-    to register them in OpenBIS. Custom properties ``session_id`` and
-    ``artifact_count`` are always attached; ``sample`` is included when
-    ``sample_id`` is provided.
+    to register them in OpenBIS.
 
     Args:
         session_id: Path parameter; the control session UUID.
-        experiment_id: Query parameter; the OpenBIS experiment identifier in the
-            form ``"/SPACE/PROJECT/EXPERIMENT"``.
+        body: JSON body containing ``experiment_id`` (required) and optional
+            metadata fields (``sample_id``, ``lab_course``, ``exp_title``,
+            ``group_name``, ``semester``, ``exp_description``,
+            ``device_under_test``, ``notes``).
         request: The current HTTP request.
         user: The authenticated user (their token is forwarded to OpenBIS).
-        sample_id: Optional query parameter; an OpenBIS sample identifier to
-            link the dataset to a specific sample.
 
     Returns:
         A dict with ``permId`` (the OpenBIS permanent dataset identifier) and
@@ -128,7 +138,7 @@ async def commit_session(
 
     Raises:
         SessionNotFoundError: If the session directory does not exist.
-        HTTPException (400): If no artifacts in the session are flagged for commit.
+        ValidationError: If no artifacts in the session are flagged for commit.
         OpenBISError: If the pybis dataset creation call fails.
     """
     buffer_service = _get_buffer(request)
@@ -140,27 +150,36 @@ async def commit_session(
             raise SessionNotFoundError(session_id)
         raise ValidationError("No artifacts are flagged for commit")
 
-    # Collect all file paths for flagged artifacts
     all_files = []
     for art in flagged:
         paths = buffer_service.get_artifact_paths(session_id, art.artifact_id)
         all_files.extend(str(p) for p in paths if p.exists())
 
-    # Get token from request headers
     auth_header = request.headers.get("Authorization", "")
     token = auth_header.removeprefix("Bearer ").strip()
 
-    properties = {
+    properties: dict[str, str] = {
         "session_id": session_id,
         "artifact_count": str(len(flagged)),
     }
-    if sample_id:
-        properties["sample"] = sample_id
+    if body.sample_id:
+        properties["sample"] = body.sample_id
+    for key, value in (
+        ("lab_course", body.lab_course),
+        ("exp_title", body.exp_title),
+        ("group_name", body.group_name),
+        ("semester", body.semester),
+        ("exp_description", body.exp_description),
+        ("device_under_test", body.device_under_test),
+        ("notes", body.notes),
+    ):
+        if value:
+            properties[key] = value
 
     perm_id = await openbis_client.create_dataset(
         token=token,
-        experiment_id=experiment_id,
-        files=[p for p in all_files],
+        experiment_id=body.experiment_id,
+        files=all_files,
         properties=properties,
     )
 

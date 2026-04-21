@@ -19,12 +19,13 @@ Persists waveforms, screenshots, and HDF5 exports to the local file system and m
 | `files`          | `list[str]`    | Filenames relative to the session dir (e.g. `["trace_0001_ch1.csv", "trace_0001_meta.json"]`) |
 | `acquisition_id` | `str \| None`  | UUID shared by all channels captured in one `acquire` call; `None` for legacy/screenshots     |
 | `annotation`     | `str \| None`  | User-supplied label for the acquisition group (e.g. `"decay capacitor a"`)                    |
+| `run_id`         | `str \| None`  | UUID shared by all acquisitions from a single RUN press; `None` for manual/single acquisitions |
 
 **`BufferService`** — public methods:
 
 | Method                                                                   | Returns              | Description                                                                                                       |
 | ------------------------------------------------------------------------ | -------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `store_waveform(device_id, session_id, waveform, meta, acquisition_id?)` | `str`                | Writes CSV + JSON sidecar; registers in `index.json`. Pass `acquisition_id` to link channels from the same call. |
+| `store_waveform(device_id, session_id, waveform, meta, acquisition_id?, run_id?)` | `str`                | Writes CSV + JSON sidecar; registers in `index.json`. Pass `acquisition_id` to link channels from the same call; pass `run_id` to group acquisitions from one RUN press. |
 | `store_screenshot(device_id, session_id, png_bytes)`                     | `str`                | Writes PNG; registers in `index.json`. Returns `artifact_id`.                                                     |
 | `list_artifacts(session_id)`                                             | `list[ArtifactInfo]` | Returns all artifacts for the session. Searches across all device dirs. Empty list if not found.                  |
 | `set_flag(session_id, artifact_id, persist)`                             | `None`               | Toggle the `persist` flag. Raises `SessionNotFoundError` / `ArtifactNotFoundError`.                               |

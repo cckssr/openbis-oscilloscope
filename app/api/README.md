@@ -16,14 +16,14 @@ All FastAPI routers. Each file is a single router mounted in `app/main.py`.
 
 | Method | Path                                        | Auth   | Lock needed | Description                                                                                                                                                                                                                                                                        |
 | ------ | ------------------------------------------- | ------ | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/devices`                                  | Bearer | —           | List all devices with their current state and lock info. Lock object includes `session_id` when `is_mine` is true.                                                                                                                                                                 |
-| GET    | `/devices/{device_id}`                      | Bearer | —           | Detailed device info: state, label, capabilities. Lock object includes `session_id` when `is_mine` is true.                                                                                                                                                                        |
+| GET    | `/devices`                                  | Bearer | —           | List all devices with state, lock info, `online_since_utc`, and `uptime_minutes`.                                                                                                                                                                                                  |
+| GET    | `/devices/{device_id}`                      | Bearer | —           | Detailed device info: state, label, capabilities, `online_since_utc`, `uptime_minutes`. Lock object includes `session_id` when `is_mine` is true.                                                                                                                                  |
 | POST   | `/devices/{device_id}/lock`                 | Bearer | —           | Acquire exclusive lock. Returns `control_session_id`.                                                                                                                                                                                                                              |
 | POST   | `/devices/{device_id}/unlock`               | Bearer | Own lock    | Release the lock (`?session_id=`).                                                                                                                                                                                                                                                 |
 | POST   | `/devices/{device_id}/heartbeat`            | Bearer | Own lock    | Renew lock TTL (`?session_id=`).                                                                                                                                                                                                                                                   |
 | POST   | `/devices/{device_id}/run`                  | Bearer | Own lock    | Start continuous acquisition (`?session_id=`).                                                                                                                                                                                                                                     |
 | POST   | `/devices/{device_id}/stop`                 | Bearer | Own lock    | Stop acquisition (`?session_id=`).                                                                                                                                                                                                                                                 |
-| POST   | `/devices/{device_id}/acquire`              | Bearer | Own lock    | Capture waveforms. Optional `?channels=1&channels=3` limits which channels are queried; omit to probe all four. Returns `artifact_ids`, `acquisition_id` (UUID shared by all channels in this call), `session_id`, and `channels`. |
+| POST   | `/devices/{device_id}/acquire`              | Bearer | Own lock    | Capture waveforms. Optional `?channels=1&channels=3` limits channels; `?run_id=<uuid>` groups all acquisitions from one RUN press. Returns `artifact_ids`, `acquisition_id`, `session_id`, and `channels`. |
 | GET    | `/devices/{device_id}/channels/{ch}/data`   | Bearer | Own lock    | Latest waveform for channel as JSON `{time_s, voltage_V}` arrays.                                                                                                                                                                  |
 | GET    | `/devices/{device_id}/screenshot`           | Bearer | Own lock    | Live screenshot as `image/png`. Does **not** save to buffer.                                                                                                                                                                        |
 | POST   | `/devices/{device_id}/screenshot`           | Bearer | Own lock    | Capture screenshot, save to buffer, return `{artifact_id}`.                                                                                                                                                                         |
@@ -39,12 +39,26 @@ All FastAPI routers. Each file is a single router mounted in `app/main.py`.
 
 | Method | Path                                                             | Auth   | Description                                                                                                                                        |
 | ------ | ---------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/sessions/{session_id}/artifacts`                               | Bearer | List all `ArtifactInfo` entries (now includes `acquisition_id` and `annotation` fields). Empty list if none.                                       |
+| GET    | `/sessions/{session_id}/artifacts`                               | Bearer | List all `ArtifactInfo` entries (includes `acquisition_id`, `annotation`, `run_id` fields). Empty list if none.                                    |
 | POST   | `/sessions/{session_id}/artifacts/{id}/flag`                     | Bearer | Set or clear the `persist` flag (`?persist=true/false`).                                                                                           |
-| POST   | `/sessions/{session_id}/commit`                                  | Bearer | Upload all flagged artifacts to OpenBIS as a new `RAW_DATA` dataset. Requires `?experiment_id=`. Returns `permId` + `artifact_count`.              |
+| POST   | `/sessions/{session_id}/commit`                                  | Bearer | Upload all flagged artifacts to OpenBIS. JSON body: `{experiment_id, sample_id?, lab_course?, exp_title?, group_name?, semester?, exp_description?, device_under_test?, notes?}`. Returns `permId` + `artifact_count`. |
 | POST   | `/sessions/{session_id}/acquisitions/{acquisition_id}/annotation`| Bearer | Set annotation text on all artifacts sharing `acquisition_id`. Body: `{"annotation": "text"}`. Returns `{acquisition_id, annotation}`.             |
 | GET    | `/sessions/{session_id}/artifacts/{artifact_id}/data`            | Bearer | Return `{artifact_id, channel, time_s, voltage_V}` for a trace artifact.                                                                          |
 | GET    | `/sessions/{session_id}/artifacts/{artifact_id}/image`           | Bearer | Return `image/png` bytes for a screenshot artifact.                                                                                                |
+
+---
+
+### `openbis_structure.py` — `/openbis/structure`
+
+Live OpenBIS hierarchy queries (lazily loaded, 5-minute TTL cache per token+params). All require Bearer auth; the user's token is forwarded to pybis.
+
+| Method | Path                              | Query params              | Response items                                    |
+| ------ | --------------------------------- | ------------------------- | ------------------------------------------------- |
+| GET    | `/openbis/structure/projects`     | `?space=` (optional)      | `[{code, display_name, semester}]`                |
+| GET    | `/openbis/structure/collections`  | `?project=`, `?space=`    | `[{code, display_name}]`                          |
+| GET    | `/openbis/structure/objects`      | `?collection=`, `?space=` | `[{code, type, identifier}]`                      |
+
+`display_name` for projects is derived from the code (e.g. `DI_X_LOLOVIC` → `Dienstag — LOLOVIC`). `identifier` for objects is the full OpenBIS sample path, suitable for use as `sample_id` in the commit endpoint. The default space is `settings.OPENBIS_SPACE` (`GP_2025_WISE`).
 
 ---
 

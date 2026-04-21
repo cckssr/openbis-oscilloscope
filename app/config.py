@@ -20,6 +20,7 @@ class Settings(BaseSettings):
         HEALTH_CHECK_TCP_TIMEOUT_SECONDS: Seconds to wait for a TCP connection during a health check.
         TOKEN_CACHE_SECONDS: How long a validated OpenBIS session token is cached in memory.
         EOD_RESET_TIMEZONE: IANA timezone name used for the end-of-day lock-reset cron job.
+        OPENBIS_SPACE: OpenBIS space code queried by the structure endpoints (e.g. ``"GP_2025_WISE"``).
         DEBUG: When ``True``, mock drivers are used and Redis is replaced with an in-memory
             fake, so the service starts without any external dependencies.
         DEBUG_TOKEN: A fixed Bearer token accepted in ``DEBUG`` mode that bypasses OpenBIS
@@ -39,6 +40,7 @@ class Settings(BaseSettings):
     HEALTH_CHECK_TCP_TIMEOUT_SECONDS: float = 2.0
     TOKEN_CACHE_SECONDS: int = 60
     EOD_RESET_TIMEZONE: str = "Europe/Berlin"
+    OPENBIS_SPACE: str = "GP_2025_WISE"
     DEBUG: bool = False
     DEBUG_TOKEN: str = "debug-token"
 

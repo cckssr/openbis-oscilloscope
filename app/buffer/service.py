@@ -45,6 +45,7 @@ class ArtifactInfo:
     files: list[str]
     acquisition_id: str | None = None  # groups channels acquired in one call
     annotation: str | None = None      # user-supplied label for the acquisition
+    run_id: str | None = None          # groups acquisitions from one RUN press
 
 
 class BufferService:
@@ -168,6 +169,7 @@ class BufferService:
         waveform: WaveformData,
         meta: dict,
         acquisition_id: str | None = None,
+        run_id: str | None = None,
     ) -> str:
         """Persist a waveform acquisition as a CSV file plus a JSON metadata sidecar.
 
@@ -239,6 +241,7 @@ class BufferService:
                 "files": [csv_name, meta_name],
                 "acquisition_id": acquisition_id,
                 "annotation": None,
+                "run_id": run_id,
             }
         )
         self._save_index(device_id, session_id, index)
@@ -327,6 +330,7 @@ class BufferService:
             ArtifactInfo(
                 acquisition_id=a.get("acquisition_id"),
                 annotation=a.get("annotation"),
+                run_id=a.get("run_id"),
                 **{k: a[k] for k in ("artifact_id", "artifact_type", "channel", "seq", "persist", "created_at", "files")},
             )
             for a in index["artifacts"]

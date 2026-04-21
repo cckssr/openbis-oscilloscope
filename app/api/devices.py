@@ -4,6 +4,7 @@ import logging
 import asyncio
 import time
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Body, Depends, Path, Query, Request
 from fastapi.responses import Response
@@ -88,6 +89,8 @@ async def list_devices(
                 "state": ds.state.value,
                 "last_error": ds.last_error,
                 "lock": lock_info,
+                "online_since_utc": ds.online_since_utc,
+                "uptime_minutes": ds.uptime_minutes,
             }
         )
     return result
@@ -131,6 +134,11 @@ async def get_device(
     if entry.driver is not None:
         capabilities = ["run", "stop", "acquire", "screenshot"]
 
+    _now = datetime.now(timezone.utc)
+    uptime_minutes = (
+        (_now - entry.online_since).total_seconds() / 60 if entry.online_since else None
+    )
+
     return {
         "id": entry.config.id,
         "label": entry.config.label,
@@ -140,6 +148,8 @@ async def get_device(
         "last_error": entry.last_error,
         "lock": lock_info,
         "capabilities": capabilities,
+        "online_since_utc": entry.online_since.isoformat() if entry.online_since else None,
+        "uptime_minutes": uptime_minutes,
     }
 
 
@@ -345,6 +355,10 @@ async def acquire(
         default=None,
         description="Optional list of channel numbers to acquire.",
     ),
+    run_id: str | None = Query(
+        default=None,
+        description="Optional UUID grouping acquisitions from one RUN press.",
+    ),
     user: UserInfo = Depends(get_current_user),
 ) -> dict:
     """Acquire waveforms from enabled channels and store the artifacts.
@@ -395,7 +409,7 @@ async def acquire(
                 "scale_v_div": cfg.scale_v_div,
             }
             art_id = buffer_service.store_waveform(
-                device_id, session_id, waveform, meta, acquisition_id=acquisition_id
+                device_id, session_id, waveform, meta, acquisition_id=acquisition_id, run_id=run_id
             )
             artifact_ids.append(art_id)
             acquired_channels.append(
