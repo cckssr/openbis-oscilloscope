@@ -1,0 +1,109 @@
+name: Release
+
+on:
+  pull_request:
+    branches: [main]
+    types: [closed]
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine version bump from PR title
+        id: bump
+        run: |
+          TITLE="${{ github.event.pull_request.title }}"
+          echo "PR title: $TITLE"
+
+          # Major: "major:" prefix or "BREAKING CHANGE" anywhere or "!:" pattern
+          if echo "$TITLE" | grep -qiE '^major:|BREAKING CHANGE|^[a-z]+!:'; then
+            echo "type=major" >> "$GITHUB_OUTPUT"
+          # Minor: "feat:" or "feature:" prefix
+          elif echo "$TITLE" | grep -qiE '^feat:|^feature:'; then
+            echo "type=minor" >> "$GITHUB_OUTPUT"
+          # Patch: everything else
+          else
+            echo "type=patch" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Bump version in pyproject.toml
+        id: version
+        run: |
+          BUMP_TYPE="${{ steps.bump.outputs.type }}"
+
+          # Read current version
+          CURRENT=$(python - <<'EOF'
+          import tomllib
+          with open("pyproject.toml", "rb") as f:
+              print(tomllib.load(f)["project"]["version"])
+          EOF
+          )
+
+          # Calculate next version
+          NEXT=$(python - <<EOF
+          major, minor, patch = map(int, "$CURRENT".split("."))
+          if "$BUMP_TYPE" == "major":
+              print(f"{major+1}.0.0")
+          elif "$BUMP_TYPE" == "minor":
+              print(f"{major}.{minor+1}.0")
+          else:
+              print(f"{major}.{minor}.{patch+1}")
+          EOF
+          )
+
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "next=$NEXT" >> "$GITHUB_OUTPUT"
+          echo "Bumping $CURRENT → $NEXT ($BUMP_TYPE)"
+
+          # Write new version into pyproject.toml
+          sed -i "s/^version = \"$CURRENT\"/version = \"$NEXT\"/" pyproject.toml
+
+      - name: Build frontend
+        working-directory: openbis_webapp
+        run: |
+          npm ci
+          npm run build
+
+      - name: Commit version bump
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml
+          git commit -m "chore: release v${{ steps.version.outputs.next }}"
+          git push
+
+      - name: Create tag and GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          BUMP_TYPE: ${{ steps.bump.outputs.type }}
+          CURRENT_VERSION: ${{ steps.version.outputs.current }}
+          NEXT_VERSION: ${{ steps.version.outputs.next }}
+        run: |
+          TAG="v${NEXT_VERSION}"
+          git tag "$TAG"
+          git push origin "$TAG"
+
+          printf '## Changes\n\n%s\n\n---\nMerged PR [#%s](%s)\nVersion bump: %s (%s → %s)\n' \
+            "$PR_BODY" "$PR_NUMBER" "$PR_URL" "$BUMP_TYPE" "$CURRENT_VERSION" "$NEXT_VERSION" \
+            > /tmp/release_notes.md
+
+          gh release create "$TAG" \
+            --title "$TAG — $PR_TITLE" \
+            --notes-file /tmp/release_notes.md
