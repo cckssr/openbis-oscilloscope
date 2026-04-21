@@ -60,17 +60,30 @@ export function fetchArtifactScreenshot(
   );
 }
 
+export interface CommitRequest {
+  experiment_id: string;
+  sample_id?: string;
+  lab_course?: string;
+  exp_title?: string;
+  group_name?: string;
+  semester?: string;
+  exp_description?: string;
+  device_under_test?: string;
+  notes?: string;
+}
+
 export function commitSession(
   token: string,
   sessionId: string,
-  experimentId: string,
-  sampleId?: string,
+  body: CommitRequest,
 ): Promise<CommitResponse> {
-  const params = new URLSearchParams({ experiment_id: experimentId });
-  if (sampleId) params.set("sample_id", sampleId);
   return apiFetch<CommitResponse>(
-    `/sessions/${sessionId}/commit?${params.toString()}`,
+    `/sessions/${sessionId}/commit`,
     token,
-    { method: "POST" },
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
   );
 }

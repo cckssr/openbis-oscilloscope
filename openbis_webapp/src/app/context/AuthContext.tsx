@@ -23,13 +23,17 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 const STORAGE_KEY = "osc_auth_token";
 
+function getOpenBISCookie(): string | null {
+  return document.cookie.match(/(?:^|;\s*)openbis=([^;]+)/)?.[1] ?? null;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(
-    () => localStorage.getItem(STORAGE_KEY),
+    () => localStorage.getItem(STORAGE_KEY) ?? getOpenBISCookie(),
   );
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(
-    () => !!localStorage.getItem(STORAGE_KEY),
+    () => !!(localStorage.getItem(STORAGE_KEY) ?? getOpenBISCookie()),
   );
 
   // Validate the stored token once on mount.
@@ -40,7 +44,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setIsLoading(true);
     getMe(token)
-      .then(setUser)
+      .then((userInfo) => {
+        setUser(userInfo);
+        // Persist cookie-sourced token to localStorage so it survives navigation
+        if (!localStorage.getItem(STORAGE_KEY)) {
+          localStorage.setItem(STORAGE_KEY, token);
+        }
+      })
       .catch((err) => {
         // 401 means the token expired; clear it silently.
         if (err instanceof ApiError && err.status === 401) {

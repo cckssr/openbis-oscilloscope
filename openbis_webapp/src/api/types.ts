@@ -72,6 +72,7 @@ export interface Artifact {
   files: string[];
   acquisition_id: string | null;
   annotation: string | null;
+  run_id: string | null;
 }
 
 export interface CommitResponse {

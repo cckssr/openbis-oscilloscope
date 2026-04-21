@@ -56,7 +56,17 @@ export function ArtifactRow({
           <span className="text-(--lab-text-secondary)">{type}</span>
         </div>
         <div>
-          <span className="text-(--lab-text-secondary)">{channel ?? "—"}</span>
+          {(() => {
+            const chNum = channel?.match(/^CH(\d+)$/)?.[1];
+            return (
+              <span
+                className="font-medium"
+                style={{ color: chNum ? `var(--ch${chNum}-color)` : "var(--lab-text-secondary)" }}
+              >
+                {channel ?? "—"}
+              </span>
+            );
+          })()}
           {annotation && (
             <p className="text-[10px] italic text-(--lab-text-secondary) truncate max-w-[120px]">
               {annotation}
@@ -68,21 +78,15 @@ export function ArtifactRow({
         </span>
       </div>
 
-      {/* Persist flag indicator */}
-      <div className="flex items-center gap-1">
-        <div
-          className="w-2 h-2 rounded-full border"
-          style={{
-            backgroundColor: persist
-              ? "var(--lab-warning)"
-              : "var(--lab-border)",
-            borderColor: persist ? "var(--lab-warning)" : "var(--lab-border)",
-          }}
-        />
-        <span className="text-xs text-(--lab-text-secondary)">
-          {persist ? "Flagged" : "—"}
-        </span>
-      </div>
+      {/* Persist flag indicator — icon only */}
+      <div
+        className="w-2 h-2 rounded-full border"
+        style={{
+          backgroundColor: persist ? "var(--lab-warning)" : "var(--lab-border)",
+          borderColor: persist ? "var(--lab-warning)" : "var(--lab-border)",
+        }}
+        title={persist ? "Flagged for upload" : "Not flagged"}
+      />
 
       {/* Actions */}
       <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
