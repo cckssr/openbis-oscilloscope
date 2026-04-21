@@ -7,19 +7,24 @@ oscilloscopes:
     driver: "mock"
 
   # Rigol DS1000Z series over LAN
-  - id: "E59240"
-    ip: "141.23.109.35"
+  - id: "E56542"
+    ip: "141.23.109.30"
     port: 111
-    label: "Rigol DS1104Z-Plus (E59240)"
+    label: "Rigol DS1104Z-Plus (E56542)"
     driver: "drivers.RigolDS1000.RigolDS1000Driver"
   - id: "E08889"
     ip: "141.23.109.34"
     port: 111
     label: "Rigol DS1104Z-Plus (E08889)"
     driver: "drivers.RigolDS1000.RigolDS1000Driver"
-  - id: "E56542"
-    ip: "141.23.109.30"
+  - id: "E59240"
+    ip: "141.23.109.35"
     port: 111
-    label: "Rigol DS1104Z-Plus (E56542)"
+    label: "Rigol DS1104Z-Plus (E59240)"
+    driver: "drivers.RigolDS1000.RigolDS1000Driver"
+  - id: "E77097"
+    ip: "141.23.109.36"
+    port: 111
+    label: "Rigol DS1104Z-Plus (E77097)"
     driver: "drivers.RigolDS1000.RigolDS1000Driver"
   
