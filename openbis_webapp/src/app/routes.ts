@@ -27,25 +27,34 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   return children as React.ReactElement;
 }
 
-export const router = createBrowserRouter([
-  {
-    path: "/login",
-    Component: Login,
-  },
-  {
-    path: "/",
-    element: createElement(RequireAuth, null, createElement(DeviceList)),
-  },
-  {
-    path: "/device/:deviceId",
-    element: createElement(
-      RequireAuth,
-      null,
-      createElement(OscilloscopeControl),
-    ),
-  },
-  {
-    path: "/archive/:sessionId",
-    element: createElement(RequireAuth, null, createElement(DataArchive)),
-  },
-]);
+// BASE_URL is set by Vite from the --base flag at build time (default "/").
+// For sub-path deployments (e.g. /oscilloscope/) pass --base=/oscilloscope/ to pnpm run build.
+const baseUrl =
+  (import.meta as ImportMeta & { env?: { BASE_URL?: string } }).env?.BASE_URL ??
+  "/";
+
+export const router = createBrowserRouter(
+  [
+    {
+      path: "/login",
+      Component: Login,
+    },
+    {
+      path: "/",
+      element: createElement(RequireAuth, null, createElement(DeviceList)),
+    },
+    {
+      path: "/device/:deviceId",
+      element: createElement(
+        RequireAuth,
+        null,
+        createElement(OscilloscopeControl),
+      ),
+    },
+    {
+      path: "/archive/:sessionId",
+      element: createElement(RequireAuth, null, createElement(DataArchive)),
+    },
+  ],
+  { basename: baseUrl },
+);

@@ -4,11 +4,12 @@ import logging
 from contextlib import asynccontextmanager
 
 import redis.asyncio as aioredis
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 
 from app.api import admin, auth, devices, openbis_structure, sessions
 from app.buffer.service import BufferService
 from app.config import settings
+from app.core.activity import ActivityTracker
 from app.core.exceptions import register_exception_handlers
 from app.instruments.health_monitor import HealthMonitor
 from app.instruments.manager import DeviceState, InstrumentManager
@@ -88,10 +89,14 @@ async def lifespan(app: FastAPI):
             except Exception as exc:
                 logger.error("Failed to init mock device %s: %s", device_id, exc)
 
+    # Activity tracker — updated by middleware on every non-health request so
+    # the health monitor can skip cycles when no users are active.
+    activity_tracker = ActivityTracker()
+
     # Health monitor — always started; skips mock devices internally.
     # Real devices are checked via TCP even in DEBUG mode so their state
     # reflects actual hardware reachability.
-    health_monitor = HealthMonitor(instrument_manager)
+    health_monitor = HealthMonitor(instrument_manager, activity_tracker)
     await health_monitor.start()
 
     # Scheduler
@@ -106,6 +111,7 @@ async def lifespan(app: FastAPI):
     app.state.buffer_service = buffer_service
     app.state.openbis_client = openbis_client
     app.state.health_monitor = health_monitor
+    app.state.activity_tracker = activity_tracker
     app.state.scheduler = scheduler
 
     yield
@@ -145,6 +151,13 @@ def create_app() -> FastAPI:
     )
 
     register_exception_handlers(app)
+
+    @app.middleware("http")
+    async def _record_activity(request: Request, call_next):
+        tracker = getattr(request.app.state, "activity_tracker", None)
+        if tracker is not None and request.url.path != "/health":
+            tracker.record()
+        return await call_next(request)
 
     app.include_router(auth.router)
     app.include_router(devices.router)
