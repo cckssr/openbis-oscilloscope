@@ -1,9 +1,12 @@
 """Background service that periodically checks device reachability and manages driver lifecycle."""
 
+from __future__ import annotations
+
 import asyncio
 import logging
 
 from app.config import settings
+from app.core.activity import ActivityTracker
 from app.instruments.manager import DeviceState, InstrumentManager
 
 logger = logging.getLogger(__name__)
@@ -26,18 +29,28 @@ class HealthMonitor:
       driver is disconnected and the reference cleared.
     - ``BUSY``: skipped entirely so as not to interfere with active commands.
 
-    This monitor is not started in ``DEBUG`` mode because mock drivers are
-    always considered connected.
+    When an :class:`~app.core.activity.ActivityTracker` is supplied, poll
+    cycles are skipped while the system has been idle for longer than
+    :attr:`~app.config.Settings.HEALTH_CHECK_IDLE_TIMEOUT_SECONDS`. Checks
+    resume automatically on the next incoming request.
     """
 
-    def __init__(self, manager: InstrumentManager) -> None:
+    def __init__(
+        self,
+        manager: InstrumentManager,
+        activity_tracker: ActivityTracker | None = None,
+    ) -> None:
         """Initialize the HealthMonitor.
 
         Args:
             manager: The :class:`~app.instruments.manager.InstrumentManager`
                 whose devices will be monitored.
+            activity_tracker: Optional tracker used to skip poll cycles when no
+                users are actively using the service. Pass ``None`` to disable
+                idle detection and always poll.
         """
         self._manager = manager
+        self._activity_tracker = activity_tracker
         self._task: asyncio.Task | None = None
 
     async def start(self) -> None:
@@ -64,11 +77,27 @@ class HealthMonitor:
         :meth:`_check_device` is caught and logged so the loop keeps running.
         The first pass runs without delay so real devices show their actual
         state as soon as the application is ready.
+
+        When an :class:`~app.core.activity.ActivityTracker` is configured,
+        poll cycles are skipped if no API request has been seen within
+        :attr:`~app.config.Settings.HEALTH_CHECK_IDLE_TIMEOUT_SECONDS` seconds.
         """
         while True:
             try:
-                for device_id in list(self._manager.devices.keys()):
-                    await self._check_device(device_id)
+                idle = (
+                    self._activity_tracker is not None
+                    and not self._activity_tracker.is_active(
+                        settings.HEALTH_CHECK_IDLE_TIMEOUT_SECONDS
+                    )
+                )
+                if idle:
+                    logger.debug(
+                        "HealthMonitor: idle (no activity for >%ds), skipping cycle",
+                        settings.HEALTH_CHECK_IDLE_TIMEOUT_SECONDS,
+                    )
+                else:
+                    for device_id in list(self._manager.devices.keys()):
+                        await self._check_device(device_id)
                 await asyncio.sleep(settings.HEALTH_CHECK_INTERVAL_SECONDS)
             except asyncio.CancelledError:
                 break
