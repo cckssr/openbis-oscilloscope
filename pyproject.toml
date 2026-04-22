@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "openbis-oscilloscope"
-version = "0.2.1"
+version = "0.2.2"
 description = "FastAPI service for LAN-connected oscilloscope control, integrated with OpenBIS"
 requires-python = ">=3.11"
 dependencies = [
