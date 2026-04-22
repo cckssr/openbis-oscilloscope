@@ -64,6 +64,8 @@ Abstract base class every driver must subclass, plus the data classes used as re
 
 The check interval is controlled by `HEALTH_CHECK_INTERVAL_SECONDS` (default 5 s). The TCP connection timeout is controlled by `HEALTH_CHECK_TCP_TIMEOUT_SECONDS` (default 2.0 s).
 
+Poll cycles are skipped when no API request has been seen within `HEALTH_CHECK_IDLE_TIMEOUT_SECONDS` seconds. Setting it to `0` disables idle suppression entirely (checks always run). The first cycle on startup always runs regardless of idle state.
+
 The monitor is **always started**, including in `DEBUG=True` mode. Devices configured with `driver: "mock"` are skipped entirely (they are pre-connected at startup and have no real network endpoint). Real hardware devices are monitored in all modes.
 
 ---

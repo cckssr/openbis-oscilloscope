@@ -82,14 +82,18 @@ class HealthMonitor:
         poll cycles are skipped if no API request has been seen within
         :attr:`~app.config.Settings.HEALTH_CHECK_IDLE_TIMEOUT_SECONDS` seconds.
         """
+        first_run = True
         while True:
             try:
                 idle = (
-                    self._activity_tracker is not None
+                    not first_run
+                    and self._activity_tracker is not None
+                    and settings.HEALTH_CHECK_IDLE_TIMEOUT_SECONDS > 0
                     and not self._activity_tracker.is_active(
                         settings.HEALTH_CHECK_IDLE_TIMEOUT_SECONDS
                     )
                 )
+                first_run = False
                 if idle:
                     logger.debug(
                         "HealthMonitor: idle (no activity for >%ds), skipping cycle",
