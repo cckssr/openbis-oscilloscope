@@ -167,6 +167,13 @@ class InstrumentManager:
         for item in raw.get("oscilloscopes", []):
             driver_path = item.get("driver", "mock")
 
+            if driver_path == "mock" and not settings.DEBUG:
+                logger.warning(
+                    "Skipping device %s with mock driver in non-DEBUG mode",
+                    item.get("id", "<unknown>"),
+                )
+                continue
+
             cfg = DeviceConfig(
                 id=item["id"],
                 ip=item["ip"],
