@@ -8,6 +8,7 @@ from apscheduler.triggers.cron import CronTrigger
 from app.instruments.manager import DeviceState
 
 from app.config import settings
+from app.scheduler.openbis_sync import sync_oscilloscopes_from_openbis
 
 logger = logging.getLogger(__name__)
 
@@ -15,10 +16,13 @@ logger = logging.getLogger(__name__)
 def create_scheduler(lock_service, instrument_manager) -> AsyncIOScheduler:
     """Build and return a configured :class:`~apscheduler.schedulers.asyncio.AsyncIOScheduler`.
 
-    Registers a single end-of-day cron job (``eod_lock_reset``) that fires at
-    23:59 every day in the timezone defined by
-    :attr:`~app.config.Settings.EOD_RESET_TIMEZONE`. The job clears all Redis
-    lock keys and resets any ``LOCKED`` devices back to ``ONLINE``.
+    Registers two end-of-day cron jobs in the timezone defined by
+    :attr:`~app.config.Settings.EOD_RESET_TIMEZONE`:
+
+    - ``eod_openbis_sync`` (23:55): queries OpenBIS for EQUIPMENT objects and
+      updates ``oscilloscopes.yaml``. No-op when ``OPENBIS_BOT_USER`` is empty.
+    - ``eod_lock_reset`` (23:59): clears all Redis lock keys and resets any
+      ``LOCKED`` devices back to ``ONLINE``.
 
     The caller is responsible for starting the scheduler with ``scheduler.start()``
     and stopping it with ``scheduler.shutdown()`` during application lifecycle
@@ -49,6 +53,15 @@ def create_scheduler(lock_service, instrument_manager) -> AsyncIOScheduler:
         for device_id, entry in instrument_manager.devices.items():
             if entry.state == DeviceState.LOCKED:
                 instrument_manager.update_state(device_id, DeviceState.ONLINE)
+
+    scheduler.add_job(
+        sync_oscilloscopes_from_openbis,
+        trigger=CronTrigger(hour=23, minute=55, timezone=settings.EOD_RESET_TIMEZONE),
+        id="eod_openbis_sync",
+        name="End-of-day OpenBIS oscilloscope sync",
+        replace_existing=True,
+        args=[settings],
+    )
 
     scheduler.add_job(
         eod_lock_reset,

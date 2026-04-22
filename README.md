@@ -1,6 +1,7 @@
 # OpenBIS Oscilloscope Control Service
 
 A three-part system for remotely controlling LAN-connected oscilloscopes from a browser. A **Vite web UI** talks to a **FastAPI backend** (oscilloscope control, locking, buffering) which in turn connects to an external **OpenBIS server** for authentication and dataset archiving.
+A three-part system for remotely controlling LAN-connected oscilloscopes from a browser. A **Vite web UI** talks to a **FastAPI backend** (oscilloscope control, locking, buffering) which in turn connects to an external **OpenBIS server** for authentication and dataset archiving.
 
 ## Features
 
@@ -11,6 +12,7 @@ A three-part system for remotely controlling LAN-connected oscilloscopes from a 
 - **Artifact buffering**: waveforms stored as CSV, screenshots as PNG, with persist flags
 - **OpenBIS commit**: flagged artifacts registered as datasets via pybis
 - **HDF5 export**: optional bundle with a self-contained unpack script
+- **Nightly OpenBIS sync**: cron job at 23:55 queries OpenBIS EQUIPMENT objects and auto-updates the oscilloscope inventory
 - **End-of-day lock reset**: cron job clears all locks at 23:59 Europe/Berlin
 - **Admin endpoints**: force-unlock and bulk lock reset
 - **Mock driver**: full dev/test mode without real hardware (`DEBUG=True`)
@@ -74,18 +76,22 @@ Tests use `fakeredis` and the mock driver — no Redis or hardware required.
 
 All settings are read from environment variables (or a `.env` file):
 
-| Variable                        | Default                       | Description                                         |
-| ------------------------------- | ----------------------------- | --------------------------------------------------- |
-| `REDIS_URL`                     | `redis://localhost:6379`      | Redis connection URL                                |
-| `OPENBIS_URL`                   | _(required)_                  | OpenBIS server URL                                  |
-| `BUFFER_DIR`                    | `./buffer`                    | Root directory for artifact storage                 |
-| `OSCILLOSCOPES_CONFIG`          | `./config/oscilloscopes.yaml` | Device list                                         |
-| `LOCK_TTL_SECONDS`              | `1800`                        | Lock expiry (seconds)                               |
-| `HEALTH_CHECK_INTERVAL_SECONDS` | `5`                           | TCP health check interval                           |
-| `TOKEN_CACHE_SECONDS`           | `60`                          | Token validation cache TTL                          |
-| `EOD_RESET_TIMEZONE`            | `Europe/Berlin`               | Timezone for end-of-day reset                       |
-| `DEBUG`                         | `False`                       | Mock driver + fakeredis; bypass OpenBIS auth/commit |
-| `DEBUG_TOKEN`                   | `debug-token`                 | Bearer token accepted in `DEBUG` mode               |
+| Variable                        | Default                        | Description                                          |
+| ------------------------------- | ------------------------------ | ---------------------------------------------------- |
+| `REDIS_URL`                     | `redis://localhost:6379`       | Redis connection URL                                 |
+| `OPENBIS_URL`                   | _(required)_                   | OpenBIS server URL                                   |
+| `BUFFER_DIR`                    | `./buffer`                     | Root directory for artifact storage                  |
+| `OSCILLOSCOPES_CONFIG`          | `./config/oscilloscopes.yaml`  | Device list                                          |
+| `LOCK_TTL_SECONDS`              | `1800`                         | Lock expiry (seconds)                                |
+| `HEALTH_CHECK_INTERVAL_SECONDS` | `5`                            | TCP health check interval                            |
+| `TOKEN_CACHE_SECONDS`           | `60`                           | Token validation cache TTL                           |
+| `EOD_RESET_TIMEZONE`            | `Europe/Berlin`                | Timezone for end-of-day reset                        |
+| `DEBUG`                         | `False`                        | Mock driver + fakeredis; bypass OpenBIS auth/commit  |
+| `DEBUG_TOKEN`                   | `debug-token`                  | Bearer token accepted in `DEBUG` mode                |
+| `OPENBIS_BOT_USER`              | _(empty)_                      | Bot account for nightly sync; leave blank to disable |
+| `OPENBIS_BOT_PASSWORD`          | _(empty)_                      | Password for `OPENBIS_BOT_USER`                      |
+| `DRIVER_MAPPING_CONFIG`         | `./config/driver_mapping.yaml` | Maps `EQUIPMENT.ALTERNATIV_NAME` → driver/port       |
+| `OPENBIS_EQUIPMENT_IP_FILTER`   | `141.23.109.*`                 | IP filter for OpenBIS EQUIPMENT queries              |
 
 ## Registering oscilloscopes
 
@@ -93,6 +99,8 @@ Edit `config/oscilloscopes.yaml`:
 
 ```yaml
 oscilloscopes:
+  # Rigol DS1000Z series (DS1054Z, DS1074Z, DS1104Z, …)
+  - id: "rigol-01"
   # Rigol DS1000Z series (DS1054Z, DS1074Z, DS1104Z, …)
   - id: "rigol-01"
     ip: "192.168.1.100"
@@ -106,8 +114,18 @@ oscilloscopes:
     port: 5025
     label: "Mock Scope"
     driver: "mock"
+    label: "Rigol DS1054Z"
+    driver: "drivers.RigolDS1000.RigolDS1000"
+
+  # Mock device — no hardware required (always active in DEBUG=True mode)
+  - id: "scope-01"
+    ip: "127.0.0.1"
+    port: 5025
+    label: "Mock Scope"
+    driver: "mock"
 ```
 
+Set `driver: "mock"` to use the built-in mock driver for a specific device regardless of `DEBUG` mode.
 Set `driver: "mock"` to use the built-in mock driver for a specific device regardless of `DEBUG` mode.
 
 ## Adding a real oscilloscope driver
