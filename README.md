@@ -1,6 +1,7 @@
 # OpenBIS Oscilloscope Control Service
 
 A three-part system for remotely controlling LAN-connected oscilloscopes from a browser. A **Vite web UI** talks to a **FastAPI backend** (oscilloscope control, locking, buffering) which in turn connects to an external **OpenBIS server** for authentication and dataset archiving.
+A three-part system for remotely controlling LAN-connected oscilloscopes from a browser. A **Vite web UI** talks to a **FastAPI backend** (oscilloscope control, locking, buffering) which in turn connects to an external **OpenBIS server** for authentication and dataset archiving.
 
 ## Features
 
@@ -100,6 +101,8 @@ Edit `config/oscilloscopes.yaml`:
 oscilloscopes:
   # Rigol DS1000Z series (DS1054Z, DS1074Z, DS1104Z, …)
   - id: "rigol-01"
+  # Rigol DS1000Z series (DS1054Z, DS1074Z, DS1104Z, …)
+  - id: "rigol-01"
     ip: "192.168.1.100"
     port: 5025
     label: "Rigol DS1054Z"
@@ -111,8 +114,18 @@ oscilloscopes:
     port: 5025
     label: "Mock Scope"
     driver: "mock"
+    label: "Rigol DS1054Z"
+    driver: "drivers.RigolDS1000.RigolDS1000"
+
+  # Mock device — no hardware required (always active in DEBUG=True mode)
+  - id: "scope-01"
+    ip: "127.0.0.1"
+    port: 5025
+    label: "Mock Scope"
+    driver: "mock"
 ```
 
+Set `driver: "mock"` to use the built-in mock driver for a specific device regardless of `DEBUG` mode.
 Set `driver: "mock"` to use the built-in mock driver for a specific device regardless of `DEBUG` mode.
 
 ## Adding a real oscilloscope driver
