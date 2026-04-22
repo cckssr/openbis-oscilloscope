@@ -272,7 +272,7 @@ The examples below use `/oscilloscope/` as the sub-path. Adjust to match the `--
 
 #### nginx — add to existing server block
 
-Open your existing OpenBIS nginx config (e.g. `/etc/nginx/sites-available/openbis`) and add inside the `server { ... }` block that handles HTTPS:
+Open your existing OpenBIS nginx config — typically `/etc/nginx/sites-available/openbis` (symlinked into `sites-enabled`) or directly `/etc/nginx/sites-enabled/openbis.conf`, depending on how it was set up. Either way, edit the file that contains the OpenBIS `server { ... }` block and add inside the block that handles HTTPS:
 
 ```nginx
 # Oscilloscope API — strip /oscilloscope/api prefix before forwarding
