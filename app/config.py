@@ -18,6 +18,8 @@ class Settings(BaseSettings):
         LOCK_TTL_SECONDS: Seconds after which an unrenewed device lock expires.
         HEALTH_CHECK_INTERVAL_SECONDS: Interval in seconds between TCP reachability checks.
         HEALTH_CHECK_TCP_TIMEOUT_SECONDS: Seconds to wait for a TCP connection during a health check.
+        HEALTH_CHECK_IDLE_TIMEOUT_SECONDS: Seconds of API inactivity after which health-check cycles
+            are paused. Checks resume automatically on the next incoming request.
         TOKEN_CACHE_SECONDS: How long a validated OpenBIS session token is cached in memory.
         EOD_RESET_TIMEZONE: IANA timezone name used for the end-of-day lock-reset cron job.
         OPENBIS_SPACE: OpenBIS space code queried by the structure endpoints (e.g. ``"GP_2025_WISE"``).
@@ -45,6 +47,7 @@ class Settings(BaseSettings):
     LOCK_TTL_SECONDS: int = 1800
     HEALTH_CHECK_INTERVAL_SECONDS: int = 20
     HEALTH_CHECK_TCP_TIMEOUT_SECONDS: float = 2.0
+    HEALTH_CHECK_IDLE_TIMEOUT_SECONDS: int = 600
     TOKEN_CACHE_SECONDS: int = 60
     EOD_RESET_TIMEZONE: str = "Europe/Berlin"
     OPENBIS_SPACE: str = "GP_2025_WISE"

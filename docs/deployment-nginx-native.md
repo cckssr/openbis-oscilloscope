@@ -1,0 +1,179 @@
+# Deployment: nginx Reverse Proxy (no Docker)
+
+This guide covers deploying the openbis-oscilloscope service behind nginx on a Linux server **without Docker**, using systemd and a native Redis installation.
+
+## Prerequisites
+
+```bash
+apt install nginx certbot python3-certbot-nginx redis-server python3-venv nodejs npm
+```
+
+## Project deployment
+
+### 1. Clone and configure
+
+```bash
+git clone <repo> /opt/openbis-oscilloscope
+cd /opt/openbis-oscilloscope
+cp .env.example .env
+# Edit .env — set OPENBIS_URL, BUFFER_DIR, DEBUG=False, etc.
+```
+
+### 2. Redis
+
+```bash
+systemctl enable --now redis
+```
+
+Redis listens on `localhost:6379` by default — no further configuration needed.
+
+### 3. Backend (FastAPI via systemd)
+
+```bash
+cd /opt/openbis-oscilloscope
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
+
+Create `/etc/systemd/system/openbis-oscilloscope.service`:
+
+```ini
+[Unit]
+Description=openbis-oscilloscope FastAPI
+After=network.target redis.service
+
+[Service]
+User=www-data
+WorkingDirectory=/opt/openbis-oscilloscope
+EnvironmentFile=/opt/openbis-oscilloscope/.env
+ExecStart=/opt/openbis-oscilloscope/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+systemctl daemon-reload
+systemctl enable --now openbis-oscilloscope
+```
+
+The backend listens on `localhost:8000`.
+
+### 4. Frontend (Vite build)
+
+```bash
+cd /opt/openbis-oscilloscope/openbis_webapp
+npm ci
+npm run build
+# Built files land in openbis_webapp/dist/
+```
+
+## nginx server block
+
+Replace `oscilloscope.example.org` with your actual domain throughout.
+
+Create `/etc/nginx/sites-available/oscilloscope`:
+
+```nginx
+server {
+    listen 80;
+    server_name oscilloscope.example.org;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name oscilloscope.example.org;
+
+    # SSL (managed by certbot)
+    ssl_certificate     /etc/letsencrypt/live/oscilloscope.example.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/oscilloscope.example.org/privkey.pem;
+    include             /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
+
+    # Security headers
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # --- API reverse proxy ---
+    location /api/ {
+        proxy_pass         http://127.0.0.1:8000/;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+    }
+
+    # --- SPA static files ---
+    root /opt/openbis-oscilloscope/openbis_webapp/dist;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+Enable the site and restart:
+
+```bash
+ln -s /etc/nginx/sites-available/oscilloscope /etc/nginx/sites-enabled/
+nginx -t
+systemctl reload nginx
+```
+
+### SSL certificate
+
+```bash
+certbot --nginx -d oscilloscope.example.org
+```
+
+Certbot will patch the server block automatically and set up auto-renewal.
+
+## Cookie sharing with OpenBIS
+
+The frontend reads an `openbis` cookie set by the OpenBIS server as a login shortcut (see `AuthContext.tsx`). For this to work, **both services must share a common parent domain**:
+
+| Scenario                                                          | Works?                              |
+| ----------------------------------------------------------------- | ----------------------------------- |
+| oscilloscope.physik.tu-berlin.de + openbis.physik.tu-berlin.de    | Yes — `Domain=.physik.tu-berlin.de` |
+| oscilloscope.example.org + openbis.other.org                      | No — different domains              |
+| Same host, different paths (e.g., `/oscilloscope` and `/openbis`) | Yes                                 |
+
+If the OpenBIS server sets `SameSite=Strict`, the cookie will not be sent cross-origin. Ask your OpenBIS admin to set `SameSite=Lax; Domain=.physik.tu-berlin.de` on the session cookie.
+
+## Environment file (`.env`)
+
+Key production settings:
+
+```bash
+DEBUG=False
+OPENBIS_URL=https://openbis.physik.tu-berlin.de
+BUFFER_DIR=/var/lib/openbis-oscilloscope/buffer
+REDIS_URL=redis://localhost:6379/0
+OPENBIS_SPACE=GP_2025_WISE
+```
+
+## Firewall
+
+```bash
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw deny 8000/tcp   # backend reachable only from localhost via nginx
+```
+
+## Updating
+
+```bash
+cd /opt/openbis-oscilloscope
+git pull
+source .venv/bin/activate
+pip install -e .
+systemctl restart openbis-oscilloscope
+
+# Rebuild frontend if changed
+cd openbis_webapp && npm ci && npm run build
+```
