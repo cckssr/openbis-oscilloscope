@@ -1,0 +1,11 @@
+oscilloscopes:
+- id: scope-01
+  ip: 127.0.0.1
+  port: 5025
+  label: Mock Scope (debug)
+  driver: mock
+- id: scope-02
+  ip: 127.0.0.1
+  port: 111
+  label: Rigol DS1104Z-S Plus
+  driver: drivers.RigolDS1000.RigolDS1000Driver
