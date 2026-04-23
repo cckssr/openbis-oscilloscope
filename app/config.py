@@ -25,6 +25,7 @@ class Settings(BaseSettings):
         OPENBIS_SPACE: OpenBIS space code queried by the structure endpoints (e.g. ``"GP_2025_WISE"``).
         DEBUG: When ``True``, mock drivers are used and Redis is replaced with an in-memory
             fake, so the service starts without any external dependencies.
+        LOG_LEVEL: Logging level for the application (e.g. ``"DEBUG"``, ``"INFO"``, ``"WARNING"``).
         DEBUG_TOKEN: A fixed Bearer token accepted in ``DEBUG`` mode that bypasses OpenBIS
             validation. Ignored when ``DEBUG`` is ``False``.
         OPENBIS_BOT_USER: OpenBIS username for the nightly sync bot. Leave empty to skip
@@ -52,6 +53,7 @@ class Settings(BaseSettings):
     EOD_RESET_TIMEZONE: str = "Europe/Berlin"
     OPENBIS_SPACE: str = "GP_2025_WISE"
     DEBUG: bool = False
+    LOG_LEVEL: str = "INFO"
     DEBUG_TOKEN: str = "debug-token"
     OPENBIS_BOT_USER: str = ""
     OPENBIS_BOT_PASSWORD: str = ""
