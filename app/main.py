@@ -56,7 +56,14 @@ async def lifespan(app: FastAPI):
         Control to FastAPI for request handling after startup completes.
     """
     # ---- Startup --------------------------------------------------------
-    logger.info("Starting openbis-oscilloscope service (DEBUG=%s)", settings.DEBUG)
+    logger.info(
+        "Starting openbis-oscilloscope service (DEBUG=%s, LOG_LEVEL=%s)",
+        settings.DEBUG,
+        settings.LOG_LEVEL,
+    )
+    logging.basicConfig(
+        level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
+    )
 
     # Redis
     if settings.DEBUG:
