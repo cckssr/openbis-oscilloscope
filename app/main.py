@@ -18,7 +18,7 @@ from app.openbis_client.client import OpenBISClient
 from app.scheduler.tasks import create_scheduler
 
 logging.basicConfig(
-    level=logging.DEBUG if settings.DEBUG else logging.INFO,
+    level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO),
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
@@ -60,9 +60,6 @@ async def lifespan(app: FastAPI):
         "Starting openbis-oscilloscope service (DEBUG=%s, LOG_LEVEL=%s)",
         settings.DEBUG,
         settings.LOG_LEVEL,
-    )
-    logging.basicConfig(
-        level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
     )
 
     # Redis
