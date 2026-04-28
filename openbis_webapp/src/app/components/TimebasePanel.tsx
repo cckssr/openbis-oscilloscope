@@ -38,9 +38,10 @@ export function TimebasePanel({
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-xs text-(--lab-text-secondary) mb-2">
-          Horizontal Scale
+        <label className="block text-xs text-(--lab-text-secondary) mb-1">
+          Zeitbasis
         </label>
+        <p className="text-[10px] text-(--lab-text-secondary) mb-2">Zeit pro Division — 10 Divisionen = volle Bildbreite</p>
         <select
           value={timebaseSettings.scale_s_div}
           onChange={(e) =>
@@ -60,8 +61,9 @@ export function TimebasePanel({
       </div>
       <div>
         <label className="block text-xs text-(--lab-text-secondary) mb-1">
-          Horizontal Offset
+          Zeitlicher Offset
         </label>
+        <p className="text-[10px] text-(--lab-text-secondary) mb-1">Horizontale Verschiebung des Trigger-Referenzpunkts</p>
         <NumericInput
           value={timebaseSettings.offset_s}
           unit="s"
@@ -77,7 +79,7 @@ export function TimebasePanel({
         disabled={!isLocked || applyingTimebase || !timebaseDirty}
         className="w-full py-2 px-4 border-2 rounded font-medium text-sm transition-colors border-(--lab-accent) text-(--lab-accent) bg-white hover:bg-(--lab-accent) hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        {applyingTimebase ? "Applying…" : "Apply Timebase"}
+        {applyingTimebase ? "Übernehmen…" : "Zeitbasis übernehmen"}
       </button>
     </div>
   );

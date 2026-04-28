@@ -35,11 +35,11 @@ export function DeviceCard({
       </p>
       {lockOwner && (
         <p className="text-xs text-(--lab-text-secondary)">
-          Locked by{" "}
+          Gesperrt von{" "}
           <span
             className={isMyLock ? "text-(--lab-accent) font-medium" : undefined}
           >
-            {isMyLock ? "you" : lockOwner}
+            {isMyLock ? "dir" : lockOwner}
           </span>
         </p>
       )}
@@ -53,7 +53,7 @@ export function DeviceCard({
             : "border-(--lab-accent)] bg-white text-(--lab-accent) hover:bg-[var(--lab-accent) hover:text-white"
         }`}
       >
-        Open
+        Öffnen
       </button>
     </div>
   );

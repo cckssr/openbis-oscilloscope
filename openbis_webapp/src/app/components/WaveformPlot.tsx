@@ -149,7 +149,7 @@ export function WaveformPlot({
         size: 10,
         color: "#6B7280",
       },
-      title: { text: "Time (s)", font: { size: 11, color: "#6B7280" } },
+      title: { text: "Zeit (s)", font: { size: 11, color: "#6B7280" } },
       fixedrange: false,
     },
     yaxis: {

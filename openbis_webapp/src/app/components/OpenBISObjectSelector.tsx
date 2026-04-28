@@ -32,7 +32,7 @@ export function OpenBISObjectSelector({ token, onSelect }: Props) {
     setError(null);
     listProjects(token)
       .then(setProjects)
-      .catch(() => setError("Failed to load projects"))
+      .catch(() => setError("Projekte konnten nicht geladen werden"))
       .finally(() => setLoadingProjects(false));
   }, [token]);
 
@@ -46,7 +46,7 @@ export function OpenBISObjectSelector({ token, onSelect }: Props) {
     setLoadingCollections(true);
     listCollections(token, code)
       .then(setCollections)
-      .catch(() => setError("Failed to load collections"))
+      .catch(() => setError("Sammlungen konnten nicht geladen werden"))
       .finally(() => setLoadingCollections(false));
   };
 
@@ -58,7 +58,7 @@ export function OpenBISObjectSelector({ token, onSelect }: Props) {
     setLoadingObjects(true);
     listObjects(token, code)
       .then(setObjects)
-      .catch(() => setError("Failed to load objects"))
+      .catch(() => setError("Objekte konnten nicht geladen werden"))
       .finally(() => setLoadingObjects(false));
   };
 
@@ -82,7 +82,7 @@ export function OpenBISObjectSelector({ token, onSelect }: Props) {
       {error && <p className="text-xs text-(--lab-danger)">{error}</p>}
 
       <div>
-        <label className="block text-xs text-(--lab-text-secondary) mb-1">Group</label>
+        <label className="block text-xs text-(--lab-text-secondary) mb-1">Gruppe</label>
         <div className="relative">
           <select
             value={selectedProject}
@@ -90,7 +90,7 @@ export function OpenBISObjectSelector({ token, onSelect }: Props) {
             disabled={loadingProjects}
             className={selectClass}
           >
-            <option value="">{loadingProjects ? "Loading…" : "— Select group —"}</option>
+            <option value="">{loadingProjects ? "Laden…" : "— Gruppe auswählen —"}</option>
             {projects.map((p) => (
               <option key={p.code} value={p.code}>{p.display_name}</option>
             ))}
@@ -106,7 +106,7 @@ export function OpenBISObjectSelector({ token, onSelect }: Props) {
           disabled={!selectedProject || loadingCollections}
           className={selectClass}
         >
-          <option value="">{loadingCollections ? "Loading…" : "— Select experiment —"}</option>
+          <option value="">{loadingCollections ? "Laden…" : "— Experiment auswählen —"}</option>
           {collections.map((c) => (
             <option key={c.code} value={c.code}>{c.display_name}</option>
           ))}
@@ -114,14 +114,14 @@ export function OpenBISObjectSelector({ token, onSelect }: Props) {
       </div>
 
       <div>
-        <label className="block text-xs text-(--lab-text-secondary) mb-1">Sample / Object</label>
+        <label className="block text-xs text-(--lab-text-secondary) mb-1">Probe / Objekt</label>
         <select
           value={selectedObject}
           onChange={(e) => handleObjectChange(e.target.value)}
           disabled={!selectedCollection || loadingObjects}
           className={selectClass}
         >
-          <option value="">{loadingObjects ? "Loading…" : "— Select object —"}</option>
+          <option value="">{loadingObjects ? "Laden…" : "— Objekt auswählen —"}</option>
           {objects.map((o) => (
             <option key={o.identifier} value={o.identifier}>
               {o.code} ({o.type})
