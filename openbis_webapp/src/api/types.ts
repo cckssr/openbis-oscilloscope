@@ -53,6 +53,15 @@ export interface AcquireResponse {
   channels: AcquiredChannel[];
 }
 
+export interface MaxAcquireProgressEvent {
+  type: "progress";
+  channel: number;
+  channel_index: number;
+  total_channels: number;
+  batch: number;
+  total_batches: number;
+}
+
 export interface WaveformData {
   artifact_id: string;
   channel: number;

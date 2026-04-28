@@ -1,9 +1,10 @@
-import { apiFetch } from "./client";
+import { apiFetch, apiFetchStream, ApiError } from "./client";
 import type {
   Device,
   DeviceDetail,
   LockResponse,
   AcquireResponse,
+  MaxAcquireProgressEvent,
   WaveformData,
   DeviceSettings,
   ChannelConfig,
@@ -146,6 +147,58 @@ export function acquireWaveforms(
     token,
     { method: "POST" },
   );
+}
+
+/**
+ * Acquires full-memory-depth waveforms via a streaming SSE connection.
+ * Calls onProgress for each batch event and resolves with the final AcquireResponse.
+ */
+export async function acquireWaveformsMax(
+  token: string,
+  deviceId: string,
+  sessionId: string,
+  channels?: number[],
+  runId?: string | null,
+  onProgress?: (event: MaxAcquireProgressEvent) => void,
+): Promise<AcquireResponse> {
+  const params = new URLSearchParams({ session_id: sessionId });
+  channels?.forEach((ch) => params.append("channels", String(ch)));
+  if (runId) params.set("run_id", runId);
+
+  const res = await apiFetchStream(
+    `/devices/${deviceId}/acquire_max?${params}`,
+    token,
+    { method: "POST" },
+  );
+
+  const reader = res.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop()!;
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      const event = JSON.parse(line.slice(6));
+      if (event.type === "progress") {
+        onProgress?.(event as MaxAcquireProgressEvent);
+      } else if (event.type === "done") {
+        reader.cancel();
+        return event as AcquireResponse;
+      } else if (event.type === "error") {
+        throw new ApiError(
+          500,
+          "acquisition_error",
+          event.message ?? "MAX acquisition failed",
+        );
+      }
+    }
+  }
+  throw new ApiError(500, "stream_ended", "SSE stream ended without a result");
 }
 
 /**

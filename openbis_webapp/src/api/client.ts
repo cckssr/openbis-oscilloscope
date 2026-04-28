@@ -14,6 +14,38 @@ export class ApiError extends Error {
 }
 
 /**
+ * Opens a streaming fetch with Bearer auth and returns the raw Response.
+ * Use this for SSE endpoints where you need to read the body as a stream.
+ * Throws ApiError for any non-2xx status.
+ */
+export async function apiFetchStream(
+  path: string,
+  token: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const res = await fetch(`${baseUrl}api${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(init.headers ?? {}),
+    },
+  });
+  if (!res.ok) {
+    let code = "unknown";
+    let detail = res.statusText;
+    try {
+      const body = await res.json();
+      code = body.error ?? code;
+      detail = body.detail ?? detail;
+    } catch {
+      // non-JSON error body
+    }
+    throw new ApiError(res.status, code, detail);
+  }
+  return res;
+}
+
+/**
  * Central fetch wrapper. Injects the Bearer token and parses the response.
  * Returns the JSON body for application/json responses, or the raw Blob for
  * binary responses (e.g. the screenshot PNG endpoint).

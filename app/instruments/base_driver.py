@@ -1,6 +1,7 @@
 """Abstract base driver class defining the interface for oscilloscope drivers."""
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass
 
 import numpy as np
@@ -164,6 +165,30 @@ class BaseOscilloscopeDriver(ABC):
             A :class:`WaveformData` instance containing time and voltage arrays
             along with sampling metadata.
         """
+
+    def acquire_waveform_max(
+        self,
+        channel: int,
+        progress_cb: Callable[[int, int], None] | None = None,
+    ) -> WaveformData:
+        """Acquire maximum-depth waveform data from the specified channel.
+
+        Default implementation delegates to :meth:`acquire_waveform` with a single
+        synthetic progress event.  Override in hardware drivers that support a
+        dedicated high-depth read mode (e.g. Rigol MAX waveform mode with batched
+        SCPI transfers).
+
+        Args:
+            channel: 1-based channel number to read from.
+            progress_cb: Optional callable invoked after each batch as
+                ``progress_cb(completed_batches, total_batches)``.
+
+        Returns:
+            A :class:`WaveformData` instance.
+        """
+        if progress_cb:
+            progress_cb(1, 1)
+        return self.acquire_waveform(channel)
 
     @abstractmethod
     def get_screenshot(self) -> bytes:
