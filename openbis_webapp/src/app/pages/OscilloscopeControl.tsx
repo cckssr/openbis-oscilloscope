@@ -15,6 +15,7 @@ import {
   runDevice,
   stopDevice,
   acquireWaveforms,
+  acquireWaveformsMax,
   getChannelData,
   getScreenshot,
   saveScreenshot,
@@ -125,20 +126,31 @@ export function OscilloscopeControl() {
   const [isRunning, setIsRunning] = useState(false);
   const isAcquiringRef = useRef(false); // synchronous guard for overlapping acquires
   const [isAcquiring, setIsAcquiring] = useState(false); // for UI rendering only
+  const isAcquiringMaxRef = useRef(false);
+  const [isAcquiringMax, setIsAcquiringMax] = useState(false);
+  const [maxProgress, setMaxProgress] = useState(0);
+  const [maxProgressLabel, setMaxProgressLabel] = useState("");
   const [isScreenshotting, setIsScreenshotting] = useState(false);
-  const [lastAcquisitionId, setLastAcquisitionId] = useState<string | null>(null);
+  const [lastAcquisitionId, setLastAcquisitionId] = useState<string | null>(
+    null,
+  );
   const [annotationText, setAnnotationText] = useState("");
   const [annotationSaved, setAnnotationSaved] = useState(false);
   const [isSavingAnnotation, setIsSavingAnnotation] = useState(false);
   const [cmdError, setCmdError] = useState<string | null>(null);
   const [waveformData, setWaveformData] = useState<PlotPoint[]>([]);
   // Full channel configs from the last acquire response — drives UI sync and plot
-  const [acquiredChannels, setAcquiredChannels] = useState<AcquiredChannel[]>([]);
+  const [acquiredChannels, setAcquiredChannels] = useState<AcquiredChannel[]>(
+    [],
+  );
   // Which acquired channels are currently visible in the plot (independent of scope enable state)
-  const [visibleChannels, setVisibleChannels] = useState<Set<number>>(new Set());
+  const [visibleChannels, setVisibleChannels] = useState<Set<number>>(
+    new Set(),
+  );
   const [timebaseLabel, setTimebaseLabel] = useState("Zeitbasis: —");
   const [sampleRateLabel, setSampleRateLabel] = useState("Abtastrate: —");
-  const [actualTimebaseScaleSDiv, setActualTimebaseScaleSDiv] = useState<number>(1e-3);
+  const [actualTimebaseScaleSDiv, setActualTimebaseScaleSDiv] =
+    useState<number>(1e-3);
 
   // Continuous acquisition: interval handle (fixed 1 Hz — acquisition takes ≥ 1 s)
   const runLoopRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -273,7 +285,9 @@ export function OscilloscopeControl() {
       })
       .catch((err) =>
         setDeviceError(
-          err instanceof Error ? err.message : "Gerät konnte nicht geladen werden",
+          err instanceof Error
+            ? err.message
+            : "Gerät konnte nicht geladen werden",
         ),
       );
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -311,7 +325,9 @@ export function OscilloscopeControl() {
       await loadSettings();
     } catch (err) {
       setLockError(
-        err instanceof ApiError ? err.message : "Gerät konnte nicht gesperrt werden",
+        err instanceof ApiError
+          ? err.message
+          : "Gerät konnte nicht gesperrt werden",
       );
     } finally {
       setLockLoading(false);
@@ -330,7 +346,9 @@ export function OscilloscopeControl() {
       setDevice(updated);
     } catch (err) {
       setLockError(
-        err instanceof ApiError ? err.message : "Sperre konnte nicht freigegeben werden",
+        err instanceof ApiError
+          ? err.message
+          : "Sperre konnte nicht freigegeben werden",
       );
     } finally {
       setLockLoading(false);
@@ -352,7 +370,9 @@ export function OscilloscopeControl() {
       setAppliedChannels({ ...channelSettings });
     } catch (err) {
       setApplyError(
-        err instanceof Error ? err.message : "Kanaleinstellungen konnten nicht übernommen werden",
+        err instanceof Error
+          ? err.message
+          : "Kanaleinstellungen konnten nicht übernommen werden",
       );
     } finally {
       setApplyingChannels(false);
@@ -368,7 +388,9 @@ export function OscilloscopeControl() {
       setAppliedTimebase({ ...timebaseSettings });
     } catch (err) {
       setApplyError(
-        err instanceof Error ? err.message : "Zeitbasis konnte nicht übernommen werden",
+        err instanceof Error
+          ? err.message
+          : "Zeitbasis konnte nicht übernommen werden",
       );
     } finally {
       setApplyingTimebase(false);
@@ -384,7 +406,9 @@ export function OscilloscopeControl() {
       setAppliedTrigger({ ...triggerSettings });
     } catch (err) {
       setApplyError(
-        err instanceof Error ? err.message : "Trigger konnte nicht übernommen werden",
+        err instanceof Error
+          ? err.message
+          : "Trigger konnte nicht übernommen werden",
       );
     } finally {
       setApplyingTrigger(false);
@@ -509,12 +533,116 @@ export function OscilloscopeControl() {
         setTimebaseLabel(`Zeitbasis: ${formatTimebase(actualScale)}`);
       }
     } catch (err) {
-      setCmdError(err instanceof ApiError ? err.message : "Messung fehlgeschlagen");
+      setCmdError(
+        err instanceof ApiError ? err.message : "Messung fehlgeschlagen",
+      );
     } finally {
       isAcquiringRef.current = false;
       setIsAcquiring(false);
       const elapsed = performance.now() - startTime;
       console.debug(`Acquisition completed in ${elapsed.toFixed(2)}ms`);
+    }
+  }, [token, deviceId, sessionId, channelSettings]);
+
+  const handleAcquireMax = useCallback(async () => {
+    if (!token || !deviceId || !sessionId) return;
+    if (isAcquiringMaxRef.current || isAcquiringRef.current) return;
+    isAcquiringMaxRef.current = true;
+    setIsAcquiringMax(true);
+    setMaxProgress(0);
+    setMaxProgressLabel("");
+    setCmdError(null);
+    const startTime = performance.now();
+    try {
+      const enabledNums = Object.entries(channelSettings)
+        .filter(([, cfg]) => cfg.enabled)
+        .map(([k]) => Number(k));
+
+      const acquireResp = await acquireWaveformsMax(
+        token,
+        deviceId,
+        sessionId,
+        enabledNums.length > 0 ? enabledNums : undefined,
+        runIdRef.current,
+        (ev) => {
+          const pct = Math.round(
+            ((ev.channel_index + ev.batch / ev.total_batches) /
+              ev.total_channels) *
+              100,
+          );
+          setMaxProgress(Math.min(99, pct));
+          setMaxProgressLabel(
+            `Kanal ${ev.channel} – Block ${ev.batch}/${ev.total_batches}`,
+          );
+        },
+      );
+
+      setMaxProgress(100);
+      setAcquiredChannels(acquireResp.channels);
+      setLastAcquisitionId(acquireResp.acquisition_id);
+      setAnnotationText("");
+      setAnnotationSaved(false);
+
+      const acquiredNums = new Set(acquireResp.channels.map((c) => c.channel));
+      const syncedSettings: Record<number, ChannelConfig> = {};
+      for (let ch = 1; ch <= 4; ch++) {
+        syncedSettings[ch] = {
+          ...(channelSettings[ch] ?? DEFAULT_CHANNEL_CFG),
+          enabled: acquiredNums.has(ch),
+        };
+      }
+      for (const ac of acquireResp.channels) {
+        syncedSettings[ac.channel] = {
+          enabled: ac.enabled,
+          scale_v_div: ac.scale_v_div,
+          offset_v: ac.offset_v,
+          coupling: ac.coupling,
+          probe_attenuation: ac.probe_attenuation,
+        };
+      }
+      setChannelSettings(syncedSettings);
+      setAppliedChannels(syncedSettings);
+      setVisibleChannels(new Set(acquireResp.channels.map((c) => c.channel)));
+
+      const results = await Promise.all(
+        acquireResp.channels.map(({ channel: ch }) =>
+          getChannelData(token, deviceId, ch, sessionId).catch(() => null),
+        ),
+      );
+      const channelDataMap: Record<number, WaveformData> = {};
+      for (let i = 0; i < acquireResp.channels.length; i++) {
+        const d = results[i];
+        if (d) channelDataMap[acquireResp.channels[i].channel] = d;
+      }
+
+      const plot = buildPlotData(channelDataMap);
+      setWaveformData(plot);
+      if (plot.length > 0) tStartRef.current = plot[0].time;
+
+      const firstData = Object.values(channelDataMap)[0];
+      if (firstData && firstData.time_s.length >= 2) {
+        const xInc = firstData.time_s[1] - firstData.time_s[0];
+        const sr = xInc > 0 ? 1 / xInc : 0;
+        setSampleRateLabel(`Abtastrate: ${formatSampleRate(sr)}`);
+        const totalTime =
+          firstData.time_s[firstData.time_s.length - 1] - firstData.time_s[0];
+        const actualScale = totalTime / 10;
+        setActualTimebaseScaleSDiv(actualScale);
+        setTimebaseLabel(`Zeitbasis: ${formatTimebase(actualScale)}`);
+      }
+
+      console.debug(
+        `MAX acquisition done in ${(performance.now() - startTime).toFixed(0)}ms`,
+      );
+    } catch (err) {
+      setCmdError(
+        err instanceof ApiError
+          ? err.message
+          : "Tiefenspeicher-Messung fehlgeschlagen",
+      );
+    } finally {
+      isAcquiringMaxRef.current = false;
+      setIsAcquiringMax(false);
     }
   }, [token, deviceId, sessionId, channelSettings]);
 
@@ -565,14 +693,22 @@ export function OscilloscopeControl() {
   };
 
   const handleSaveAnnotation = async () => {
-    if (!token || !sessionId || !lastAcquisitionId || !annotationText.trim()) return;
+    if (!token || !sessionId || !lastAcquisitionId || !annotationText.trim())
+      return;
     setIsSavingAnnotation(true);
     try {
-      await setAnnotation(token, sessionId, lastAcquisitionId, annotationText.trim());
+      await setAnnotation(
+        token,
+        sessionId,
+        lastAcquisitionId,
+        annotationText.trim(),
+      );
       setAnnotationSaved(true);
     } catch (err) {
       setCmdError(
-        err instanceof ApiError ? err.message : "Beschriftung konnte nicht gespeichert werden",
+        err instanceof ApiError
+          ? err.message
+          : "Beschriftung konnte nicht gespeichert werden",
       );
     } finally {
       setIsSavingAnnotation(false);
@@ -598,7 +734,9 @@ export function OscilloscopeControl() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
-      setCmdError(err instanceof ApiError ? err.message : "Screenshot fehlgeschlagen");
+      setCmdError(
+        err instanceof ApiError ? err.message : "Screenshot fehlgeschlagen",
+      );
     } finally {
       setIsScreenshotting(false);
     }
@@ -718,7 +856,11 @@ export function OscilloscopeControl() {
             <button
               onClick={handleRun}
               disabled={!canCommand}
-              aria-label={isRunning ? "Läuft (kontinuierlich)" : "Kontinuierliche Messung starten"}
+              aria-label={
+                isRunning
+                  ? "Läuft (kontinuierlich)"
+                  : "Kontinuierliche Messung starten"
+              }
               title={
                 isRunning
                   ? "Kontinuierliche Messung läuft (~1 Hz)"
@@ -811,7 +953,9 @@ export function OscilloscopeControl() {
                 <button
                   onClick={handleSaveAnnotation}
                   disabled={
-                    !annotationText.trim() || isSavingAnnotation || annotationSaved
+                    !annotationText.trim() ||
+                    isSavingAnnotation ||
+                    annotationSaved
                   }
                   className="w-full py-1 px-2 border-2 rounded text-xs font-medium transition-colors border-(--lab-border) text-(--lab-text-secondary) hover:bg-(--lab-panel) disabled:opacity-40 disabled:cursor-not-allowed"
                 >
@@ -823,6 +967,42 @@ export function OscilloscopeControl() {
                 </button>
               </div>
             )}
+
+            {/* MAX depth acquisition */}
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={handleAcquireMax}
+                  disabled={!canCommand || isAcquiringMax || isAcquiring}
+                  title="Vollständigen Oszilloskopspeicher auslesen (MAX-Modus) — deutlich mehr Datenpunkte als MESSEN, dauert länger"
+                  className="flex-1 flex items-center justify-center gap-2 py-2 px-4 border-2 rounded font-medium text-sm bg-white border-(--lab-accent) text-(--lab-accent) hover:bg-(--lab-accent) hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {isAcquiringMax ? "Lese Speicher…" : "TIEFENSPEICHER"}
+                </button>
+                <span
+                  className="shrink-0 text-sm leading-none text-(--lab-text-secondary) cursor-help select-none"
+                  title="MAX-Modus: Liest den vollständigen Oszilloskopspeicher blockweise aus. Liefert erheblich mehr Datenpunkte als eine normale Messung (je nach Speichertiefe bis zu mehreren Millionen). Dauert abhängig von der Speichertiefe 5–60 Sekunden."
+                >
+                  ⓘ
+                </span>
+              </div>
+              {isAcquiringMax && (
+                <div className="space-y-0.5">
+                  <div className="w-full bg-(--lab-border) rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className="h-1.5 rounded-full transition-all duration-300"
+                      style={{
+                        width: `${maxProgress}%`,
+                        backgroundColor: "var(--lab-accent)",
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-(--lab-text-secondary) font-mono truncate">
+                    {maxProgressLabel || "Initialisierung…"}
+                  </p>
+                </div>
+              )}
+            </div>
 
             <button
               onClick={handleScreenshot}
@@ -935,7 +1115,11 @@ export function OscilloscopeControl() {
                       : "text-(--lab-text-secondary) hover:text-(--lab-text-primary)"
                   }`}
                 >
-                  {{ channels: "Kanäle", timebase: "Zeitbasis", trigger: "Trigger" }[tab] ?? tab}
+                  {{
+                    channels: "Kanäle",
+                    timebase: "Zeitbasis",
+                    trigger: "Trigger",
+                  }[tab] ?? tab}
                   {dirty && isLocked && expertMode && (
                     <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-(--lab-warning)" />
                   )}

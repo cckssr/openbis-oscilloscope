@@ -194,6 +194,42 @@ class MockOscilloscopeDriver(BaseOscilloscopeDriver):
             unit_y="V",
         )
 
+    def acquire_waveform_max(self, channel: int, progress_cb=None) -> WaveformData:
+        """Generate a synthetic large-depth waveform simulating MAX mode.
+
+        Returns 10× more samples than :meth:`acquire_waveform` and fires fake
+        batch progress events so the SSE progress bar works in DEBUG mode.
+
+        Args:
+            channel: 1-based channel number (1–4).
+            progress_cb: Optional callable invoked as ``progress_cb(batch, total)``.
+        """
+        num_divs = 10
+        window_s = self._timebase.scale_s_div * num_divs * 10  # 10× wider window
+        sample_rate = 1e6
+        record_length = min(max(10_000, int(sample_rate * window_s)), 1_500_000)
+        num_batches = max(1, (record_length + 249_999) // 250_000)
+
+        freq_hz = 1e3 + (channel - 1) * 500
+        amplitude = self._channels[channel].scale_v_div * 3.0
+        phase_time = time.time() if self._running else self._stop_time
+
+        t = np.linspace(0, window_s, record_length, endpoint=False)
+        v = amplitude * np.sin(2 * math.pi * freq_hz * (t + phase_time))
+        v = v + self._rng.normal(0, 0.01 * amplitude, size=record_length)
+
+        for i in range(num_batches):
+            if progress_cb:
+                progress_cb(i + 1, num_batches)
+
+        return WaveformData(
+            channel=channel,
+            time_array=t,
+            voltage_array=v,
+            sample_rate=sample_rate,
+            record_length=record_length,
+        )
+
     def get_screenshot(self) -> bytes:
         """Return a cached minimal valid white PNG image.
 

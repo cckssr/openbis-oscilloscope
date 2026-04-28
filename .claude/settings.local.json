@@ -20,7 +20,8 @@
       "Bash(npm run *)",
       "Bash(git check-ignore *)",
       "Bash(git checkout *)",
-      "Bash(.venv/bin/pip show *)"
+      "Bash(.venv/bin/pip show *)",
+      "Bash(npx vite *)"
     ]
   }
 }

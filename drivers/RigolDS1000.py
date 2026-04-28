@@ -2,6 +2,7 @@
 
 import numpy as np
 import logging
+from collections.abc import Callable
 
 from app.instruments.base_driver import (
     BaseOscilloscopeDriver,
@@ -130,6 +131,74 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
             voltage_array=voltages,
             sample_rate=sample_rate,
             record_length=n_points,
+        )
+
+    def acquire_waveform_max(
+        self,
+        channel: int,
+        progress_cb: Callable[[int, int], None] | None = None,
+    ) -> WaveformData:
+        """Acquire full memory depth using MAX waveform mode with batched SCPI reads.
+
+        Sets the instrument to MAX mode and reads the complete acquisition buffer in
+        chunks of up to 250,000 points.  Does not stop or restart the oscilloscope —
+        MAX mode captures whatever is currently in the acquisition memory.
+
+        Args:
+            channel: 1-based channel number (1–4).
+            progress_cb: Optional callable invoked after each batch as
+                ``progress_cb(completed_batches, total_batches)``.
+
+        Returns:
+            WaveformData with time/voltage arrays and sampling metadata.
+
+        Raises:
+            ValueError: If channel is not in 1–4 or the preamble xincrement is zero.
+        """
+        if not 1 <= channel <= 4:
+            raise ValueError(f"Channel must be 1–4, got {channel}")
+
+        self.instrument.waveform_source = f"CHAN{channel}"
+        self.instrument.waveform_mode = "MAX"
+        self.instrument.waveform_format = "BYTE"
+
+        preamble = self.instrument.get_waveform_preamble()
+        total_points = preamble["points"]
+        max_per_batch = 250_000
+        num_batches = max(1, (total_points + max_per_batch - 1) // max_per_batch)
+
+        all_data = b""
+        for batch_idx in range(num_batches):
+            start = batch_idx * max_per_batch + 1
+            end = min((batch_idx + 1) * max_per_batch, total_points)
+            self.instrument.waveform_start = start
+            self.instrument.waveform_stop = end
+            self.instrument.write(":WAVeform:DATA?")
+            raw_response = self.instrument.adapter.connection.read_raw()
+            all_data += self.instrument._parse_tmc_response(raw_response)
+            if progress_cb:
+                progress_cb(batch_idx + 1, num_batches)
+
+        values = np.frombuffer(all_data, dtype=np.uint8).astype(float)
+        voltages = (values - preamble["yreference"]) * preamble[
+            "yincrement"
+        ] + preamble["yorigin"]
+
+        x_inc = preamble["xincrement"]
+        x_origin = preamble["xorigin"]
+        x_ref = preamble["xreference"]
+        if x_inc <= 0:
+            raise ValueError(f"Invalid xincrement from preamble: {x_inc}")
+
+        time_array = x_origin + (np.arange(total_points) - x_ref) * x_inc
+        sample_rate = 1.0 / x_inc
+
+        return WaveformData(
+            channel=channel,
+            time_array=time_array,
+            voltage_array=voltages,
+            sample_rate=sample_rate,
+            record_length=total_points,
         )
 
     def get_screenshot(self) -> bytes:

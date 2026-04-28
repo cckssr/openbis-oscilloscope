@@ -38,6 +38,8 @@ Every driver must implement these abstract methods:
 
 `get_all_settings()` and `get_channel_enabled(channel)` are provided by the base class. Override `get_channel_enabled()` with a single `:CHANnelN:DISPlay?` query to avoid reading the full config for disabled channels during acquire pre-screening — saves 4 round-trips per inactive channel.
 
+Override `acquire_waveform_max(channel, progress_cb)` to implement full-memory-depth reading (e.g. MAX/RAW waveform mode with batched SCPI transfers). The base class provides a fallback that calls `acquire_waveform()` with a single progress event. `progress_cb(completed, total)` may be called from a worker thread — use `loop.call_soon_threadsafe` if the callback touches asyncio objects.
+
 ## 3. LAN / SCPI connection
 
 For LAN-connected instruments (SCPI over TCP port 5025), the simplest approach is a raw socket or PyVISA with the TCPIP resource string:
