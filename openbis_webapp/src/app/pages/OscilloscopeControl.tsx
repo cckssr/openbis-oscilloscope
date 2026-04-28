@@ -136,8 +136,8 @@ export function OscilloscopeControl() {
   const [acquiredChannels, setAcquiredChannels] = useState<AcquiredChannel[]>([]);
   // Which acquired channels are currently visible in the plot (independent of scope enable state)
   const [visibleChannels, setVisibleChannels] = useState<Set<number>>(new Set());
-  const [timebaseLabel, setTimebaseLabel] = useState("Timebase: —");
-  const [sampleRateLabel, setSampleRateLabel] = useState("Sample rate: —");
+  const [timebaseLabel, setTimebaseLabel] = useState("Zeitbasis: —");
+  const [sampleRateLabel, setSampleRateLabel] = useState("Abtastrate: —");
   const [actualTimebaseScaleSDiv, setActualTimebaseScaleSDiv] = useState<number>(1e-3);
 
   // Continuous acquisition: interval handle (fixed 1 Hz — acquisition takes ≥ 1 s)
@@ -273,7 +273,7 @@ export function OscilloscopeControl() {
       })
       .catch((err) =>
         setDeviceError(
-          err instanceof Error ? err.message : "Failed to load device",
+          err instanceof Error ? err.message : "Gerät konnte nicht geladen werden",
         ),
       );
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -287,7 +287,7 @@ export function OscilloscopeControl() {
         await sendHeartbeat(token, deviceId, sessionId);
       } catch {
         setSessionId(null);
-        setLockError("Lock expired. Please re-acquire.");
+        setLockError("Sperre abgelaufen. Bitte erneut sperren.");
       }
     }, HEARTBEAT_INTERVAL_MS);
     return () => {
@@ -311,7 +311,7 @@ export function OscilloscopeControl() {
       await loadSettings();
     } catch (err) {
       setLockError(
-        err instanceof ApiError ? err.message : "Failed to acquire lock",
+        err instanceof ApiError ? err.message : "Gerät konnte nicht gesperrt werden",
       );
     } finally {
       setLockLoading(false);
@@ -330,7 +330,7 @@ export function OscilloscopeControl() {
       setDevice(updated);
     } catch (err) {
       setLockError(
-        err instanceof ApiError ? err.message : "Failed to release lock",
+        err instanceof ApiError ? err.message : "Sperre konnte nicht freigegeben werden",
       );
     } finally {
       setLockLoading(false);
@@ -352,7 +352,7 @@ export function OscilloscopeControl() {
       setAppliedChannels({ ...channelSettings });
     } catch (err) {
       setApplyError(
-        err instanceof Error ? err.message : "Failed to apply channel settings",
+        err instanceof Error ? err.message : "Kanaleinstellungen konnten nicht übernommen werden",
       );
     } finally {
       setApplyingChannels(false);
@@ -368,7 +368,7 @@ export function OscilloscopeControl() {
       setAppliedTimebase({ ...timebaseSettings });
     } catch (err) {
       setApplyError(
-        err instanceof Error ? err.message : "Failed to apply timebase",
+        err instanceof Error ? err.message : "Zeitbasis konnte nicht übernommen werden",
       );
     } finally {
       setApplyingTimebase(false);
@@ -384,7 +384,7 @@ export function OscilloscopeControl() {
       setAppliedTrigger({ ...triggerSettings });
     } catch (err) {
       setApplyError(
-        err instanceof Error ? err.message : "Failed to apply trigger",
+        err instanceof Error ? err.message : "Trigger konnte nicht übernommen werden",
       );
     } finally {
       setApplyingTrigger(false);
@@ -501,15 +501,15 @@ export function OscilloscopeControl() {
       if (firstData && firstData.time_s.length >= 2) {
         const xInc = firstData.time_s[1] - firstData.time_s[0];
         const sr = xInc > 0 ? 1 / xInc : 0;
-        setSampleRateLabel(`Sample rate: ${formatSampleRate(sr)}`);
+        setSampleRateLabel(`Abtastrate: ${formatSampleRate(sr)}`);
         const totalTime =
           firstData.time_s[firstData.time_s.length - 1] - firstData.time_s[0];
         const actualScale = totalTime / 10;
         setActualTimebaseScaleSDiv(actualScale);
-        setTimebaseLabel(`Timebase: ${formatTimebase(actualScale)}`);
+        setTimebaseLabel(`Zeitbasis: ${formatTimebase(actualScale)}`);
       }
     } catch (err) {
-      setCmdError(err instanceof ApiError ? err.message : "Acquire failed");
+      setCmdError(err instanceof ApiError ? err.message : "Messung fehlgeschlagen");
     } finally {
       isAcquiringRef.current = false;
       setIsAcquiring(false);
@@ -572,7 +572,7 @@ export function OscilloscopeControl() {
       setAnnotationSaved(true);
     } catch (err) {
       setCmdError(
-        err instanceof ApiError ? err.message : "Failed to save annotation",
+        err instanceof ApiError ? err.message : "Beschriftung konnte nicht gespeichert werden",
       );
     } finally {
       setIsSavingAnnotation(false);
@@ -598,7 +598,7 @@ export function OscilloscopeControl() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
-      setCmdError(err instanceof ApiError ? err.message : "Screenshot failed");
+      setCmdError(err instanceof ApiError ? err.message : "Screenshot fehlgeschlagen");
     } finally {
       setIsScreenshotting(false);
     }
@@ -631,7 +631,7 @@ export function OscilloscopeControl() {
           </button>
           <div className="flex items-center gap-3">
             <h1 className="text-lg font-semibold text-(--lab-text-primary)">
-              {device?.label ?? deviceId}
+              {device?.label + " (" + deviceId + ")"}
             </h1>
             {device && <StatusBadge status={device.state} />}
           </div>
@@ -641,7 +641,9 @@ export function OscilloscopeControl() {
           <button
             onClick={toggleExpertMode}
             title={
-              expertMode ? "Switch to restricted mode" : "Switch to expert mode"
+              expertMode
+                ? "Zu eingeschränktem Modus wechseln"
+                : "Zu Expertenmodus wechseln — ermöglicht Zeitbasis-, Trigger- und Kanaleinstellungen"
             }
             className={`flex items-center gap-2 px-3 py-1.5 border-2 text-sm rounded transition-colors ${
               expertMode
@@ -654,15 +656,16 @@ export function OscilloscopeControl() {
             ) : (
               <EyeOff className="w-4 h-4" />
             )}
-            {expertMode ? "Expert" : "Restricted"}
+            {expertMode ? "Experte" : "Eingeschränkt"}
           </button>
           <button
             onClick={() => sessionId && navigate(`/archive/${sessionId}`)}
             disabled={!sessionId}
+            title="Gespeicherte Messdaten dieser Sitzung anzeigen"
             className="flex items-center gap-2 px-3 py-1.5 border-2 border-(--lab-border) text-sm text-(--lab-text-secondary) hover:text-(--lab-text-primary) hover:bg-(--lab-panel) rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Database className="w-4 h-4" />
-            Data Archive
+            Datenarchiv
           </button>
         </div>
       </header>
@@ -674,11 +677,16 @@ export function OscilloscopeControl() {
           {/* Lock */}
           <div>
             <h3 className="text-xs font-medium text-(--lab-text-secondary) uppercase mb-2">
-              Device Control
+              Gerätekontrolle
             </h3>
             <button
               onClick={isLocked ? handleReleaseLock : handleAcquireLock}
               disabled={lockLoading || device?.state === "OFFLINE"}
+              title={
+                isLocked
+                  ? "Gerät für andere Benutzer freigeben"
+                  : "Gerät exklusiv für diese Sitzung sperren — verhindert gleichzeitige Bedienung"
+              }
               className={`w-full flex items-center justify-center gap-2 py-2 px-4 border-2 rounded font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                 isLocked
                   ? "bg-white text-(--lab-warning) border-(--lab-warning)"
@@ -690,11 +698,11 @@ export function OscilloscopeControl() {
               ) : (
                 <Unlock className="w-4 h-4" />
               )}
-              {lockLoading ? "…" : isLocked ? "Release Lock" : "Acquire Lock"}
+              {lockLoading ? "…" : isLocked ? "Freigeben" : "Sperren"}
             </button>
             {isLocked && (
               <p className="text-xs text-(--lab-text-secondary) mt-2 font-mono truncate">
-                Session: {sessionId?.slice(0, 8)}…
+                Sitzung: {sessionId?.slice(0, 8)}…
               </p>
             )}
             {lockError && (
@@ -705,15 +713,16 @@ export function OscilloscopeControl() {
           {/* Acquisition */}
           <div className="space-y-2">
             <h3 className="text-xs font-medium text-(--lab-text-secondary) uppercase">
-              Acquisition
+              Aufnahme
             </h3>
             <button
               onClick={handleRun}
               disabled={!canCommand}
-              aria-label={
+              aria-label={isRunning ? "Läuft (kontinuierlich)" : "Kontinuierliche Messung starten"}
+              title={
                 isRunning
-                  ? "Running (continuous)"
-                  : "Start continuous acquisition"
+                  ? "Kontinuierliche Messung läuft (~1 Hz)"
+                  : "Kontinuierliche Messung starten (~1 Hz) — stoppt mit STOPP"
               }
               className={`w-full flex items-center justify-center gap-2 py-3 px-4 border-2 rounded font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                 isRunning
@@ -722,17 +731,18 @@ export function OscilloscopeControl() {
               }`}
             >
               <Play className="w-5 h-5" />
-              {isRunning ? "RUNNING" : "RUN"}
+              {isRunning ? "LÄUFT" : "START"}
             </button>
 
             <button
               onClick={handleStop}
               disabled={!canCommand}
-              aria-label="Stop acquisition"
+              aria-label="Messung stoppen"
+              title="Messung anhalten — letztes Signal bleibt sichtbar"
               className="w-full flex items-center justify-center gap-2 py-3 px-4 border-2 rounded font-semibold bg-white border-(--lab-danger) text-(--lab-danger) hover:bg-(--lab-danger) hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Square className="w-5 h-5" />
-              STOP
+              STOPP
             </button>
             {expertMode && (
               <>
@@ -744,9 +754,10 @@ export function OscilloscopeControl() {
                     })
                   }
                   disabled={!canCommand}
+                  title="Einzelmessung: stoppt nach einer Aufnahme"
                   className="w-full flex items-center justify-center gap-2 py-2 px-4 border-2 rounded font-medium text-sm bg-white border-(--lab-border) text-(--lab-text-primary) hover:bg-(--lab-panel) transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  SINGLE
+                  EINZEL
                 </button>
                 <button
                   onClick={() =>
@@ -756,10 +767,11 @@ export function OscilloscopeControl() {
                     })
                   }
                   disabled={!canCommand}
+                  title="Stoppt und startet neu — löst sofort einen Trigger aus"
                   className="w-full flex items-center justify-center gap-2 py-2 px-4 border-2 rounded font-medium text-sm bg-white border-(--lab-border) text-(--lab-text-primary) hover:bg-(--lab-panel) transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <Zap className="w-4 h-4" />
-                  Force Trigger
+                  Trigger erzwingen
                 </button>
               </>
             )}
@@ -770,16 +782,17 @@ export function OscilloscopeControl() {
             <button
               onClick={handleAcquire}
               disabled={!canCommand || isAcquiring}
+              title="Einzelmessung durchführen und Wellenformdaten abrufen"
               className="w-full flex items-center justify-center gap-2 py-2 px-4 border-2 rounded font-medium text-sm bg-white border-(--lab-accent) text-(--lab-accent) hover:bg-(--lab-accent) hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {isAcquiring ? "Acquiring…" : "ACQUIRE"}
+              {isAcquiring ? "Messen…" : "MESSEN"}
             </button>
 
             {/* Annotation input — shown after each acquisition */}
             {lastAcquisitionId && (
               <div className="space-y-1 pt-1">
                 <label className="block text-xs text-(--lab-text-secondary)">
-                  Annotation
+                  Beschriftung
                 </label>
                 <input
                   type="text"
@@ -791,7 +804,8 @@ export function OscilloscopeControl() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleSaveAnnotation();
                   }}
-                  placeholder="Label this acquisition…"
+                  placeholder="Messung beschriften…"
+                  title="Freitextbeschriftung für diese Aufnahme — wird im Datenarchiv angezeigt"
                   className="w-full border-2 border-(--lab-border) rounded px-2 py-1 text-xs font-mono focus:outline-none focus:border-(--lab-accent)"
                 />
                 <button
@@ -802,10 +816,10 @@ export function OscilloscopeControl() {
                   className="w-full py-1 px-2 border-2 rounded text-xs font-medium transition-colors border-(--lab-border) text-(--lab-text-secondary) hover:bg-(--lab-panel) disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {annotationSaved
-                    ? "Saved"
+                    ? "Gespeichert"
                     : isSavingAnnotation
-                      ? "Saving…"
-                      : "Save label"}
+                      ? "Speichern…"
+                      : "Speichern"}
                 </button>
               </div>
             )}
@@ -813,6 +827,7 @@ export function OscilloscopeControl() {
             <button
               onClick={handleScreenshot}
               disabled={!canCommand || isScreenshotting}
+              title="Screenshot vom Gerätedisplay aufnehmen und herunterladen"
               className="w-full flex items-center justify-center gap-2 py-2 px-4 border-2 rounded font-medium text-sm bg-white border-(--lab-border) text-(--lab-text-primary) hover:bg-(--lab-panel) transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {isScreenshotting ? (
@@ -820,7 +835,7 @@ export function OscilloscopeControl() {
               ) : (
                 <Camera className="w-4 h-4" />
               )}
-              {isScreenshotting ? "Capturing…" : "Screenshot"}
+              {isScreenshotting ? "Aufnehmen…" : "Screenshot"}
             </button>
           </div>
 
@@ -835,12 +850,12 @@ export function OscilloscopeControl() {
         <main className="flex-1 flex flex-col p-4 overflow-hidden">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-medium text-(--lab-text-secondary)">
-              Waveform Display
+              Signaldarstellung
             </h2>
             <div className="flex items-center gap-2">
               <button
-                title="Download CSV"
-                aria-label="Download waveform as CSV"
+                title="Wellenformdaten als CSV herunterladen"
+                aria-label="Wellenformdaten als CSV herunterladen"
                 onClick={handleDownloadCsv}
                 disabled={!waveformData.length}
                 className="p-1.5 border-2 border-(--lab-border) hover:bg-(--lab-panel) rounded text-(--lab-text-secondary) hover:text-(--lab-text-primary) disabled:opacity-40"
@@ -857,9 +872,9 @@ export function OscilloscopeControl() {
                 <p className="text-sm text-(--lab-text-secondary)">
                   {isLocked
                     ? isRunning
-                      ? "Starting acquisition…"
-                      : "Press RUN or ACQUIRE to capture waveform data"
-                    : "Acquire a lock to start"}
+                      ? "Messung startet…"
+                      : "START oder MESSEN drücken, um Messdaten zu erfassen"
+                    : "Gerät sperren, um zu beginnen"}
                 </p>
               </div>
             ) : (
@@ -914,13 +929,13 @@ export function OscilloscopeControl() {
                   onClick={() =>
                     setActiveTab(tab as "channels" | "timebase" | "trigger")
                   }
-                  className={`flex-1 py-3 text-sm font-medium capitalize transition-colors relative ${
+                  className={`flex-1 py-3 text-sm font-medium transition-colors relative ${
                     activeTab === tab
                       ? "text-(--lab-text-primary) border-b-2 border-(--lab-accent)"
                       : "text-(--lab-text-secondary) hover:text-(--lab-text-primary)"
                   }`}
                 >
-                  {tab}
+                  {{ channels: "Kanäle", timebase: "Zeitbasis", trigger: "Trigger" }[tab] ?? tab}
                   {dirty && isLocked && expertMode && (
                     <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-(--lab-warning)" />
                   )}

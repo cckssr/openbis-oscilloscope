@@ -165,7 +165,7 @@ export function DataArchive() {
       const data = await listArtifacts(token, sessionId);
       setArtifacts(data);
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "Failed to load artifacts");
+      setLoadError(err instanceof Error ? err.message : "Artefakte konnten nicht geladen werden");
     } finally {
       setIsLoading(false);
     }
@@ -361,7 +361,7 @@ export function DataArchive() {
     if (!token || !sessionId) return;
     const selectedArtifacts = artifacts.filter((a) => selected.has(a.artifact_id));
     if (selectedArtifacts.length > 50) {
-      alert("Cannot download more than 50 items at once. Please reduce your selection.");
+      alert("Maximal 50 Elemente gleichzeitig herunterladen. Bitte Auswahl reduzieren.");
       return;
     }
     setIsDownloading(true);
@@ -421,9 +421,9 @@ export function DataArchive() {
         device_under_test: deviceUnderTest.trim() || undefined,
         notes: notes.trim() || undefined,
       });
-      setCommitResult(`Committed ${res.artifact_count} artifact(s) → ${res.permId}`);
+      setCommitResult(`${res.artifact_count} Artefakt(e) übertragen → ${res.permId}`);
     } catch (err) {
-      setCommitError(err instanceof ApiError ? err.message : "Commit failed");
+      setCommitError(err instanceof ApiError ? err.message : "Übertragung fehlgeschlagen");
     } finally {
       setIsCommitting(false);
     }
@@ -449,7 +449,7 @@ export function DataArchive() {
         key={group.acquisition_id}
         artifactId={group.acquisition_id}
         timestamp={formatTimestamp(group.created_at)}
-        type="Waveform"
+        type="Wellenform"
         channel={channelLabel}
         files={Array(totalFiles).fill("")}
         persist={group.persist}
@@ -477,8 +477,8 @@ export function DataArchive() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-lg font-semibold text-(--lab-text-primary)">Data Archive</h1>
-            <p className="font-mono text-xs text-(--lab-text-secondary)">Session {sessionId}</p>
+            <h1 className="text-lg font-semibold text-(--lab-text-primary)">Datenarchiv</h1>
+            <p className="font-mono text-xs text-(--lab-text-secondary)">Sitzung {sessionId}</p>
           </div>
         </div>
 
@@ -488,16 +488,16 @@ export function DataArchive() {
               onClick={handleDownloadSelected}
               disabled={isDownloading}
               className="flex items-center gap-1.5 px-3 py-1.5 border-2 border-(--lab-border) hover:bg-(--lab-panel) rounded text-sm text-(--lab-text-secondary) transition-colors disabled:opacity-40"
-              title={selected.size > 50 ? "Max 50 items" : "Download as ZIP"}
+              title={selected.size > 50 ? "Maximal 50 Elemente" : "Als ZIP herunterladen"}
             >
               <Download className="w-4 h-4" />
-              {isDownloading ? "Zipping…" : `Download (${selected.size})`}
+              {isDownloading ? "ZIP…" : `Herunterladen (${selected.size})`}
             </button>
           )}
           <button
             onClick={fetchArtifacts}
             className="p-1.5 border-2 border-(--lab-border) hover:bg-(--lab-panel) rounded text-(--lab-text-secondary) hover:text-(--lab-text-primary) transition-colors"
-            title="Refresh"
+            title="Aktualisieren"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
           </button>
@@ -526,20 +526,20 @@ export function DataArchive() {
                 <button
                   onClick={selectFlagged}
                   className="text-[10px] normal-case text-(--lab-warning) hover:underline whitespace-nowrap"
-                  title="Select all flagged artifacts"
+                  title="Alle markierten Artefakte auswählen"
                 >
-                  Flagged
+                  Markiert
                 </button>
               )}
             </div>
             <div className="grid grid-cols-4 gap-4">
-              <span>Timestamp</span>
-              <span>Type</span>
-              <span>Channels / Annotation</span>
-              <span>Files</span>
+              <span>Zeitstempel</span>
+              <span>Typ</span>
+              <span>Kanal / Beschriftung</span>
+              <span>Dateien</span>
             </div>
             <span />
-            <span>Actions</span>
+            <span>Aktionen</span>
           </div>
         </div>
 
@@ -551,7 +551,7 @@ export function DataArchive() {
           !loadError && (
             <div className="flex items-center justify-center py-16">
               <p className="text-sm text-(--lab-text-secondary)">
-                No artifacts yet. Use ACQUIRE on the control page.
+                Noch keine Daten. MESSEN auf der Steuerungsseite verwenden.
               </p>
             </div>
           )}
@@ -602,10 +602,10 @@ export function DataArchive() {
                       <ChevronDown className="w-4 h-4 text-(--lab-text-secondary)" />
                     )}
                     <span className="font-medium text-sm text-(--lab-text-primary)">
-                      Run {rg.run_nr}
+                      Messung {rg.run_nr}
                     </span>
                     <span className="font-mono text-xs text-(--lab-text-secondary)">
-                      {formatTimestamp(rg.created_at)} · {acqCount} acquisition{acqCount !== 1 ? "s" : ""} · {artifactCount} trace{artifactCount !== 1 ? "s" : ""}
+                      {formatTimestamp(rg.created_at)} · {acqCount} Aufnahme{acqCount !== 1 ? "n" : ""} · {artifactCount} Spur{artifactCount !== 1 ? "en" : ""}
                     </span>
                   </button>
                   <span />
@@ -649,7 +649,7 @@ export function DataArchive() {
               key={artifact.artifact_id}
               artifactId={artifact.artifact_id}
               timestamp={formatTimestamp(artifact.created_at)}
-              type="Waveform"
+              type="Wellenform"
               channel={artifact.channel != null ? `CH${artifact.channel}` : undefined}
               files={artifact.files}
               persist={artifact.persist}
@@ -669,9 +669,9 @@ export function DataArchive() {
           className="w-full flex items-center justify-between text-sm font-medium text-(--lab-text-primary) hover:text-(--lab-accent) transition-colors"
         >
           <span>
-            Commit to OpenBIS{" "}
+            Zu OpenBIS übertragen{" "}
             <span className="text-(--lab-text-secondary) font-normal">
-              ({flaggedCount} artifact{flaggedCount !== 1 ? "s" : ""} flagged)
+              ({flaggedCount} Artefakt{flaggedCount !== 1 ? "e" : ""} markiert)
             </span>
           </span>
           {showCommitForm ? (
@@ -713,7 +713,7 @@ export function DataArchive() {
               </div>
               <div>
                 <label className="block text-xs text-(--lab-text-secondary) mb-1">
-                  Sample ID
+                  Proben ID
                 </label>
                 <input
                   type="text"
@@ -729,7 +729,7 @@ export function DataArchive() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs text-(--lab-text-secondary) mb-1">
-                  Lab Course *
+                  Praktikum *
                 </label>
                 <select
                   value={labCourse}
@@ -737,7 +737,7 @@ export function DataArchive() {
                   required
                   className={inputClass}
                 >
-                  <option value="">— Select —</option>
+                  <option value="">— Auswählen —</option>
                   <option value="GP1">GP1</option>
                   <option value="GP2">GP2</option>
                   <option value="GP3">GP3</option>
@@ -746,13 +746,13 @@ export function DataArchive() {
               </div>
               <div>
                 <label className="block text-xs text-(--lab-text-secondary) mb-1">
-                  DSO Experiment Title *
+                  DSO-Versuchstitel *
                 </label>
                 <input
                   type="text"
                   value={expTitle}
                   onChange={(e) => setExpTitle(e.target.value)}
-                  placeholder="e.g. RC circuit frequency response"
+                  placeholder="z.B. RC-Schaltung Frequenzgang"
                   required
                   className={inputClass}
                 />
@@ -763,13 +763,13 @@ export function DataArchive() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs text-(--lab-text-secondary) mb-1">
-                  Group Name
+                  Gruppenname
                 </label>
                 <input
                   type="text"
                   value={groupName}
                   onChange={(e) => setGroupName(e.target.value)}
-                  placeholder="Auto-filled from selector"
+                  placeholder="Automatisch aus Auswahl"
                   className={inputClass}
                 />
               </div>
@@ -781,7 +781,7 @@ export function DataArchive() {
                   type="text"
                   value={semester}
                   readOnly
-                  placeholder="Auto-filled from selector"
+                  placeholder="Automatisch aus Auswahl"
                   className={`${inputClass} bg-(--lab-panel) cursor-default`}
                 />
               </div>
@@ -790,12 +790,12 @@ export function DataArchive() {
             {/* Row 4: Description */}
             <div>
               <label className="block text-xs text-(--lab-text-secondary) mb-1">
-                DSO Experiment Description
+                DSO-Versuchsbeschreibung
               </label>
               <textarea
                 value={expDescription}
                 onChange={(e) => setExpDescription(e.target.value)}
-                placeholder="Optional description of the experiment"
+                placeholder="Optionale Beschreibung des Versuchs"
                 rows={2}
                 className={inputClass}
               />
@@ -805,25 +805,25 @@ export function DataArchive() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs text-(--lab-text-secondary) mb-1">
-                  Device Under Test
+                  Messobjekt
                 </label>
                 <input
                   type="text"
                   value={deviceUnderTest}
                   onChange={(e) => setDeviceUnderTest(e.target.value)}
-                  placeholder="e.g. RC filter, Op-Amp LM741"
+                  placeholder="z.B. RC-Filter, Op-Amp LM741"
                   className={inputClass}
                 />
               </div>
               <div>
                 <label className="block text-xs text-(--lab-text-secondary) mb-1">
-                  Notes
+                  Notizen
                 </label>
                 <input
                   type="text"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Optional notes"
+                  placeholder="Optionale Notizen"
                   className={inputClass}
                 />
               </div>
@@ -843,11 +843,11 @@ export function DataArchive() {
                 className="flex items-center gap-2 px-4 py-1.5 border-2 border-(--lab-accent) bg-white text-(--lab-accent) hover:bg-(--lab-accent) hover:text-white rounded font-medium text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Upload className="w-4 h-4" />
-                {isCommitting ? "Committing…" : "Commit"}
+                {isCommitting ? "Übertragen…" : "Übertragen"}
               </button>
               {flaggedCount === 0 && (
                 <span className="text-xs text-(--lab-text-secondary)">
-                  Flag artifacts first using the flag button
+                  Artefakte zuerst mit dem Markierungs-Button kennzeichnen
                 </span>
               )}
             </div>

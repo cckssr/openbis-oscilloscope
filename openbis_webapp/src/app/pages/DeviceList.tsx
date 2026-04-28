@@ -21,7 +21,7 @@ export function DeviceList() {
       const data = await listDevices(token);
       setDevices(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load devices");
+      setError(err instanceof Error ? err.message : "Geräte konnten nicht geladen werden");
     } finally {
       setIsLoading(false);
     }
@@ -43,7 +43,7 @@ export function DeviceList() {
     <div className="min-h-screen bg-(--lab-bg)">
       <header className="bg-white border-b-2 border-(--lab-border) px-6 py-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold text-(--lab-text-primary)">
-          Oscilloscope Control System
+          Oszilloskop-Steuerungssystem
         </h1>
         <div className="flex items-center gap-4">
           {user && (
@@ -60,7 +60,7 @@ export function DeviceList() {
             onClick={fetchDevices}
             disabled={isLoading}
             className="p-1.5 border-2 border-(--lab-border) hover:bg-(--lab-panel) rounded text-(--lab-text-secondary) hover:text-(--lab-text-primary) transition-colors disabled:opacity-50"
-            title="Refresh"
+            title="Aktualisieren"
           >
             <RefreshCw
               className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
@@ -71,7 +71,7 @@ export function DeviceList() {
             className="flex items-center gap-2 px-3 py-1.5 border-2 border-(--lab-border) text-sm text-(--lab-text-secondary) hover:text-(--lab-text-primary) hover:bg-(--lab-panel) rounded transition-colors"
           >
             <LogOut className="w-4 h-4" />
-            Logout
+            Abmelden
           </button>
         </div>
       </header>
@@ -96,9 +96,9 @@ export function DeviceList() {
 
         {!isLoading && devices.length === 0 && !error && (
           <div className="flex flex-col items-center justify-center py-24 text-center">
-            <p className="text-(--lab-text-secondary)">No devices available</p>
+            <p className="text-(--lab-text-secondary)">Keine Geräte verfügbar</p>
             <p className="text-sm text-(--lab-text-secondary) mt-1">
-              Check the server configuration or network connection
+              Serverkonfiguration oder Netzwerkverbindung prüfen
             </p>
           </div>
         )}

@@ -22,9 +22,10 @@ export function TriggerPanel({
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-xs text-(--lab-text-secondary) mb-2">
-          Mode
+        <label className="block text-xs text-(--lab-text-secondary) mb-1">
+          Triggermodus
         </label>
+        <p className="text-[10px] text-(--lab-text-secondary) mb-2">AUTO: ohne Trigger · NORMAL: wartet auf Trigger · SINGLE: eine Aufnahme</p>
         <SegmentedControl
           options={["AUTO", "NORMAL", "SINGLE"]}
           value={triggerSettings.mode}
@@ -39,7 +40,7 @@ export function TriggerPanel({
       </div>
       <div>
         <label className="block text-xs text-(--lab-text-secondary) mb-2">
-          Source
+          Triggerquelle
         </label>
         <SegmentedControl
           options={["CH1", "CH2", "CH3", "CH4"]}
@@ -51,9 +52,10 @@ export function TriggerPanel({
         />
       </div>
       <div>
-        <label className="block text-xs text-(--lab-text-secondary) mb-2">
-          Slope
+        <label className="block text-xs text-(--lab-text-secondary) mb-1">
+          Triggerflanke
         </label>
+        <p className="text-[10px] text-(--lab-text-secondary) mb-2">RISE: steigend · FALL: fallend · EITHER: beide Flanken</p>
         <SegmentedControl
           options={["RISE", "FALL", "EITHER"]}
           value={triggerSettings.slope}
@@ -68,8 +70,9 @@ export function TriggerPanel({
       </div>
       <div>
         <label className="block text-xs text-(--lab-text-secondary) mb-1">
-          Level
+          Triggerpegel
         </label>
+        <p className="text-[10px] text-(--lab-text-secondary) mb-1">Spannungsschwelle, bei der der Trigger auslöst</p>
         <NumericInput
           value={triggerSettings.level_v}
           unit="V"
@@ -87,7 +90,7 @@ export function TriggerPanel({
         disabled={!isLocked || applyingTrigger || !triggerDirty}
         className="w-full py-2 px-4 border-2 rounded font-medium text-sm transition-colors border-(--lab-accent) text-(--lab-accent) bg-white hover:bg-(--lab-accent) hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        {applyingTrigger ? "Applying…" : "Apply Trigger"}
+        {applyingTrigger ? "Übernehmen…" : "Trigger übernehmen"}
       </button>
     </div>
   );

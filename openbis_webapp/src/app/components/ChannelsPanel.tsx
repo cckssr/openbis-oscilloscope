@@ -70,7 +70,7 @@ export function ChannelsPanel({
                 </span>
                 {restrictedMode && (
                   <span className="text-xs text-(--lab-text-secondary) font-mono">
-                    {cfg.enabled ? "ON" : "OFF"}
+                    {cfg.enabled ? "AN" : "AUS"}
                   </span>
                 )}
               </div>
@@ -87,7 +87,7 @@ export function ChannelsPanel({
                     }
                     className="w-4 h-4 accent-(--lab-accent)"
                   />
-                  Enable
+                  Aktivieren
                 </label>
               )}
             </button>
@@ -97,8 +97,9 @@ export function ChannelsPanel({
               <div className="px-3 pb-3 space-y-3 border-t-2 border-(--lab-border)">
                 <div className="pt-3">
                   <label className="block text-xs text-(--lab-text-secondary) mb-1">
-                    Vertical Scale
+                    Vertikale Skalierung
                   </label>
+                  <p className="text-[10px] text-(--lab-text-secondary) mb-1">Volt pro Division (V/div)</p>
                   <NumericInput
                     value={cfg.scale_v_div}
                     unit="V/div"
@@ -115,7 +116,7 @@ export function ChannelsPanel({
                 </div>
                 <div>
                   <label className="block text-xs text-(--lab-text-secondary) mb-1">
-                    Offset
+                    Vertikaler Offset
                   </label>
                   <NumericInput
                     value={cfg.offset_v}
@@ -133,8 +134,9 @@ export function ChannelsPanel({
                 </div>
                 <div>
                   <label className="block text-xs text-(--lab-text-secondary) mb-1">
-                    Coupling
+                    Kopplung
                   </label>
+                  <p className="text-[10px] text-(--lab-text-secondary) mb-1">AC: Gleichanteil blockiert · DC: vollständig · GND: Masse</p>
                   <SegmentedControl
                     options={["AC", "DC", "GND"]}
                     value={cfg.coupling}
@@ -152,8 +154,9 @@ export function ChannelsPanel({
                 </div>
                 <div>
                   <label className="block text-xs text-(--lab-text-secondary) mb-1">
-                    Probe
+                    Tastkopf
                   </label>
+                  <p className="text-[10px] text-(--lab-text-secondary) mb-1">Dämpfungsfaktor der Tastleitung</p>
                   <SegmentedControl
                     options={["1×", "10×", "100×"]}
                     value={probeLabel}
@@ -183,7 +186,7 @@ export function ChannelsPanel({
           disabled={!isLocked || applyingChannels || !channelsDirty}
           className="w-full py-2 px-4 border-2 rounded font-medium text-sm transition-colors border-(--lab-accent) text-(--lab-accent) bg-white hover:bg-(--lab-accent) hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {applyingChannels ? "Applying…" : "Apply Channels"}
+          {applyingChannels ? "Übernehmen…" : "Kanäle übernehmen"}
         </button>
       )}
     </>

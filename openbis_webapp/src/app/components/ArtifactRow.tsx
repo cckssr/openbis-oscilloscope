@@ -51,7 +51,7 @@ export function ArtifactRow({
         <span className="text-(--lab-text-primary)">{timestamp}</span>
         <div className="flex items-center gap-2">
           {thumbnailUrl && (
-            <img src={thumbnailUrl} className="h-8 w-auto rounded border border-(--lab-border)" alt="screenshot" />
+            <img src={thumbnailUrl} className="h-8 w-auto rounded border border-(--lab-border)" alt="Screenshot" />
           )}
           <span className="text-(--lab-text-secondary)">{type}</span>
         </div>
@@ -74,7 +74,7 @@ export function ArtifactRow({
           )}
         </div>
         <span className="text-(--lab-text-secondary)">
-          {files.length} file{files.length !== 1 ? "s" : ""}
+          {files.length} Datei{files.length !== 1 ? "en" : ""}
         </span>
       </div>
 
@@ -85,7 +85,7 @@ export function ArtifactRow({
           backgroundColor: persist ? "var(--lab-warning)" : "var(--lab-border)",
           borderColor: persist ? "var(--lab-warning)" : "var(--lab-border)",
         }}
-        title={persist ? "Flagged for upload" : "Not flagged"}
+        title={persist ? "Für Upload markiert" : "Nicht markiert"}
       />
 
       {/* Actions */}
@@ -94,7 +94,7 @@ export function ArtifactRow({
           <button
             onClick={onPreview}
             className="p-1.5 border-2 rounded transition-colors border-transparent hover:border-(--lab-border) hover:bg-(--lab-panel) text-(--lab-text-secondary)"
-            title="Preview"
+            title="Vorschau"
           >
             <Eye className="w-4 h-4" />
           </button>
@@ -106,7 +106,7 @@ export function ArtifactRow({
               ? "border-(--lab-warning) text-(--lab-warning) bg-white"
               : "border-transparent hover:border-(--lab-border) hover:bg-(--lab-panel) text-(--lab-text-secondary) hover:text-(--lab-warning)"
           }`}
-          title={persist ? "Remove flag" : "Flag for OpenBIS upload"}
+          title={persist ? "Markierung entfernen" : "Für OpenBIS-Upload markieren"}
         >
           <Flag className="w-4 h-4" />
         </button>

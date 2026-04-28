@@ -21,12 +21,12 @@ export function Login() {
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 401) {
-          setError("Invalid or expired token.");
+          setError("Token ungültig oder abgelaufen.");
         } else {
-          setError(`Server error ${err.status}: ${err.message}`);
+          setError(`Serverfehler ${err.status}: ${err.message}`);
         }
       } else {
-        setError("Could not reach the backend. Is the server running?");
+        setError("Backend nicht erreichbar. Läuft der Server?");
       }
     } finally {
       setIsLoading(false);
@@ -37,10 +37,10 @@ export function Login() {
     <div className="min-h-screen bg-(--lab-bg) flex items-center justify-center">
       <div className="w-full max-w-sm border-2 border-(--lab-border) rounded bg-white p-8">
         <h1 className="text-xl font-semibold text-(--lab-text-primary) mb-1">
-          Oscilloscope Control
+          Oszilloskop-Steuerung
         </h1>
         <p className="text-sm text-(--lab-text-secondary) mb-6">
-          Enter your OpenBIS session token to continue.
+          OpenBIS-Sitzungstoken eingeben, um fortzufahren.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -58,7 +58,7 @@ export function Login() {
               autoFocus
             />
             <p className="text-xs text-(--lab-text-secondary) mt-1">
-              In DEBUG mode use{" "}
+              Im DEBUG-Modus:{" "}
               <code className="font-mono bg-(--lab-panel) px-1 rounded">
                 debug-token
               </code>
@@ -72,7 +72,7 @@ export function Login() {
             disabled={isLoading || !token.trim()}
             className="w-full py-2 px-4 border-2 border-(--lab-accent) bg-white text-(--lab-accent) hover:bg-(--lab-accent) hover:text-white rounded font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? "Connecting…" : "Connect"}
+            {isLoading ? "Verbinden…" : "Verbinden"}
           </button>
         </form>
       </div>
