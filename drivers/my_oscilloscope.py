@@ -81,7 +81,7 @@ class MyOscilloscope(BaseOscilloscopeDriver):
     # Waveform
     # ------------------------------------------------------------------
 
-    def acquire_waveform(self, channel: int) -> WaveformData:
+    def acquire_waveform(self, channel: int, max_samples: bool = False) -> WaveformData:
         """
         Transfer waveform from the given channel and return WaveformData.
 

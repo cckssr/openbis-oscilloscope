@@ -15,7 +15,6 @@ import {
   runDevice,
   stopDevice,
   acquireWaveforms,
-  acquireWaveformsMax,
   getChannelData,
   getScreenshot,
   saveScreenshot,
@@ -96,6 +95,12 @@ function formatTimebase(sPerDiv: number): string {
   return `${sPerDiv.toFixed(0)} s/div`;
 }
 
+function formatMemoryDepth(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)} MPkt`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)} kPkt`;
+  return `${n} Pkt`;
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -126,10 +131,7 @@ export function OscilloscopeControl() {
   const [isRunning, setIsRunning] = useState(false);
   const isAcquiringRef = useRef(false); // synchronous guard for overlapping acquires
   const [isAcquiring, setIsAcquiring] = useState(false); // for UI rendering only
-  const isAcquiringMaxRef = useRef(false);
   const [isAcquiringMax, setIsAcquiringMax] = useState(false);
-  const [maxProgress, setMaxProgress] = useState(0);
-  const [maxProgressLabel, setMaxProgressLabel] = useState("");
   const [isScreenshotting, setIsScreenshotting] = useState(false);
   const [lastAcquisitionId, setLastAcquisitionId] = useState<string | null>(
     null,
@@ -149,6 +151,8 @@ export function OscilloscopeControl() {
   );
   const [timebaseLabel, setTimebaseLabel] = useState("Zeitbasis: —");
   const [sampleRateLabel, setSampleRateLabel] = useState("Abtastrate: —");
+  const [currentDepth, setCurrentDepth] = useState<number | null>(null);
+  const [maxDepth, setMaxDepth] = useState<number | null>(null);
   const [actualTimebaseScaleSDiv, setActualTimebaseScaleSDiv] =
     useState<number>(1e-3);
 
@@ -442,209 +446,97 @@ export function OscilloscopeControl() {
       setIsRunning(false);
     });
 
-  const handleAcquire = useCallback(async () => {
-    if (!token || !deviceId || !sessionId) return;
-    if (isAcquiringRef.current) return; // prevent overlapping requests
-    const startTime = performance.now();
-    console.debug("Starting acquisition...");
-    isAcquiringRef.current = true;
-    setIsAcquiring(true);
-    setCmdError(null);
-    try {
-      // Pass the channels the user has enabled in the UI so every enabled channel
-      // is acquired, not just whatever the scope happens to report first.
-      const enabledNums = Object.entries(channelSettings)
-        .filter(([, cfg]) => cfg.enabled)
-        .map(([k]) => Number(k));
-      const acquireResp = await acquireWaveforms(
-        token,
-        deviceId,
-        sessionId,
-        enabledNums.length > 0 ? enabledNums : undefined,
-        runIdRef.current,
-      );
-      setAcquiredChannels(acquireResp.channels);
-      setLastAcquisitionId(acquireResp.acquisition_id);
-      setAnnotationText("");
-      setAnnotationSaved(false);
-      let elapsed = performance.now() - startTime;
-      console.debug(`Waveform acquired in ${elapsed.toFixed(2)}ms`);
+  const handleAcquire = useCallback(
+    async (maxSamples = false) => {
+      if (!token || !deviceId || !sessionId) return;
+      if (isAcquiringRef.current) return;
+      const startTime = performance.now();
+      isAcquiringRef.current = true;
+      setIsAcquiring(true);
+      if (maxSamples) setIsAcquiringMax(true);
+      setCmdError(null);
+      try {
+        const enabledNums = Object.entries(channelSettings)
+          .filter(([, cfg]) => cfg.enabled)
+          .map(([k]) => Number(k));
+        const acquireResp = await acquireWaveforms(
+          token,
+          deviceId,
+          sessionId,
+          enabledNums.length > 0 ? enabledNums : undefined,
+          maxSamples,
+          runIdRef.current,
+        );
+        setAcquiredChannels(acquireResp.channels);
+        setLastAcquisitionId(acquireResp.acquisition_id);
+        setAnnotationText("");
+        setAnnotationSaved(false);
 
-      // Sync channelSettings from scope's actual state (scope is authoritative).
-      // Start by marking all channels as disabled, then overlay what was acquired.
-      // This ensures channels absent from the acquire response (disabled on scope)
-      // are correctly reflected in the UI even if they were enabled in the old state.
-      const acquiredNums = new Set(acquireResp.channels.map((c) => c.channel));
-      const syncedSettings: Record<number, ChannelConfig> = {};
-      for (let ch = 1; ch <= 4; ch++) {
-        syncedSettings[ch] = {
-          ...(channelSettings[ch] ?? DEFAULT_CHANNEL_CFG),
-          enabled: acquiredNums.has(ch),
-        };
+        const acquiredNums = new Set(
+          acquireResp.channels.map((c) => c.channel),
+        );
+        const syncedSettings: Record<number, ChannelConfig> = {};
+        for (let ch = 1; ch <= 4; ch++) {
+          syncedSettings[ch] = {
+            ...(channelSettings[ch] ?? DEFAULT_CHANNEL_CFG),
+            enabled: acquiredNums.has(ch),
+          };
+        }
+        for (const ac of acquireResp.channels) {
+          syncedSettings[ac.channel] = {
+            enabled: ac.enabled,
+            scale_v_div: ac.scale_v_div,
+            offset_v: ac.offset_v,
+            coupling: ac.coupling,
+            probe_attenuation: ac.probe_attenuation,
+          };
+        }
+        setChannelSettings(syncedSettings);
+        setAppliedChannels(syncedSettings);
+        setVisibleChannels(new Set(acquireResp.channels.map((c) => c.channel)));
+
+        const results = await Promise.all(
+          acquireResp.channels.map(({ channel: ch }) =>
+            getChannelData(token, deviceId, ch, sessionId).catch(() => null),
+          ),
+        );
+        const channelDataMap: Record<number, WaveformData> = {};
+        for (let i = 0; i < acquireResp.channels.length; i++) {
+          const d = results[i];
+          if (d) channelDataMap[acquireResp.channels[i].channel] = d;
+        }
+
+        const plot = buildPlotData(channelDataMap);
+        setWaveformData(plot);
+        if (plot.length > 0) tStartRef.current = plot[0].time;
+
+        const firstData = Object.values(channelDataMap)[0];
+        if (firstData && firstData.time_s.length >= 2) {
+          const xInc = firstData.time_s[1] - firstData.time_s[0];
+          const sr = xInc > 0 ? 1 / xInc : 0;
+          setSampleRateLabel(`Abtastrate: ${formatSampleRate(sr)}`);
+          const totalTime =
+            firstData.time_s[firstData.time_s.length - 1] - firstData.time_s[0];
+          const actualScale = totalTime / 10;
+          setActualTimebaseScaleSDiv(actualScale);
+          setTimebaseLabel(`Zeitbasis: ${formatTimebase(actualScale)}`);
+          setCurrentDepth(firstData.time_s.length);
+        }
+      } catch (err) {
+        setCmdError(
+          err instanceof ApiError ? err.message : "Messung fehlgeschlagen",
+        );
+      } finally {
+        isAcquiringRef.current = false;
+        setIsAcquiring(false);
+        setIsAcquiringMax(false);
+        console.debug(
+          `Acquisition completed in ${(performance.now() - startTime).toFixed(2)}ms`,
+        );
       }
-      for (const ac of acquireResp.channels) {
-        syncedSettings[ac.channel] = {
-          enabled: ac.enabled,
-          scale_v_div: ac.scale_v_div,
-          offset_v: ac.offset_v,
-          coupling: ac.coupling,
-          probe_attenuation: ac.probe_attenuation,
-        };
-      }
-      setChannelSettings(syncedSettings);
-      setAppliedChannels(syncedSettings);
-
-      // Show all acquired channels; user can hide individual ones without re-acquiring
-      setVisibleChannels(new Set(acquireResp.channels.map((c) => c.channel)));
-      elapsed = performance.now() - startTime;
-      console.debug(`Current channels updated in ${elapsed.toFixed(2)}ms`);
-
-      // Fetch all channel waveforms in parallel
-      const results = await Promise.all(
-        acquireResp.channels.map(({ channel: ch }) =>
-          getChannelData(token, deviceId, ch, sessionId).catch(() => null),
-        ),
-      );
-      const channelDataMap: Record<number, WaveformData> = {};
-      for (let i = 0; i < acquireResp.channels.length; i++) {
-        const d = results[i];
-        if (d) channelDataMap[acquireResp.channels[i].channel] = d;
-      }
-
-      elapsed = performance.now() - startTime;
-      console.debug(`Waveforms fetched int ${elapsed.toFixed(2)}ms`);
-
-      const plot = buildPlotData(channelDataMap);
-      setWaveformData(plot);
-
-      if (plot.length > 0) {
-        tStartRef.current = plot[0].time;
-      }
-
-      const firstData = Object.values(channelDataMap)[0];
-      if (firstData && firstData.time_s.length >= 2) {
-        const xInc = firstData.time_s[1] - firstData.time_s[0];
-        const sr = xInc > 0 ? 1 / xInc : 0;
-        setSampleRateLabel(`Abtastrate: ${formatSampleRate(sr)}`);
-        const totalTime =
-          firstData.time_s[firstData.time_s.length - 1] - firstData.time_s[0];
-        const actualScale = totalTime / 10;
-        setActualTimebaseScaleSDiv(actualScale);
-        setTimebaseLabel(`Zeitbasis: ${formatTimebase(actualScale)}`);
-      }
-    } catch (err) {
-      setCmdError(
-        err instanceof ApiError ? err.message : "Messung fehlgeschlagen",
-      );
-    } finally {
-      isAcquiringRef.current = false;
-      setIsAcquiring(false);
-      const elapsed = performance.now() - startTime;
-      console.debug(`Acquisition completed in ${elapsed.toFixed(2)}ms`);
-    }
-  }, [token, deviceId, sessionId, channelSettings]);
-
-  const handleAcquireMax = useCallback(async () => {
-    if (!token || !deviceId || !sessionId) return;
-    if (isAcquiringMaxRef.current || isAcquiringRef.current) return;
-    isAcquiringMaxRef.current = true;
-    setIsAcquiringMax(true);
-    setMaxProgress(0);
-    setMaxProgressLabel("");
-    setCmdError(null);
-    const startTime = performance.now();
-    try {
-      const enabledNums = Object.entries(channelSettings)
-        .filter(([, cfg]) => cfg.enabled)
-        .map(([k]) => Number(k));
-
-      const acquireResp = await acquireWaveformsMax(
-        token,
-        deviceId,
-        sessionId,
-        enabledNums.length > 0 ? enabledNums : undefined,
-        runIdRef.current,
-        (ev) => {
-          const pct = Math.round(
-            ((ev.channel_index + ev.batch / ev.total_batches) /
-              ev.total_channels) *
-              100,
-          );
-          setMaxProgress(Math.min(99, pct));
-          setMaxProgressLabel(
-            `Kanal ${ev.channel} – Block ${ev.batch}/${ev.total_batches}`,
-          );
-        },
-      );
-
-      setMaxProgress(100);
-      setAcquiredChannels(acquireResp.channels);
-      setLastAcquisitionId(acquireResp.acquisition_id);
-      setAnnotationText("");
-      setAnnotationSaved(false);
-
-      const acquiredNums = new Set(acquireResp.channels.map((c) => c.channel));
-      const syncedSettings: Record<number, ChannelConfig> = {};
-      for (let ch = 1; ch <= 4; ch++) {
-        syncedSettings[ch] = {
-          ...(channelSettings[ch] ?? DEFAULT_CHANNEL_CFG),
-          enabled: acquiredNums.has(ch),
-        };
-      }
-      for (const ac of acquireResp.channels) {
-        syncedSettings[ac.channel] = {
-          enabled: ac.enabled,
-          scale_v_div: ac.scale_v_div,
-          offset_v: ac.offset_v,
-          coupling: ac.coupling,
-          probe_attenuation: ac.probe_attenuation,
-        };
-      }
-      setChannelSettings(syncedSettings);
-      setAppliedChannels(syncedSettings);
-      setVisibleChannels(new Set(acquireResp.channels.map((c) => c.channel)));
-
-      const results = await Promise.all(
-        acquireResp.channels.map(({ channel: ch }) =>
-          getChannelData(token, deviceId, ch, sessionId).catch(() => null),
-        ),
-      );
-      const channelDataMap: Record<number, WaveformData> = {};
-      for (let i = 0; i < acquireResp.channels.length; i++) {
-        const d = results[i];
-        if (d) channelDataMap[acquireResp.channels[i].channel] = d;
-      }
-
-      const plot = buildPlotData(channelDataMap);
-      setWaveformData(plot);
-      if (plot.length > 0) tStartRef.current = plot[0].time;
-
-      const firstData = Object.values(channelDataMap)[0];
-      if (firstData && firstData.time_s.length >= 2) {
-        const xInc = firstData.time_s[1] - firstData.time_s[0];
-        const sr = xInc > 0 ? 1 / xInc : 0;
-        setSampleRateLabel(`Abtastrate: ${formatSampleRate(sr)}`);
-        const totalTime =
-          firstData.time_s[firstData.time_s.length - 1] - firstData.time_s[0];
-        const actualScale = totalTime / 10;
-        setActualTimebaseScaleSDiv(actualScale);
-        setTimebaseLabel(`Zeitbasis: ${formatTimebase(actualScale)}`);
-      }
-
-      console.debug(
-        `MAX acquisition done in ${(performance.now() - startTime).toFixed(0)}ms`,
-      );
-    } catch (err) {
-      setCmdError(
-        err instanceof ApiError
-          ? err.message
-          : "Tiefenspeicher-Messung fehlgeschlagen",
-      );
-    } finally {
-      isAcquiringMaxRef.current = false;
-      setIsAcquiringMax(false);
-    }
-  }, [token, deviceId, sessionId, channelSettings]);
+    },
+    [token, deviceId, sessionId, channelSettings],
+  );
 
   // Continuous acquisition loop — runs while isRunning is true
   useEffect(() => {
@@ -656,8 +548,8 @@ export function OscilloscopeControl() {
       return;
     }
     // Immediate first frame, then repeat at 1 Hz
-    handleAcquire();
-    runLoopRef.current = setInterval(handleAcquire, 1000);
+    handleAcquire(false);
+    runLoopRef.current = setInterval(() => handleAcquire(false), 1000);
     return () => {
       if (runLoopRef.current) {
         clearInterval(runLoopRef.current);
@@ -972,7 +864,7 @@ export function OscilloscopeControl() {
             <div className="space-y-1">
               <div className="flex items-center gap-1.5">
                 <button
-                  onClick={handleAcquireMax}
+                  onClick={() => handleAcquire(true)}
                   disabled={!canCommand || isAcquiringMax || isAcquiring}
                   title="Vollständigen Oszilloskopspeicher auslesen (MAX-Modus) — deutlich mehr Datenpunkte als MESSEN, dauert länger"
                   className="flex-1 flex items-center justify-center gap-2 py-2 px-4 border-2 rounded font-medium text-sm bg-white border-(--lab-accent) text-(--lab-accent) hover:bg-(--lab-accent) hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -986,22 +878,6 @@ export function OscilloscopeControl() {
                   ⓘ
                 </span>
               </div>
-              {isAcquiringMax && (
-                <div className="space-y-0.5">
-                  <div className="w-full bg-(--lab-border) rounded-full h-1.5 overflow-hidden">
-                    <div
-                      className="h-1.5 rounded-full transition-all duration-300"
-                      style={{
-                        width: `${maxProgress}%`,
-                        backgroundColor: "var(--lab-accent)",
-                      }}
-                    />
-                  </div>
-                  <p className="text-xs text-(--lab-text-secondary) font-mono truncate">
-                    {maxProgressLabel || "Initialisierung…"}
-                  </p>
-                </div>
-              )}
             </div>
 
             <button
@@ -1073,6 +949,11 @@ export function OscilloscopeControl() {
                 triggerTime={timebaseSettings.offset_s}
                 timebase={timebaseLabel}
                 sampleRate={sampleRateLabel}
+                memoryDepth={
+                  currentDepth !== null
+                    ? `Tiefe: ${formatMemoryDepth(currentDepth)}${maxDepth !== null && maxDepth !== currentDepth ? ` | Max: ${formatMemoryDepth(maxDepth)}` : ""}`
+                    : undefined
+                }
                 timebaseScaleSDiv={actualTimebaseScaleSDiv}
               />
             )}

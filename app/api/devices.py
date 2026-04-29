@@ -1,6 +1,5 @@
 """API endpoints for device listing, lock management, and instrument commands."""
 
-import json
 import logging
 import asyncio
 import time
@@ -8,7 +7,7 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Body, Depends, Path, Query, Request
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import Response
 
 from app.core.dependencies import get_current_user
 from app.core.exceptions import (
@@ -358,6 +357,11 @@ async def acquire(
         default=None,
         description="Optional list of channel numbers to acquire.",
     ),
+    max_samples: bool = Query(
+        default=False,
+        description="Whether to acquire the maximum number of samples available on the device. "
+        "If false, the driver may apply a default decimation to fit the waveform into memory.",
+    ),
     run_id: str | None = Query(
         default=None,
         description="Optional UUID grouping acquisitions from one RUN press.",
@@ -389,7 +393,9 @@ async def acquire(
                 cfg = driver.get_channel_config(ch)
                 elapsed = time.monotonic() - start_time
                 logger.debug("Acquiring channel %d after %.2f seconds", ch, elapsed)
-                waveform = driver.acquire_waveform(ch)
+                waveform = await asyncio.to_thread(
+                    driver.acquire_waveform, ch, max_samples
+                )
                 elapsed = time.monotonic() - start_time
                 logger.debug(
                     "Acquired waveforms for channel %d after %.2f seconds", ch, elapsed
@@ -410,6 +416,7 @@ async def acquire(
                 "unit_x": waveform.unit_x,
                 "unit_y": waveform.unit_y,
                 "scale_v_div": cfg.scale_v_div,
+                **({"waveform_mode": "MAX"} if max_samples else {}),
             }
             art_id = buffer_service.store_waveform(
                 device_id,
@@ -437,163 +444,14 @@ async def acquire(
             "channels": acquired_channels,
         }
 
-    result = await manager.execute_command(device_id, _acquire, timeout=60.0)
+    timeout = 120.0 if max_samples else 60.0
+    result = await manager.execute_command(device_id, _acquire, timeout=timeout)
     return {
         "artifact_ids": result["artifact_ids"],
         "acquisition_id": result["acquisition_id"],
         "session_id": session_id,
         "channels": result["channels"],
     }
-
-
-@router.post(
-    "/{device_id}/acquire_max",
-    summary="Acquire maximum-depth waveforms (streaming)",
-    response_description="Server-sent event stream with batch progress and final result.",
-)
-async def acquire_max(
-    request: Request,
-    device_id: str = Path(..., description="Device identifier."),
-    session_id: str = Query(..., description="Control session UUID returned by /lock."),
-    channels: list[int] | None = Query(
-        default=None,
-        description="Optional list of channel numbers to acquire.",
-    ),
-    run_id: str | None = Query(
-        default=None,
-        description="Optional UUID grouping acquisitions from one RUN press.",
-    ),
-    user: UserInfo = Depends(get_current_user),
-):
-    """Acquire full-memory-depth waveforms and stream progress as server-sent events.
-
-    Uses the driver's MAX waveform mode to read the complete oscilloscope memory
-    in batches.  Each batch yields a ``data: {...}`` SSE line with
-    ``"type": "progress"``.  The final event has ``"type": "done"`` and carries
-    ``artifact_ids``, ``acquisition_id``, ``session_id``, and ``channels``.
-    A ``"type": "error"`` event is emitted on failure.
-    """
-    manager, driver = await _get_locked_online_driver(
-        request, device_id, user.user_id, session_id
-    )
-    buffer_service = request.app.state.buffer_service
-    entry = manager.get_device(device_id)
-
-    progress_queue: asyncio.Queue = asyncio.Queue()
-    loop = asyncio.get_running_loop()
-
-    async def _acquire_max():
-        artifact_ids: list[str] = []
-        acquired_channels: list[dict] = []
-        acquisition_id = str(uuid.uuid4())
-        channel_list = channels if channels else driver.get_available_channels()
-        n_channels = len(channel_list)
-
-        for ch_idx, ch in enumerate(channel_list):
-            try:
-                cfg = driver.get_channel_config(ch)
-
-                def _make_cb(cidx: int, cnum: int) -> None:
-                    def _cb(batch: int, total_batches: int) -> None:
-                        loop.call_soon_threadsafe(
-                            progress_queue.put_nowait,
-                            {
-                                "type": "progress",
-                                "channel": cnum,
-                                "channel_index": cidx,
-                                "total_channels": n_channels,
-                                "batch": batch,
-                                "total_batches": total_batches,
-                            },
-                        )
-
-                    return _cb
-
-                waveform = await asyncio.to_thread(
-                    driver.acquire_waveform_max,
-                    ch,
-                    _make_cb(ch_idx, ch),
-                )
-            except (
-                OSError,
-                TimeoutError,
-                ValueError,
-                KeyError,
-                RuntimeError,
-                AttributeError,
-            ) as exc:
-                logger.error(
-                    "Failed MAX acquire on channel %d for device %s: %s",
-                    ch,
-                    device_id,
-                    exc,
-                )
-                continue
-
-            meta = {
-                "channel": waveform.channel,
-                "sample_rate": waveform.sample_rate,
-                "record_length": waveform.record_length,
-                "unit_x": waveform.unit_x,
-                "unit_y": waveform.unit_y,
-                "scale_v_div": cfg.scale_v_div,
-                "waveform_mode": "MAX",
-            }
-            art_id = buffer_service.store_waveform(
-                device_id,
-                session_id,
-                waveform,
-                meta,
-                acquisition_id=acquisition_id,
-                run_id=run_id,
-            )
-            artifact_ids.append(art_id)
-            acquired_channels.append(
-                {
-                    "channel": ch,
-                    "enabled": cfg.enabled,
-                    "scale_v_div": cfg.scale_v_div,
-                    "offset_v": cfg.offset_v,
-                    "coupling": cfg.coupling,
-                    "probe_attenuation": cfg.probe_attenuation,
-                }
-            )
-
-        result = {
-            "type": "done",
-            "artifact_ids": artifact_ids,
-            "acquisition_id": acquisition_id,
-            "session_id": session_id,
-            "channels": acquired_channels,
-        }
-        loop.call_soon_threadsafe(progress_queue.put_nowait, result)
-        return result
-
-    # Submit to the device's serialised worker queue without blocking this handler,
-    # so the SSE generator can concurrently drain progress events.
-    cmd_future: asyncio.Future = loop.create_future()
-    await entry.queue.put((_acquire_max, cmd_future))
-
-    async def _event_stream():
-        while True:
-            try:
-                event = await asyncio.wait_for(progress_queue.get(), timeout=2.0)
-                yield f"data: {json.dumps(event)}\n\n"
-                if event.get("type") in ("done", "error"):
-                    return
-            except asyncio.TimeoutError:
-                if cmd_future.done():
-                    exc = cmd_future.exception() if not cmd_future.cancelled() else None
-                    if exc:
-                        yield f"data: {json.dumps({'type': 'error', 'message': str(exc)})}\n\n"
-                    return
-                yield ": keepalive\n\n"
-
-    return StreamingResponse(
-        _event_stream(),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-    )
 
 
 @router.get(
