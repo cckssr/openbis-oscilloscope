@@ -2,10 +2,10 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 
 from app.core.dependencies import require_admin
-from app.core.exceptions import DeviceNotFoundError
+from app.core.exceptions import DeviceNotFoundError, DeviceOfflineError
 from app.openbis_client.client import UserInfo
 from app.instruments.manager import DeviceState
 
@@ -91,3 +91,55 @@ async def force_unlock(
         manager.update_state(device_id, DeviceState.ONLINE)
 
     return {"device_id": device_id, "released": released}
+
+
+@router.post("/devices/{device_id}/keyboard-lock", response_model=dict)
+async def set_keyboard_lock(
+    device_id: str,
+    request: Request,
+    locked: bool = Query(
+        ..., description="True to lock front-panel keys, False to unlock."
+    ),
+    admin: UserInfo = Depends(require_admin),
+) -> dict:
+    """Lock or unlock the physical front-panel keys on a device (admin only).
+
+    Useful to manually restore key access after an interrupted acquisition left
+    the instrument in locked state. Locking is normally managed automatically
+    by the driver during long acquisitions.
+
+    Args:
+        device_id: Path parameter identifying the target device.
+        locked: Query parameter — ``true`` to lock, ``false`` to unlock.
+        request: The current HTTP request.
+        admin: The authenticated admin user, enforced by
+            :func:`~app.core.dependencies.require_admin`.
+
+    Returns:
+        A dict with ``device_id`` and ``keyboard_locked`` reflecting the new state.
+
+    Raises:
+        DeviceNotFoundError: If ``device_id`` is not registered.
+        DeviceOfflineError: If no driver is connected for the device.
+        AdminRequiredError: If the authenticated user is not an admin.
+    """
+    manager = request.app.state.instrument_manager
+
+    try:
+        entry = manager.get_device(device_id)
+    except KeyError as e:
+        raise DeviceNotFoundError(device_id) from e
+
+    if entry.driver is None:
+        raise DeviceOfflineError(device_id)
+
+    driver = entry.driver
+
+    async def _set():
+        driver.set_keyboard_lock(locked)
+
+    await manager.execute_command(device_id, _set)
+    logger.info(
+        "Admin %s set keyboard_locked=%s on device %s", admin.user_id, locked, device_id
+    )
+    return {"device_id": device_id, "keyboard_locked": locked}
