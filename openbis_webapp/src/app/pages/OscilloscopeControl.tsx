@@ -814,7 +814,7 @@ export function OscilloscopeControl() {
           {/* Acquire */}
           <div className="space-y-2">
             <button
-              onClick={handleAcquire}
+              onClick={() => handleAcquire(false)}
               disabled={!canCommand || isAcquiring}
               title="Einzelmessung durchführen und Wellenformdaten abrufen"
               className="w-full flex items-center justify-center gap-2 py-2 px-4 border-2 rounded font-medium text-sm bg-white border-(--lab-accent) text-(--lab-accent) hover:bg-(--lab-accent) hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
