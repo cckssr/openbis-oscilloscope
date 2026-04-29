@@ -1,7 +1,6 @@
 """Abstract base driver class defining the interface for oscilloscope drivers."""
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 from dataclasses import dataclass
 
 import numpy as np
@@ -155,40 +154,33 @@ class BaseOscilloscopeDriver(ABC):
         """Stop acquisition (STOP/SINGLE mode)."""
 
     @abstractmethod
-    def acquire_waveform(self, channel: int) -> WaveformData:
+    def acquire_waveform(self, channel: int, max_samples: bool) -> WaveformData:
         """Acquire and return waveform data from the specified channel.
 
         Args:
             channel: 1-based channel number to read from.
+            max_samples: If ``True``, acquire the maximum number of samples available on the device. If false, the driver may apply a default decimation to fit the waveform into memory.
 
         Returns:
             A :class:`WaveformData` instance containing time and voltage arrays
             along with sampling metadata.
         """
 
-    def acquire_waveform_max(
-        self,
-        channel: int,
-        progress_cb: Callable[[int, int], None] | None = None,
-    ) -> WaveformData:
+    def acquire_waveform_max(self, channel: int) -> WaveformData:
         """Acquire maximum-depth waveform data from the specified channel.
 
-        Default implementation delegates to :meth:`acquire_waveform` with a single
-        synthetic progress event.  Override in hardware drivers that support a
-        dedicated high-depth read mode (e.g. Rigol MAX waveform mode with batched
-        SCPI transfers).
+        Default implementation calls :meth:`acquire_waveform` with
+        ``max_samples=False`` as a fallback for drivers that do not support a
+        dedicated high-depth mode.  Override in hardware drivers that do (e.g.
+        ``RigolDS1000Driver`` delegates to ``acquire_waveform(max_samples=True)``).
 
         Args:
             channel: 1-based channel number to read from.
-            progress_cb: Optional callable invoked after each batch as
-                ``progress_cb(completed_batches, total_batches)``.
 
         Returns:
             A :class:`WaveformData` instance.
         """
-        if progress_cb:
-            progress_cb(1, 1)
-        return self.acquire_waveform(channel)
+        return self.acquire_waveform(channel, max_samples=False)
 
     @abstractmethod
     def get_screenshot(self) -> bytes:

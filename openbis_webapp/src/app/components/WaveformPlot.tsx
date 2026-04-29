@@ -25,6 +25,7 @@ interface WaveformPlotProps {
   triggerTime?: number;
   timebase: string;
   sampleRate: string;
+  memoryDepth?: string;
   timebaseScaleSDiv: number;
 }
 
@@ -50,6 +51,7 @@ export function WaveformPlot({
   triggerTime,
   timebase,
   sampleRate,
+  memoryDepth,
   timebaseScaleSDiv,
 }: WaveformPlotProps) {
   const channels = ["ch1", "ch2", "ch3", "ch4"] as const;
@@ -186,7 +188,7 @@ export function WaveformPlot({
         y: 1.02,
         xanchor: "left",
         yanchor: "bottom",
-        text: `${timebase}   ${sampleRate}`,
+        text: [timebase, sampleRate, memoryDepth].filter(Boolean).join("   "),
         showarrow: false,
         font: {
           family: "JetBrains Mono, monospace",

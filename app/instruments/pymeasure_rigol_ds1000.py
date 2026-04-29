@@ -821,7 +821,7 @@ class RigolDS1000ZSeries(SCPIMixin, Instrument):
                 f"(max {max_points_per_batch} per batch)..."
             )
 
-            all_data_bytes = b""
+            chunks = []
             for batch_idx in range(num_batches):
                 start_point = batch_idx * max_points_per_batch + 1  # 1-indexed
                 end_point = min((batch_idx + 1) * max_points_per_batch, total_points)
@@ -834,12 +834,13 @@ class RigolDS1000ZSeries(SCPIMixin, Instrument):
                 self.write(":WAVeform:DATA?")
                 raw_response: bytes = self.adapter.connection.read_raw()
                 batch_data = self._parse_tmc_response(raw_response)
-                all_data_bytes += batch_data
+                chunks.append(batch_data)
 
                 print(
                     f"  Batch {batch_idx + 1}/{num_batches}: "
                     f"points {start_point}-{end_point} ({len(batch_data)} bytes)"
                 )
+            all_data_bytes = b"".join(chunks)
 
         if raw:
             return all_data_bytes
