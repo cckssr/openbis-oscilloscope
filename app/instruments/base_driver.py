@@ -1,5 +1,9 @@
-"""Abstract base driver class defining the interface for oscilloscope drivers."""
+"""Abstract base driver class and built-in mock implementation for oscilloscope drivers."""
 
+import math
+import struct
+import time
+import zlib
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
@@ -273,6 +277,21 @@ class BaseOscilloscopeDriver(ABC):
             config: The :class:`TriggerConfig` values to apply.
         """
 
+    def set_keyboard_lock(self, locked: bool) -> None:
+        """Lock or unlock the physical front-panel keys on the instrument.
+
+        Default implementation is a no-op. Override in hardware drivers that
+        expose a key-lock command (e.g. Rigol DS1000 series via
+        ``system_locked``).
+
+        Locking prevents users from accidentally changing settings during
+        automated acquisitions. Always call with ``locked=False`` when the
+        acquisition is complete to restore normal operation.
+
+        Args:
+            locked: ``True`` to lock the front-panel keys; ``False`` to unlock.
+        """
+
     def get_all_settings(self) -> dict:
         """Collect a complete snapshot of all instrument settings for metadata storage.
 
@@ -324,3 +343,162 @@ class BaseOscilloscopeDriver(ABC):
                 pass
 
         return settings_dict
+
+
+# ---------------------------------------------------------------------------
+# Built-in mock driver (used in DEBUG mode and automated tests)
+# ---------------------------------------------------------------------------
+
+_BLANK_PNG: bytes | None = None
+
+
+def _make_blank_png() -> bytes:
+    """Build a minimal valid 640×480 white PNG image using only stdlib."""
+
+    def png_chunk(chunk_type: bytes, data: bytes) -> bytes:
+        chunk_len = len(data)
+        chunk_data = chunk_type + data
+        crc = zlib.crc32(chunk_data) & 0xFFFFFFFF
+        return struct.pack(">I", chunk_len) + chunk_data + struct.pack(">I", crc)
+
+    signature = b"\x89PNG\r\n\x1a\n"
+    ihdr_data = struct.pack(">IIBBBBB", 640, 480, 8, 2, 0, 0, 0)
+    ihdr = png_chunk(b"IHDR", ihdr_data)
+    raw_row = b"\x00" + b"\xff\xff\xff" * 640
+    compressed = zlib.compress(raw_row * 480)
+    idat = png_chunk(b"IDAT", compressed)
+    iend = png_chunk(b"IEND", b"")
+    return signature + ihdr + idat + iend
+
+
+def _get_blank_png() -> bytes:
+    """Return a cached blank PNG, building it once on first call."""
+    global _BLANK_PNG
+    if _BLANK_PNG is None:
+        _BLANK_PNG = _make_blank_png()
+    return _BLANK_PNG
+
+
+class MockOscilloscopeDriver(BaseOscilloscopeDriver):
+    """Synthetic oscilloscope driver that generates sine-wave data in memory.
+
+    Intended for local development (``DEBUG=True``) and automated tests.
+    No real network connection is made; all responses are computed immediately.
+
+    Each channel produces a sine wave at a distinct frequency:
+
+    - Channel 1: 1 kHz
+    - Channel 2: 1.5 kHz
+    - Channel 3: 2 kHz
+    - Channel 4: 2.5 kHz
+
+    Small Gaussian noise (σ = 0.01 V) is added to each waveform. All four
+    channels are enabled by default.
+
+    Use ``driver: "mock"`` in ``oscilloscopes.yaml`` to activate this driver
+    for a specific device, or set ``DEBUG=True`` to force it for all devices.
+    """
+
+    def __init__(self, ip: str = "127.0.0.1", port: int = 5025) -> None:
+        super().__init__(ip, port)
+        self._connected = False
+        self._running = False
+        self._stop_time: float = 0.0
+        self._rng = np.random.default_rng(seed=42)
+        self._channels: dict[int, ChannelConfig] = {
+            ch: ChannelConfig(
+                channel=ch,
+                enabled=True,
+                scale_v_div=1.0,
+                offset_v=0.0,
+                coupling="DC",
+                probe_attenuation=1.0,
+            )
+            for ch in range(1, 5)
+        }
+        self._timebase = TimebaseConfig(scale_s_div=1e-6, offset_s=0.0, sample_rate=1e9)
+        self._trigger = TriggerConfig(
+            source="CH1", level_v=0.0, slope="RISE", mode="AUTO"
+        )
+        self._keyboard_locked = False
+
+    def connect(self) -> None:
+        self._connected = True
+
+    def disconnect(self) -> None:
+        self._connected = False
+
+    def identify(self) -> InstrumentInfo:
+        return InstrumentInfo(
+            idn="MOCK,MockScope,SN000001,FW1.0", ip=self.ip, firmware="FW1.0"
+        )
+
+    def run(self) -> None:
+        self._running = True
+
+    def stop(self) -> None:
+        self._running = False
+        self._stop_time = time.time()
+
+    def acquire_waveform(self, channel: int, max_samples: bool = False) -> WaveformData:
+        """Generate a synthetic sine-wave waveform for the requested channel.
+
+        When the scope is running the phase advances with wall-clock time so
+        successive calls show different snapshots; when stopped the waveform is
+        frozen at the instant :meth:`stop` was called.
+
+        Args:
+            channel: 1-based channel number (1–4).
+            max_samples: If ``True``, returns a 10× wider window (MAX-mode simulation).
+        """
+        num_divs = 10
+        multiplier = 10 if max_samples else 1
+        window_s = self._timebase.scale_s_div * num_divs * multiplier
+        sample_rate = 1e6
+        min_samples = 10_000 if max_samples else 1_000
+        max_cap = 1_500_000 if max_samples else 100_000
+        record_length = min(max(min_samples, int(sample_rate * window_s)), max_cap)
+
+        freq_hz = 1e3 + (channel - 1) * 500
+        amplitude = self._channels[channel].scale_v_div * 3.0
+        phase_time = time.time() if self._running else self._stop_time
+
+        t = np.linspace(0, window_s, record_length, endpoint=False)
+        v = amplitude * np.sin(2 * math.pi * freq_hz * (t + phase_time))
+        v = v + self._rng.normal(0, 0.01 * amplitude, size=record_length)
+
+        return WaveformData(
+            channel=channel,
+            time_array=t,
+            voltage_array=v,
+            sample_rate=sample_rate,
+            record_length=record_length,
+        )
+
+    def acquire_waveform_max(self, channel: int) -> WaveformData:
+        """Delegate to :meth:`acquire_waveform` with ``max_samples=True``."""
+        return self.acquire_waveform(channel, max_samples=True)
+
+    def get_screenshot(self) -> bytes:
+        return _get_blank_png()
+
+    def get_channel_config(self, channel: int) -> ChannelConfig:
+        return self._channels[channel]
+
+    def get_timebase(self) -> TimebaseConfig:
+        return self._timebase
+
+    def get_trigger(self) -> TriggerConfig:
+        return self._trigger
+
+    def set_channel_config(self, channel: int, config: ChannelConfig) -> None:
+        self._channels[channel] = config
+
+    def set_timebase(self, config: TimebaseConfig) -> None:
+        self._timebase = config
+
+    def set_trigger(self, config: TriggerConfig) -> None:
+        self._trigger = config
+
+    def set_keyboard_lock(self, locked: bool) -> None:
+        self._keyboard_locked = locked

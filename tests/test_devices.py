@@ -14,7 +14,7 @@ from app.instruments.manager import (
     DeviceState,
     InstrumentManager,
 )
-from app.instruments.mock_driver import MockOscilloscopeDriver
+from app.instruments.base_driver import MockOscilloscopeDriver
 from app.locks.service import LockService
 from app.openbis_client.client import OpenBISClient, UserInfo
 

@@ -12,8 +12,7 @@ from typing import Any, Callable, Coroutine
 import yaml
 
 from app.config import settings
-from app.instruments.base_driver import BaseOscilloscopeDriver
-from app.instruments.mock_driver import MockOscilloscopeDriver
+from app.instruments.base_driver import BaseOscilloscopeDriver, MockOscilloscopeDriver
 
 logger = logging.getLogger(__name__)
 

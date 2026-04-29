@@ -102,9 +102,7 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
         self.instrument.waveform_source = f"CHAN{channel}"
         if max_samples:
             self.instrument.stop()
-            self.instrument.system_locked = (
-                True  # Lock keys to prevent user interference during long acquisition
-            )
+            self.set_keyboard_lock(True)
             self.instrument.waveform_mode = "MAX"
         else:
             self.instrument.waveform_mode = "NORM"
@@ -129,7 +127,7 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
 
         # RAW mode stops the scope; restart so continuous acquisition resumes.
         try:
-            self.instrument.system_locked = False
+            self.set_keyboard_lock(False)
             self.instrument.run()
         except Exception:
             pass  # Non-fatal — the next explicit run() call will recover
@@ -305,3 +303,11 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
         self.instrument.trigger_edge_level = config.level_v
         self.instrument.trigger_edge_slope = _slope_rev.get(config.slope, config.slope)
         self.instrument.trigger_sweep = _sweep_rev.get(config.mode, config.mode)
+
+    def set_keyboard_lock(self, locked: bool) -> None:
+        """Lock or unlock the physical front-panel keys via SCPI.
+
+        Args:
+            locked: ``True`` to lock the keys; ``False`` to restore normal operation.
+        """
+        self.instrument.system_locked = locked

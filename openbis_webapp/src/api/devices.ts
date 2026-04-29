@@ -301,3 +301,22 @@ export function saveScreenshot(
     { method: "POST" },
   );
 }
+
+/**
+ * Lock or unlock the physical front-panel keys on a device (admin only).
+ * @param token - The authentication bearer token
+ * @param deviceId - The unique identifier of the device
+ * @param locked - True to lock the keys, false to unlock
+ * @returns A promise resolving to the new keyboard lock state
+ */
+export function setKeyboardLock(
+  token: string,
+  deviceId: string,
+  locked: boolean,
+): Promise<{ device_id: string; keyboard_locked: boolean }> {
+  return apiFetch<{ device_id: string; keyboard_locked: boolean }>(
+    `/admin/devices/${deviceId}/keyboard-lock?locked=${locked}`,
+    token,
+    { method: "POST" },
+  );
+}
