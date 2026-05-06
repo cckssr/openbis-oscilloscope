@@ -23,7 +23,6 @@ from httpx import ASGITransport, AsyncClient
 from app.core.exceptions import AuthError, OpenBISError
 from app.openbis_client.client import OpenBISClient
 
-
 # ---------------------------------------------------------------------------
 # Integration-specific fixtures
 # ---------------------------------------------------------------------------

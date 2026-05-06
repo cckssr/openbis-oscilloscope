@@ -2,6 +2,25 @@
 
 One-off helper scripts for working with data produced by the service.
 
+## `smoke_test_hardware.py`
+
+Exercises every API endpoint against a single real device and prints a `✓ / ✗` summary. No pytest dependency — run it directly against a live `uvicorn` server. Useful when integrating a new driver class or verifying a fresh deployment.
+
+**Usage:**
+
+```bash
+python scripts/smoke_test_hardware.py \
+    --base-url http://127.0.0.1:8000 \
+    --token $OPENBIS_TOKEN \
+    --device scope-01
+```
+
+**What it tests:** health, auth, device listing, probe, settings, lock/heartbeat/unlock, channel config, timebase, trigger, run/stop, acquire, channel data, screenshot (GET + POST save), and all admin endpoints. Exits non-zero on any failure.
+
+**In DEBUG mode** use `--token debug-token`.
+
+---
+
 ## `unpack_hdf5.py`
 
 Reads an HDF5 file exported by `BufferService.export_hdf5()` and prints a human-readable summary of its contents.

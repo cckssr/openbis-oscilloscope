@@ -8,7 +8,6 @@ import pytest
 from app.instruments.manager import DeviceState
 from app.openbis_client.client import UserInfo
 
-
 ADMIN_HEADERS = {"Authorization": "Bearer admin-tok"}
 USER_HEADERS = {"Authorization": "Bearer tok"}
 

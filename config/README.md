@@ -56,6 +56,18 @@ To support a new instrument model: add an entry here, ensure the driver class ex
 
 ---
 
+---
+
+### `oscilloscopes.test.yaml`
+
+Hardware integration test inventory used by `pytest tests/integration --hw`. Uses the same schema as `oscilloscopes.yaml`. **Gitignored** — never commit real IPs here.
+
+Copy the provided example and fill in the actual device IPs and driver class paths before running hardware integration tests. Devices with `driver: "mock"` are ignored by the test suite (only real-driver entries are tested).
+
+See `docs/HARDWARE_TESTING.md` for setup instructions.
+
+---
+
 ## Adding a new device
 
 1. Add an entry to `oscilloscopes.yaml`.

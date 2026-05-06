@@ -16,7 +16,6 @@ from app.instruments.base_driver import (
     WaveformData,
 )
 
-
 _BLANK_PNG: bytes | None = None  # cached after first call
 
 

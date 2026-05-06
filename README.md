@@ -72,6 +72,21 @@ pytest
 
 Tests use `fakeredis` and the mock driver — no Redis or hardware required.
 
+### Hardware integration tests
+
+Requires real oscilloscopes on the LAN and an OpenBIS session token:
+
+```bash
+pip install -e ".[dev,integration]"
+
+pytest tests/integration --hw \
+    --openbis-url $OPENBIS_URL \
+    --openbis-token $OPENBIS_TOKEN \
+    --openbis-test-space /SPACE/PROJECT/EXP
+```
+
+See [`docs/HARDWARE_TESTING.md`](docs/HARDWARE_TESTING.md) for the full setup guide, Playwright E2E instructions, and the VM staging sign-off checklist.
+
 ## Configuration
 
 All settings are read from environment variables (or a `.env` file):
