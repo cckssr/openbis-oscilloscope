@@ -24,10 +24,10 @@ Edit `config/oscilloscopes.test.yaml`:
 ```yaml
 oscilloscopes:
   - id: scope-01
-    ip: 192.168.1.101       # real LAN IP
-    port: 5025              # 5025 for raw SCPI, 111 for VXI-11
+    ip: 192.168.1.101 # real LAN IP
+    port: 5025 # 5025 for raw SCPI, 111 for VXI-11
     label: "Rigol DS1054Z"
-    driver: drivers.rigol_ds1054z.RigolDS1054Z  # real driver class path
+    driver: drivers.rigol_ds1054z.RigolDS1054Z # real driver class path
 
   - id: scope-02
     ip: 192.168.1.102
@@ -179,6 +179,7 @@ npx playwright test
 ```
 
 If either suite fails on the VM but passes locally, check:
+
 1. `OSCILLOSCOPES_CONFIG` env var on the VM points to the right YAML
 2. Redis is running and `REDIS_URL` is correct
 3. `OPENBIS_URL` is reachable from the VM (not just your laptop)
@@ -188,11 +189,11 @@ If either suite fails on the VM but passes locally, check:
 
 ## Troubleshooting
 
-| Symptom | Likely cause |
-|---|---|
-| `Could not connect to scope-01` | Wrong IP/port in `oscilloscopes.test.yaml`, or device off/firewall |
-| `pytest.skip: No real-driver devices` | All devices have `driver: "mock"` in test YAML |
-| `pass --openbis-url` skip message | Missing env var or `--openbis-url` flag |
-| Acquire timeout (120 s) | Device busy, SCPI socket hung — power-cycle the scope |
-| Playwright `getByRole` not found | UI labels are in German; update selectors in `e2e/*.spec.ts` if they changed |
-| `OPENBIS_TEST_TOKEN` env not set | Playwright tests skip — export the token before running |
+| Symptom                               | Likely cause                                                                 |
+| ------------------------------------- | ---------------------------------------------------------------------------- |
+| `Could not connect to scope-01`       | Wrong IP/port in `oscilloscopes.test.yaml`, or device off/firewall           |
+| `pytest.skip: No real-driver devices` | All devices have `driver: "mock"` in test YAML                               |
+| `pass --openbis-url` skip message     | Missing env var or `--openbis-url` flag                                      |
+| Acquire timeout (120 s)               | Device busy, SCPI socket hung — power-cycle the scope                        |
+| Playwright `getByRole` not found      | UI labels are in German; update selectors in `e2e/*.spec.ts` if they changed |
+| `OPENBIS_TEST_TOKEN` env not set      | Playwright tests skip — export the token before running                      |
