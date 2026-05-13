@@ -10,7 +10,7 @@ export function Login() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.InputEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!token.trim()) return;
     setError(null);

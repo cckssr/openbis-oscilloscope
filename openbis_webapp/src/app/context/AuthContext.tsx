@@ -27,13 +27,24 @@ function getOpenBISCookie(): string | null {
   return document.cookie.match(/(?:^|;\s*)openbis=([^;]+)/)?.[1] ?? null;
 }
 
+function getOpenBISTokenFragment(): string | null {
+  const hash = window.location.hash;
+  const match = hash.match(/token=([^&]+)/);
+  if (match) {
+    const token = decodeURIComponent(match[1]);
+    window.location.hash = ""; // cleanup
+    return token;
+  }
+  return null;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(
-    () => localStorage.getItem(STORAGE_KEY) ?? getOpenBISCookie(),
+    () => localStorage.getItem(STORAGE_KEY) ?? getOpenBISCookie() ?? getOpenBISTokenFragment(),
   );
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(
-    () => !!(localStorage.getItem(STORAGE_KEY) ?? getOpenBISCookie()),
+    () => !!(localStorage.getItem(STORAGE_KEY) ?? getOpenBISCookie() ?? getOpenBISTokenFragment()),
   );
 
   // Validate the stored token once on mount.
