@@ -174,7 +174,8 @@ async def list_collections(
 
         result = []
         for col in collection_list:
-            display = col.props.get("$name", col.code)
+            name = col.pros["$name"]
+            display = col.code + f" ({name})" if name else ""
             result.append({"code": col.code, "display_name": display})
 
         _collections_cache[cache_key] = result

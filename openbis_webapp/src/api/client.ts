@@ -1,6 +1,7 @@
-const baseUrl =
-  (import.meta as ImportMeta & { env?: { BASE_URL?: string } }).env?.BASE_URL ??
-  "/";
+const apiBaseUrl = (
+  (import.meta as ImportMeta & { env?: { VITE_API_BASE_URL?: string } }).env
+    ?.VITE_API_BASE_URL ?? "/api"
+).replace(/\/$/, "");
 
 export class ApiError extends Error {
   constructor(
@@ -24,7 +25,7 @@ export async function apiFetch<T>(
   token: string,
   init: RequestInit = {},
 ): Promise<T> {
-  const res = await fetch(`${baseUrl}api${path}`, {
+  const res = await fetch(`${apiBaseUrl}${path}`, {
     ...init,
     headers: {
       Authorization: `Bearer ${token}`,
