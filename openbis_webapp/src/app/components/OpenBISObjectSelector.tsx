@@ -1,9 +1,18 @@
 import { useEffect, useState } from "react";
-import { listProjects, listCollections, listObjects } from "../../api/openbis_structure";
-import type { ProjectOption, CollectionOption, ObjectOption } from "../../api/openbis_structure";
+import {
+  listProjects,
+  listCollections,
+  listObjects,
+} from "../../api/openbis_structure";
+import type {
+  ProjectOption,
+  CollectionOption,
+  ObjectOption,
+} from "../../api/openbis_structure";
 
 interface Props {
   token: string;
+  disabled?: boolean;
   onSelect: (values: {
     experimentId: string;
     sampleId: string;
@@ -12,7 +21,56 @@ interface Props {
   }) => void;
 }
 
-export function OpenBISObjectSelector({ token, onSelect }: Props) {
+// German weekday prefix → sort order (0–4 = Mon–Fri, 10 = other)
+const WEEKDAY_ORDER: Record<string, number> = {
+  montag: 0,
+  dienstag: 1,
+  mittwoch: 2,
+  donnerstag: 3,
+  freitag: 4,
+  monday: 0,
+  tuesday: 1,
+  wednesday: 2,
+  thursday: 3,
+  friday: 4,
+  mo: 0,
+  di: 1,
+  mi: 2,
+  do: 3,
+  fr: 4,
+  mon: 0,
+  tue: 1,
+  wed: 2,
+  thu: 3,
+  fri: 4,
+};
+
+function weekdayRank(name: string): number {
+  const lower = name.toLowerCase();
+  for (const [day, order] of Object.entries(WEEKDAY_ORDER)) {
+    if (lower.startsWith(day)) return order;
+  }
+  return 10;
+}
+
+function sortedProjects(list: ProjectOption[]): ProjectOption[] {
+  return [...list].sort((a, b) => {
+    const da = weekdayRank(a.display_name);
+    const db = weekdayRank(b.display_name);
+    if (da !== db) return da - db;
+    return a.display_name.localeCompare(b.display_name);
+  });
+}
+
+function sortedCollections(list: CollectionOption[]): CollectionOption[] {
+  return [...list].sort((a, b) => a.display_name.localeCompare(b.display_name));
+}
+
+export function OpenBISObjectSelector({
+  token,
+  disabled = false,
+  onSelect,
+}: Props) {
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [collections, setCollections] = useState<CollectionOption[]>([]);
   const [objects, setObjects] = useState<ObjectOption[]>([]);
@@ -31,7 +89,7 @@ export function OpenBISObjectSelector({ token, onSelect }: Props) {
     setLoadingProjects(true);
     setError(null);
     listProjects(token)
-      .then(setProjects)
+      .then((list) => setProjects(sortedProjects(list)))
       .catch(() => setError("Projekte konnten nicht geladen werden"))
       .finally(() => setLoadingProjects(false));
   }, [token]);
@@ -42,10 +100,13 @@ export function OpenBISObjectSelector({ token, onSelect }: Props) {
     setSelectedObject("");
     setCollections([]);
     setObjects([]);
-    if (!code) return;
+    if (!code) {
+      onSelect({ experimentId: "", sampleId: "", groupName: "", semester: "" });
+      return;
+    }
     setLoadingCollections(true);
     listCollections(token, code)
-      .then(setCollections)
+      .then((list) => setCollections(sortedCollections(list)))
       .catch(() => setError("Sammlungen konnten nicht geladen werden"))
       .finally(() => setLoadingCollections(false));
   };
@@ -54,7 +115,23 @@ export function OpenBISObjectSelector({ token, onSelect }: Props) {
     setSelectedCollection(code);
     setSelectedObject("");
     setObjects([]);
-    if (!code) return;
+    const proj = projects.find((p) => p.code === selectedProject);
+    if (!code) {
+      onSelect({
+        experimentId: "",
+        sampleId: "",
+        groupName: proj?.group_name ?? "",
+        semester: proj?.semester ?? "",
+      });
+      return;
+    }
+    // Selecting a collection alone is a valid upload target
+    onSelect({
+      experimentId: code,
+      sampleId: "",
+      groupName: proj?.group_name ?? "",
+      semester: proj?.semester ?? "",
+    });
     setLoadingObjects(true);
     listObjects(token, code)
       .then(setObjects)
@@ -64,7 +141,6 @@ export function OpenBISObjectSelector({ token, onSelect }: Props) {
 
   const handleObjectChange = (identifier: string) => {
     setSelectedObject(identifier);
-    if (!identifier) return;
     const proj = projects.find((p) => p.code === selectedProject);
     onSelect({
       experimentId: selectedCollection,
@@ -75,53 +151,71 @@ export function OpenBISObjectSelector({ token, onSelect }: Props) {
   };
 
   const selectClass =
-    "w-full border-2 border-(--lab-border) rounded px-2 py-1.5 text-sm focus:outline-none focus:border-(--lab-accent) bg-white disabled:opacity-50";
+    "w-full border-2 border-(--lab-border) rounded px-2 py-1.5 text-sm focus:outline-none focus:border-(--lab-accent) bg-white disabled:opacity-50 disabled:cursor-not-allowed";
 
   return (
-    <div className="flex flex-col gap-2">
+    <div
+      className={`flex flex-col gap-2 ${disabled ? "opacity-50 pointer-events-none" : ""}`}
+    >
       {error && <p className="text-xs text-(--lab-danger)">{error}</p>}
 
       <div>
-        <label className="block text-xs text-(--lab-text-secondary) mb-1">Gruppe</label>
-        <div className="relative">
-          <select
-            value={selectedProject}
-            onChange={(e) => handleProjectChange(e.target.value)}
-            disabled={loadingProjects}
-            className={selectClass}
-          >
-            <option value="">{loadingProjects ? "Laden…" : "— Gruppe auswählen —"}</option>
-            {projects.map((p) => (
-              <option key={p.code} value={p.code}>{p.display_name}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-xs text-(--lab-text-secondary) mb-1">Experiment</label>
+        <label className="block text-xs text-(--lab-text-secondary) mb-1">
+          Gruppe / Wochentag
+        </label>
         <select
-          value={selectedCollection}
-          onChange={(e) => handleCollectionChange(e.target.value)}
-          disabled={!selectedProject || loadingCollections}
+          value={selectedProject}
+          onChange={(e) => handleProjectChange(e.target.value)}
+          disabled={loadingProjects || disabled}
           className={selectClass}
         >
-          <option value="">{loadingCollections ? "Laden…" : "— Experiment auswählen —"}</option>
-          {collections.map((c) => (
-            <option key={c.code} value={c.code}>{c.display_name}</option>
+          <option value="">
+            {loadingProjects ? "Laden…" : "— Gruppe auswählen —"}
+          </option>
+          {projects.map((p) => (
+            <option key={p.code} value={p.code}>
+              {p.display_name}
+            </option>
           ))}
         </select>
       </div>
 
       <div>
-        <label className="block text-xs text-(--lab-text-secondary) mb-1">Probe / Objekt</label>
+        <label className="block text-xs text-(--lab-text-secondary) mb-1">
+          Sammlung / Experiment{" "}
+          <span className="text-(--lab-accent) font-medium">← Upload-Ziel</span>
+        </label>
+        <select
+          value={selectedCollection}
+          onChange={(e) => handleCollectionChange(e.target.value)}
+          disabled={!selectedProject || loadingCollections || disabled}
+          className={selectClass}
+        >
+          <option value="">
+            {loadingCollections ? "Laden…" : "— Sammlung auswählen —"}
+          </option>
+          {collections.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.display_name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-xs text-(--lab-text-secondary) mb-1">
+          Probe / Objekt{" "}
+          <span className="italic">(optional — Upload direkt auf Objekt)</span>
+        </label>
         <select
           value={selectedObject}
           onChange={(e) => handleObjectChange(e.target.value)}
-          disabled={!selectedCollection || loadingObjects}
+          disabled={!selectedCollection || loadingObjects || disabled}
           className={selectClass}
         >
-          <option value="">{loadingObjects ? "Laden…" : "— Objekt auswählen —"}</option>
+          <option value="">
+            {loadingObjects ? "Laden…" : "— Objekt auswählen (optional) —"}
+          </option>
           {objects.map((o) => (
             <option key={o.identifier} value={o.identifier}>
               {o.code} ({o.type})

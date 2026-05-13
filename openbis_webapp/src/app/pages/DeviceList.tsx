@@ -19,9 +19,13 @@ export function DeviceList() {
     setError(null);
     try {
       const data = await listDevices(token);
-      setDevices(data);
+      setDevices(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Geräte konnten nicht geladen werden");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Geräte konnten nicht geladen werden",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -96,7 +100,9 @@ export function DeviceList() {
 
         {!isLoading && devices.length === 0 && !error && (
           <div className="flex flex-col items-center justify-center py-24 text-center">
-            <p className="text-(--lab-text-secondary)">Keine Geräte verfügbar</p>
+            <p className="text-(--lab-text-secondary)">
+              Keine Geräte verfügbar
+            </p>
             <p className="text-sm text-(--lab-text-secondary) mt-1">
               Serverkonfiguration oder Netzwerkverbindung prüfen
             </p>

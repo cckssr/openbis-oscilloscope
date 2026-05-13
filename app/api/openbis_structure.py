@@ -162,24 +162,19 @@ async def list_collections(
 
     try:
         o = _get_openbis(token)
-        sp = o.get_space(space_code)
-        proj = None
-        for p in sp.get_projects():
-            if p.code == project:
-                proj = p
-                break
-        if proj is None:
+
+        collection_list = o.get_collections(
+            project=project, space=space_code, props=["$name"]
+        )
+        if len(collection_list) == 0:
+            logger.error(
+                "No collections found for project %s in space %s", project, space_code
+            )
             return []
 
-        prefix = f"{project}_"
         result = []
-        for col in proj.get_collections():
-            display = (
-                col.code.removeprefix(prefix)
-                if col.code.startswith(prefix)
-                else col.code
-            )
-            display = display.replace("_", " ")
+        for col in collection_list:
+            display = col.props.get("$name", col.code)
             result.append({"code": col.code, "display_name": display})
 
         _collections_cache[cache_key] = result
@@ -227,25 +222,18 @@ async def list_objects(
 
     try:
         o = _get_openbis(token)
-        sp = o.get_space(space_code)
-        target_col = None
-        for proj in sp.get_projects():
-            for col in proj.get_collections():
-                if col.code == collection:
-                    target_col = col
-                    break
-            if target_col:
-                break
-
-        if target_col is None:
-            return []
-
         result = []
-        for obj in target_col.get_objects():
+        object_list = o.get_objects(collection=collection, space=space_code)
+        if len(object_list) == 0:
+            logger.error(
+                "No objects found for collection %s in space %s", collection, space_code
+            )
+            return []
+        for obj in object_list:
             result.append(
                 {
                     "code": obj.code,
-                    "type": obj.type,
+                    "type": obj.type.code,
                     "identifier": obj.identifier,
                 }
             )

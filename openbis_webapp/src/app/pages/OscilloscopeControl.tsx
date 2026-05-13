@@ -23,7 +23,7 @@ import {
   setTimebase,
   setTrigger,
 } from "../../api/devices";
-import { setAnnotation } from "../../api/sessions";
+import { setAnnotation, flagArtifact } from "../../api/sessions";
 import type {
   DeviceDetail,
   WaveformData,
@@ -136,11 +136,16 @@ export function OscilloscopeControl() {
   const [lastAcquisitionId, setLastAcquisitionId] = useState<string | null>(
     null,
   );
+  const [lastArtifactIds, setLastArtifactIds] = useState<string[]>([]);
   const [annotationText, setAnnotationText] = useState("");
   const [annotationSaved, setAnnotationSaved] = useState(false);
   const [isSavingAnnotation, setIsSavingAnnotation] = useState(false);
   const [cmdError, setCmdError] = useState<string | null>(null);
   const [waveformData, setWaveformData] = useState<PlotPoint[]>([]);
+  // Full-resolution channel data kept for CSV export (not downsampled)
+  const [rawChannelData, setRawChannelData] = useState<
+    Record<number, WaveformData>
+  >({});
   // Full channel configs from the last acquire response — drives UI sync and plot
   const [acquiredChannels, setAcquiredChannels] = useState<AcquiredChannel[]>(
     [],
@@ -469,6 +474,7 @@ export function OscilloscopeControl() {
         );
         setAcquiredChannels(acquireResp.channels);
         setLastAcquisitionId(acquireResp.acquisition_id);
+        setLastArtifactIds(acquireResp.artifact_ids);
         setAnnotationText("");
         setAnnotationSaved(false);
 
@@ -506,6 +512,7 @@ export function OscilloscopeControl() {
           if (d) channelDataMap[acquireResp.channels[i].channel] = d;
         }
 
+        setRawChannelData(channelDataMap);
         const plot = buildPlotData(channelDataMap);
         setWaveformData(plot);
         if (plot.length > 0) tStartRef.current = plot[0].time;
@@ -564,13 +571,15 @@ export function OscilloscopeControl() {
   // ---------------------------------------------------------------------------
 
   const handleDownloadCsv = () => {
-    if (!waveformData.length) return;
-    const channels = (["ch1", "ch2", "ch3", "ch4"] as const).filter(
-      (ch) => waveformData[0][ch] !== undefined,
-    );
-    const header = ["time_s", ...channels].join(",");
-    const rows = waveformData.map((pt) =>
-      [pt.time, ...channels.map((ch) => pt[ch] ?? "")].join(","),
+    const entries = Object.entries(rawChannelData);
+    if (!entries.length) return;
+    const channels = entries.map(([ch]) => Number(ch)).sort((a, b) => a - b);
+    const refData = rawChannelData[channels[0]];
+    const header = ["time_s", ...channels.map((ch) => `ch${ch}_V`)].join(",");
+    const rows = refData.time_s.map((t, i) =>
+      [t, ...channels.map((ch) => rawChannelData[ch]?.voltage_V[i] ?? "")].join(
+        ",",
+      ),
     );
     const csv = [header, ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -594,6 +603,10 @@ export function OscilloscopeControl() {
         sessionId,
         lastAcquisitionId,
         annotationText.trim(),
+      );
+      // Auto-flag all artifacts in this acquisition for OpenBIS upload
+      await Promise.all(
+        lastArtifactIds.map((id) => flagArtifact(token, sessionId!, id, true)),
       );
       setAnnotationSaved(true);
     } catch (err) {
@@ -839,7 +852,7 @@ export function OscilloscopeControl() {
                     if (e.key === "Enter") handleSaveAnnotation();
                   }}
                   placeholder="Messung beschriften…"
-                  title="Freitextbeschriftung für diese Aufnahme — wird im Datenarchiv angezeigt"
+                  title="Freitextbeschriftung für diese Aufnahme — wird im Datenarchiv angezeigt. Speichern markiert die Messung automatisch für den OpenBIS-Upload."
                   className="w-full border-2 border-(--lab-border) rounded px-2 py-1 text-xs font-mono focus:outline-none focus:border-(--lab-accent)"
                 />
                 <button
@@ -852,10 +865,10 @@ export function OscilloscopeControl() {
                   className="w-full py-1 px-2 border-2 rounded text-xs font-medium transition-colors border-(--lab-border) text-(--lab-text-secondary) hover:bg-(--lab-panel) disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {annotationSaved
-                    ? "Gespeichert"
+                    ? "Gespeichert ✓ (markiert)"
                     : isSavingAnnotation
                       ? "Speichern…"
-                      : "Speichern"}
+                      : "Speichern & markieren"}
                 </button>
               </div>
             )}
@@ -910,10 +923,10 @@ export function OscilloscopeControl() {
             </h2>
             <div className="flex items-center gap-2">
               <button
-                title="Wellenformdaten als CSV herunterladen"
+                title="Wellenformdaten als CSV herunterladen — alle Messpunkte (keine Decimation)"
                 aria-label="Wellenformdaten als CSV herunterladen"
                 onClick={handleDownloadCsv}
-                disabled={!waveformData.length}
+                disabled={Object.keys(rawChannelData).length === 0}
                 className="p-1.5 border-2 border-(--lab-border) hover:bg-(--lab-panel) rounded text-(--lab-text-secondary) hover:text-(--lab-text-primary) disabled:opacity-40"
               >
                 <Download className="w-4 h-4" />

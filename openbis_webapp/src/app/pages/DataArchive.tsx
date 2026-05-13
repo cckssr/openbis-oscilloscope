@@ -14,7 +14,16 @@ import {
   fetchArtifactScreenshot,
 } from "../../api/sessions";
 import type { Artifact, WaveformData } from "../../api/types";
-import { ArrowLeft, Upload, RefreshCw, X, Download, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  ArrowLeft,
+  Upload,
+  RefreshCw,
+  X,
+  Download,
+  ChevronDown,
+  ChevronRight,
+  Trash2,
+} from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -130,17 +139,29 @@ export function DataArchive() {
   const [commitResult, setCommitResult] = useState<string | null>(null);
   const [commitError, setCommitError] = useState<string | null>(null);
 
+  // Track whether the current experiment/sample values came from the dropdown
+  const [dropdownFilled, setDropdownFilled] = useState(false);
+  // Increment to force-remount the selector (clears its internal state)
+  const [selectorKey, setSelectorKey] = useState(0);
+
   // Download
   const [isDownloading, setIsDownloading] = useState(false);
 
   // Screenshot thumbnails
-  const [screenshotUrls, setScreenshotUrls] = useState<Record<string, string>>({});
+  const [screenshotUrls, setScreenshotUrls] = useState<Record<string, string>>(
+    {},
+  );
 
   // Waveform preview
-  const [previewGroup, setPreviewGroup] = useState<AcquisitionGroup | null>(null);
+  const [previewGroup, setPreviewGroup] = useState<AcquisitionGroup | null>(
+    null,
+  );
   const [previewPlotData, setPreviewPlotData] = useState<PlotPoint[]>([]);
   const [previewChannels, setPreviewChannels] = useState<{
-    ch1: boolean; ch2: boolean; ch3: boolean; ch4: boolean;
+    ch1: boolean;
+    ch2: boolean;
+    ch3: boolean;
+    ch4: boolean;
   }>({ ch1: false, ch2: false, ch3: false, ch4: false });
   const [previewTimebaseScale, setPreviewTimebaseScale] = useState(1e-3);
   const [previewSampleRate, setPreviewSampleRate] = useState("—");
@@ -148,7 +169,9 @@ export function DataArchive() {
   const [previewLoading, setPreviewLoading] = useState(false);
 
   // Screenshot full-size preview
-  const [previewScreenshotUrl, setPreviewScreenshotUrl] = useState<string | null>(null);
+  const [previewScreenshotUrl, setPreviewScreenshotUrl] = useState<
+    string | null
+  >(null);
 
   // Run group collapse state (all collapsed by default)
   const [collapsedRuns, setCollapsedRuns] = useState<Set<string>>(new Set());
@@ -165,7 +188,11 @@ export function DataArchive() {
       const data = await listArtifacts(token, sessionId);
       setArtifacts(data);
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "Artefakte konnten nicht geladen werden");
+      setLoadError(
+        err instanceof Error
+          ? err.message
+          : "Artefakte konnten nicht geladen werden",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -178,7 +205,9 @@ export function DataArchive() {
   // Fetch screenshot thumbnails whenever the artifact list changes
   useEffect(() => {
     if (!token || !sessionId) return;
-    const screenshots = artifacts.filter((a) => a.artifact_type === "screenshot");
+    const screenshots = artifacts.filter(
+      (a) => a.artifact_type === "screenshot",
+    );
     for (const a of screenshots) {
       if (screenshotUrls[a.artifact_id]) continue;
       fetchArtifactScreenshot(token, sessionId, a.artifact_id)
@@ -191,77 +220,82 @@ export function DataArchive() {
   }, [artifacts, token, sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    return () => { Object.values(screenshotUrls).forEach(URL.revokeObjectURL); };
+    return () => {
+      Object.values(screenshotUrls).forEach(URL.revokeObjectURL);
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------------------------------------------------------------------------
   // Grouping
   // ---------------------------------------------------------------------------
 
-  const { runGroups, ungroupedAcquisitions, screenshots, legacyTraces } = useMemo(() => {
-    const acqMap = new Map<string, AcquisitionGroup>();
-    const screenshotList: Artifact[] = [];
-    const legacyList: Artifact[] = [];
+  const { runGroups, ungroupedAcquisitions, screenshots, legacyTraces } =
+    useMemo(() => {
+      const acqMap = new Map<string, AcquisitionGroup>();
+      const screenshotList: Artifact[] = [];
+      const legacyList: Artifact[] = [];
 
-    for (const a of artifacts) {
-      if (a.artifact_type === "screenshot") {
-        screenshotList.push(a);
-      } else if (a.acquisition_id) {
-        const existing = acqMap.get(a.acquisition_id);
-        if (existing) {
-          existing.traces.push(a);
-          if (!a.persist) existing.persist = false;
-          if (a.annotation && !existing.annotation) existing.annotation = a.annotation;
+      for (const a of artifacts) {
+        if (a.artifact_type === "screenshot") {
+          screenshotList.push(a);
+        } else if (a.acquisition_id) {
+          const existing = acqMap.get(a.acquisition_id);
+          if (existing) {
+            existing.traces.push(a);
+            if (!a.persist) existing.persist = false;
+            if (a.annotation && !existing.annotation)
+              existing.annotation = a.annotation;
+          } else {
+            acqMap.set(a.acquisition_id, {
+              acquisition_id: a.acquisition_id,
+              annotation: a.annotation,
+              traces: [a],
+              created_at: a.created_at,
+              persist: a.persist,
+              run_id: a.run_id ?? null,
+            });
+          }
         } else {
-          acqMap.set(a.acquisition_id, {
-            acquisition_id: a.acquisition_id,
-            annotation: a.annotation,
-            traces: [a],
-            created_at: a.created_at,
-            persist: a.persist,
-            run_id: a.run_id ?? null,
-          });
+          legacyList.push(a);
         }
-      } else {
-        legacyList.push(a);
       }
-    }
 
-    for (const g of acqMap.values()) {
-      g.traces.sort((x, y) => (x.channel ?? 0) - (y.channel ?? 0));
-    }
+      for (const g of acqMap.values()) {
+        g.traces.sort((x, y) => (x.channel ?? 0) - (y.channel ?? 0));
+      }
 
-    const sortedAcqs = Array.from(acqMap.values()).sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-    );
+      const sortedAcqs = Array.from(acqMap.values()).sort(
+        (a, b) =>
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      );
 
-    const runMap = new Map<string, RunGroup>();
-    const ungrouped: AcquisitionGroup[] = [];
-    let runCounter = 1;
+      const runMap = new Map<string, RunGroup>();
+      const ungrouped: AcquisitionGroup[] = [];
+      let runCounter = 1;
 
-    for (const acq of sortedAcqs) {
-      if (!acq.run_id) {
-        ungrouped.push(acq);
-      } else {
-        if (!runMap.has(acq.run_id)) {
-          runMap.set(acq.run_id, {
-            run_id: acq.run_id,
-            run_nr: runCounter++,
-            acquisitions: [],
-            created_at: acq.created_at,
-          });
+      for (const acq of sortedAcqs) {
+        if (!acq.run_id) {
+          ungrouped.push(acq);
+        } else {
+          if (!runMap.has(acq.run_id)) {
+            runMap.set(acq.run_id, {
+              run_id: acq.run_id,
+              run_nr: runCounter++,
+              acquisitions: [],
+              created_at: acq.created_at,
+            });
+          }
+          runMap.get(acq.run_id)!.acquisitions.push(acq);
         }
-        runMap.get(acq.run_id)!.acquisitions.push(acq);
       }
-    }
 
-    return {
-      runGroups: Array.from(runMap.values()),
-      ungroupedAcquisitions: ungrouped,
-      screenshots: screenshotList,
-      legacyTraces: legacyList,
-    };
-  }, [artifacts]);
+      return {
+        runGroups: Array.from(runMap.values()),
+        ungroupedAcquisitions: ungrouped,
+        screenshots: screenshotList,
+        legacyTraces: legacyList,
+      };
+    }, [artifacts]);
 
   // Collapse all run groups on first load
   useEffect(() => {
@@ -271,7 +305,10 @@ export function DataArchive() {
     }
   }, [runGroups]);
 
-  const allArtifactIds = useMemo(() => artifacts.map((a) => a.artifact_id), [artifacts]);
+  const allArtifactIds = useMemo(
+    () => artifacts.map((a) => a.artifact_id),
+    [artifacts],
+  );
 
   // ---------------------------------------------------------------------------
   // Selection
@@ -293,7 +330,9 @@ export function DataArchive() {
   };
 
   const selectFlagged = () => {
-    setSelected(new Set(artifacts.filter((a) => a.persist).map((a) => a.artifact_id)));
+    setSelected(
+      new Set(artifacts.filter((a) => a.persist).map((a) => a.artifact_id)),
+    );
   };
 
   // ---------------------------------------------------------------------------
@@ -307,7 +346,9 @@ export function DataArchive() {
         artifactIds.map((id) => flagArtifact(token, sessionId!, id, persist)),
       );
       setArtifacts((prev) =>
-        prev.map((a) => artifactIds.includes(a.artifact_id) ? { ...a, persist } : a),
+        prev.map((a) =>
+          artifactIds.includes(a.artifact_id) ? { ...a, persist } : a,
+        ),
       );
     } catch (err) {
       console.error("Flag failed:", err);
@@ -325,13 +366,16 @@ export function DataArchive() {
     setPreviewPlotData([]);
     try {
       const results = await Promise.all(
-        group.traces.map((t) => getArtifactWaveform(token, sessionId!, t.artifact_id)),
+        group.traces.map((t) =>
+          getArtifactWaveform(token, sessionId!, t.artifact_id),
+        ),
       );
       setPreviewPlotData(buildPlotData(results));
 
       const enabledChs = { ch1: false, ch2: false, ch3: false, ch4: false };
       for (const t of group.traces) {
-        if (t.channel) enabledChs[`ch${t.channel}` as keyof typeof enabledChs] = true;
+        if (t.channel)
+          enabledChs[`ch${t.channel}` as keyof typeof enabledChs] = true;
       }
       setPreviewChannels(enabledChs);
 
@@ -359,28 +403,47 @@ export function DataArchive() {
 
   const handleDownloadSelected = async () => {
     if (!token || !sessionId) return;
-    const selectedArtifacts = artifacts.filter((a) => selected.has(a.artifact_id));
+    const selectedArtifacts = artifacts.filter((a) =>
+      selected.has(a.artifact_id),
+    );
     if (selectedArtifacts.length > 50) {
-      alert("Maximal 50 Elemente gleichzeitig herunterladen. Bitte Auswahl reduzieren.");
+      alert(
+        "Maximal 50 Elemente gleichzeitig herunterladen. Bitte Auswahl reduzieren.",
+      );
       return;
     }
     setIsDownloading(true);
     try {
       const zip = new JSZip();
-      const traces = selectedArtifacts.filter((a) => a.artifact_type === "trace");
-      const shots = selectedArtifacts.filter((a) => a.artifact_type === "screenshot");
+      const traces = selectedArtifacts.filter(
+        (a) => a.artifact_type === "trace",
+      );
+      const shots = selectedArtifacts.filter(
+        (a) => a.artifact_type === "screenshot",
+      );
 
       await Promise.all(
         traces.map(async (a) => {
-          const data = await getArtifactWaveform(token, sessionId!, a.artifact_id);
+          const data = await getArtifactWaveform(
+            token,
+            sessionId!,
+            a.artifact_id,
+          );
           const rows = data.time_s.map((t, i) => `${t},${data.voltage_V[i]}`);
-          zip.file(`${a.acquisition_id ?? a.artifact_id}_ch${a.channel}.csv`, ["time_s,voltage_V", ...rows].join("\n"));
+          zip.file(
+            `${a.acquisition_id ?? a.artifact_id}_ch${a.channel}.csv`,
+            ["time_s,voltage_V", ...rows].join("\n"),
+          );
         }),
       );
 
       await Promise.all(
         shots.map(async (a) => {
-          const blob = await fetchArtifactScreenshot(token, sessionId!, a.artifact_id);
+          const blob = await fetchArtifactScreenshot(
+            token,
+            sessionId!,
+            a.artifact_id,
+          );
           zip.file(`screenshot_${a.artifact_id}.png`, blob);
         }),
       );
@@ -421,12 +484,32 @@ export function DataArchive() {
         device_under_test: deviceUnderTest.trim() || undefined,
         notes: notes.trim() || undefined,
       });
-      setCommitResult(`${res.artifact_count} Artefakt(e) übertragen → ${res.permId}`);
+      setCommitResult(
+        `${res.artifact_count} Artefakt(e) übertragen → ${res.permId}`,
+      );
     } catch (err) {
-      setCommitError(err instanceof ApiError ? err.message : "Übertragung fehlgeschlagen");
+      setCommitError(
+        err instanceof ApiError ? err.message : "Übertragung fehlgeschlagen",
+      );
     } finally {
       setIsCommitting(false);
     }
+  };
+
+  const handleClearForm = () => {
+    setExperimentId("");
+    setSampleId("");
+    setLabCourse("");
+    setExpTitle("");
+    setGroupName("");
+    setSemester("");
+    setExpDescription("");
+    setDeviceUnderTest("");
+    setNotes("");
+    setDropdownFilled(false);
+    setSelectorKey((k) => k + 1);
+    setCommitResult(null);
+    setCommitError(null);
   };
 
   const flaggedCount = artifacts.filter((a) => a.persist).length;
@@ -477,8 +560,12 @@ export function DataArchive() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-lg font-semibold text-(--lab-text-primary)">Datenarchiv</h1>
-            <p className="font-mono text-xs text-(--lab-text-secondary)">Sitzung {sessionId}</p>
+            <h1 className="text-lg font-semibold text-(--lab-text-primary)">
+              Datenarchiv
+            </h1>
+            <p className="font-mono text-xs text-(--lab-text-secondary)">
+              Sitzung {sessionId}
+            </p>
           </div>
         </div>
 
@@ -488,7 +575,11 @@ export function DataArchive() {
               onClick={handleDownloadSelected}
               disabled={isDownloading}
               className="flex items-center gap-1.5 px-3 py-1.5 border-2 border-(--lab-border) hover:bg-(--lab-panel) rounded text-sm text-(--lab-text-secondary) transition-colors disabled:opacity-40"
-              title={selected.size > 50 ? "Maximal 50 Elemente" : "Als ZIP herunterladen"}
+              title={
+                selected.size > 50
+                  ? "Maximal 50 Elemente"
+                  : "Als ZIP herunterladen"
+              }
             >
               <Download className="w-4 h-4" />
               {isDownloading ? "ZIP…" : `Herunterladen (${selected.size})`}
@@ -499,7 +590,9 @@ export function DataArchive() {
             className="p-1.5 border-2 border-(--lab-border) hover:bg-(--lab-panel) rounded text-(--lab-text-secondary) hover:text-(--lab-text-primary) transition-colors"
             title="Aktualisieren"
           >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
+            />
           </button>
         </div>
       </header>
@@ -518,7 +611,10 @@ export function DataArchive() {
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
-                checked={allArtifactIds.length > 0 && selected.size === allArtifactIds.length}
+                checked={
+                  allArtifactIds.length > 0 &&
+                  selected.size === allArtifactIds.length
+                }
                 onChange={toggleSelectAll}
                 className="w-4 h-4 accent-(--lab-accent)"
               />
@@ -563,7 +659,9 @@ export function DataArchive() {
             const allRunArtifactIds = rg.acquisitions.flatMap((g) =>
               g.traces.map((t) => t.artifact_id),
             );
-            const runSelected = allRunArtifactIds.every((id) => selected.has(id));
+            const runSelected = allRunArtifactIds.every((id) =>
+              selected.has(id),
+            );
             const runPartial =
               !runSelected && allRunArtifactIds.some((id) => selected.has(id));
             const acqCount = rg.acquisitions.length;
@@ -605,16 +703,29 @@ export function DataArchive() {
                       Messung {rg.run_nr}
                     </span>
                     <span className="font-mono text-xs text-(--lab-text-secondary)">
-                      {formatTimestamp(rg.created_at)} · {acqCount} Aufnahme{acqCount !== 1 ? "n" : ""} · {artifactCount} Spur{artifactCount !== 1 ? "en" : ""}
+                      {formatTimestamp(rg.created_at)} · {acqCount} Aufnahme
+                      {acqCount !== 1 ? "n" : ""} · {artifactCount} Spur
+                      {artifactCount !== 1 ? "en" : ""}
                     </span>
                   </button>
                   <span />
                   <span />
                 </div>
 
-                {/* Run acquisitions (collapsed or expanded) */}
-                {!isCollapsed &&
-                  rg.acquisitions.map((group) => renderAcquisitionGroup(group))}
+                {/* Run acquisitions — visually indented under their run group */}
+                {!isCollapsed && rg.acquisitions.length > 0 && (
+                  <div
+                    style={{
+                      borderLeft: "3px solid var(--lab-accent)",
+                      marginLeft: "1.5rem",
+                      background: "var(--lab-bg)",
+                    }}
+                  >
+                    {rg.acquisitions.map((group) =>
+                      renderAcquisitionGroup(group),
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -633,7 +744,9 @@ export function DataArchive() {
               persist={artifact.persist}
               selected={selected.has(artifact.artifact_id)}
               onSelect={() => toggleSelect([artifact.artifact_id])}
-              onFlag={(persist) => handleFlagIds([artifact.artifact_id], persist)}
+              onFlag={(persist) =>
+                handleFlagIds([artifact.artifact_id], persist)
+              }
               thumbnailUrl={screenshotUrls[artifact.artifact_id]}
               onPreview={
                 screenshotUrls[artifact.artifact_id]
@@ -650,12 +763,16 @@ export function DataArchive() {
               artifactId={artifact.artifact_id}
               timestamp={formatTimestamp(artifact.created_at)}
               type="Wellenform"
-              channel={artifact.channel != null ? `CH${artifact.channel}` : undefined}
+              channel={
+                artifact.channel != null ? `CH${artifact.channel}` : undefined
+              }
               files={artifact.files}
               persist={artifact.persist}
               selected={selected.has(artifact.artifact_id)}
               onSelect={() => toggleSelect([artifact.artifact_id])}
-              onFlag={(persist) => handleFlagIds([artifact.artifact_id], persist)}
+              onFlag={(persist) =>
+                handleFlagIds([artifact.artifact_id], persist)
+              }
             />
           ))}
         </div>
@@ -683,49 +800,127 @@ export function DataArchive() {
 
         {showCommitForm && (
           <form onSubmit={handleCommit} className="mt-4 flex flex-col gap-4">
-            {/* OpenBIS structure selector */}
-            {token && (
-              <OpenBISObjectSelector
-                token={token}
-                onSelect={({ experimentId: eid, sampleId: sid, groupName: gn, semester: sem }) => {
-                  setExperimentId(eid);
-                  setSampleId(sid);
-                  setGroupName(gn);
-                  setSemester(sem);
-                }}
-              />
-            )}
+            {/* Upload target — either dropdown OR manual entry */}
+            <div className="border-2 border-(--lab-border) rounded p-3 flex flex-col gap-3">
+              <p className="text-xs text-(--lab-text-secondary)">
+                <span className="font-medium text-(--lab-text-primary)">
+                  Upload-Ziel:
+                </span>{" "}
+                Wähle über die Dropdowns (Gruppe → Sammlung, Objekt optional)
+                <span className="mx-1 text-(--lab-text-secondary)">—oder—</span>
+                gib Sammlung-/Objekt-Kennung direkt ein. Beides gleichzeitig ist
+                nicht möglich.
+              </p>
 
-            {/* Row 1: Experiment ID + Sample ID */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-(--lab-text-secondary) mb-1">
-                  Experiment ID *
-                </label>
-                <input
-                  type="text"
-                  value={experimentId}
-                  onChange={(e) => setExperimentId(e.target.value)}
-                  placeholder="/SPACE/PROJECT/EXPERIMENT"
-                  required
-                  className={inputClass}
+              {/* Dropdown selector — disabled when manual fields have content */}
+              {token && (
+                <OpenBISObjectSelector
+                  key={selectorKey}
+                  token={token}
+                  disabled={
+                    !dropdownFilled &&
+                    (experimentId.trim() !== "" || sampleId.trim() !== "")
+                  }
+                  onSelect={({
+                    experimentId: eid,
+                    sampleId: sid,
+                    groupName: gn,
+                    semester: sem,
+                  }) => {
+                    setExperimentId(eid);
+                    setSampleId(sid);
+                    setGroupName(gn);
+                    setSemester(sem);
+                    setDropdownFilled(eid !== "");
+                  }}
                 />
+              )}
+
+              {/* Divider */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 border-t border-(--lab-border)" />
+                <span className="text-xs text-(--lab-text-secondary)">
+                  oder manuell
+                </span>
+                <div className="flex-1 border-t border-(--lab-border)" />
               </div>
-              <div>
-                <label className="block text-xs text-(--lab-text-secondary) mb-1">
-                  Proben ID
-                </label>
-                <input
-                  type="text"
-                  value={sampleId}
-                  onChange={(e) => setSampleId(e.target.value)}
-                  placeholder="/SPACE/SAMPLE"
-                  className={inputClass}
-                />
+
+              {/* Manual entry — disabled when dropdown filled */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-(--lab-text-secondary) mb-1">
+                    Sammlung-ID *{" "}
+                    <span className="italic font-normal">(Upload-Ziel)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={experimentId}
+                    onChange={(e) => {
+                      setExperimentId(e.target.value);
+                      if (dropdownFilled) {
+                        setDropdownFilled(false);
+                        setSelectorKey((k) => k + 1);
+                      }
+                    }}
+                    placeholder="/SPACE/PROJECT/EXPERIMENT"
+                    disabled={dropdownFilled}
+                    title="OpenBIS-Sammlungspfad, z.B. /MY_SPACE/PROJECT/EXP-1 — Pflichtfeld"
+                    className={`${inputClass} disabled:bg-(--lab-panel) disabled:cursor-default`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-(--lab-text-secondary) mb-1">
+                    Objekt-ID{" "}
+                    <span className="italic font-normal">(optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={sampleId}
+                    onChange={(e) => {
+                      setSampleId(e.target.value);
+                      if (dropdownFilled) {
+                        setDropdownFilled(false);
+                        setSelectorKey((k) => k + 1);
+                      }
+                    }}
+                    placeholder="/SPACE/SAMPLE"
+                    disabled={dropdownFilled}
+                    title="OpenBIS-Objekt-/Proben-Kennung — optional, wenn leer wird zur Sammlung hochgeladen"
+                    className={`${inputClass} disabled:bg-(--lab-panel) disabled:cursor-default`}
+                  />
+                </div>
               </div>
+
+              {/* Auto-populated metadata from dropdown (read-only) */}
+              {(groupName || semester) && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-(--lab-text-secondary) mb-1">
+                      Gruppe <span className="italic">(aus Auswahl)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={groupName}
+                      readOnly
+                      className={`${inputClass} bg-(--lab-panel) cursor-default`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-(--lab-text-secondary) mb-1">
+                      Semester <span className="italic">(aus Auswahl)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={semester}
+                      readOnly
+                      className={`${inputClass} bg-(--lab-panel) cursor-default`}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Row 2: Lab course + Exp title */}
+            {/* Row: Lab course + Exp title */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs text-(--lab-text-secondary) mb-1">
@@ -759,35 +954,7 @@ export function DataArchive() {
               </div>
             </div>
 
-            {/* Row 3: Group name + Semester */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-(--lab-text-secondary) mb-1">
-                  Gruppenname
-                </label>
-                <input
-                  type="text"
-                  value={groupName}
-                  onChange={(e) => setGroupName(e.target.value)}
-                  placeholder="Automatisch aus Auswahl"
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-(--lab-text-secondary) mb-1">
-                  Semester
-                </label>
-                <input
-                  type="text"
-                  value={semester}
-                  readOnly
-                  placeholder="Automatisch aus Auswahl"
-                  className={`${inputClass} bg-(--lab-panel) cursor-default`}
-                />
-              </div>
-            </div>
-
-            {/* Row 4: Description */}
+            {/* Row: Description */}
             <div>
               <label className="block text-xs text-(--lab-text-secondary) mb-1">
                 DSO-Versuchsbeschreibung
@@ -801,7 +968,7 @@ export function DataArchive() {
               />
             </div>
 
-            {/* Row 5: Device under test + Notes */}
+            {/* Row: Device under test + Notes */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs text-(--lab-text-secondary) mb-1">
@@ -829,8 +996,8 @@ export function DataArchive() {
               </div>
             </div>
 
-            {/* Submit */}
-            <div className="flex items-center gap-3">
+            {/* Submit row */}
+            <div className="flex items-center gap-3 flex-wrap">
               <button
                 type="submit"
                 disabled={
@@ -845,6 +1012,15 @@ export function DataArchive() {
                 <Upload className="w-4 h-4" />
                 {isCommitting ? "Übertragen…" : "Übertragen"}
               </button>
+              <button
+                type="button"
+                onClick={handleClearForm}
+                className="flex items-center gap-1.5 px-3 py-1.5 border-2 border-(--lab-border) bg-white text-(--lab-text-secondary) hover:bg-(--lab-panel) rounded text-sm transition-colors"
+                title="Alle Formularfelder zurücksetzen"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Alles löschen
+              </button>
               {flaggedCount === 0 && (
                 <span className="text-xs text-(--lab-text-secondary)">
                   Artefakte zuerst mit dem Markierungs-Button kennzeichnen
@@ -853,7 +1029,9 @@ export function DataArchive() {
             </div>
 
             {commitResult && (
-              <p className="text-xs text-(--lab-success) font-mono">{commitResult}</p>
+              <p className="text-xs text-(--lab-success) font-mono">
+                {commitResult}
+              </p>
             )}
             {commitError && (
               <p className="text-xs text-(--lab-danger)">{commitError}</p>
