@@ -39,6 +39,8 @@ class Settings(BaseSettings):
             values to driver class paths and VXI-11 port numbers.
         OPENBIS_EQUIPMENT_IP_FILTER: IP address pattern used to filter EQUIPMENT objects
             from OpenBIS. Supports a trailing ``.*`` wildcard (e.g. ``"141.23.109.*"``).
+        OPENBIS_DATASET_TYPE: OpenBIS dataset type code used when committing artifacts.
+            Must match a dataset type defined in the target OpenBIS instance.
     """
 
     model_config = SettingsConfigDict(
@@ -63,6 +65,7 @@ class Settings(BaseSettings):
     OPENBIS_BOT_PASSWORD: str = ""
     DRIVER_MAPPING_CONFIG: str = "./config/driver_mapping.yaml"
     OPENBIS_EQUIPMENT_IP_FILTER: str = "141.23.109.*"
+    OPENBIS_DATASET_TYPE: str = "OSCILLOSCOPE"
 
 
 settings = Settings()

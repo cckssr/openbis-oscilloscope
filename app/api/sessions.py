@@ -1,9 +1,11 @@
 """API endpoints for managing control sessions and their artifacts."""
 
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import Response
 from pydantic import BaseModel
 
+from app.config import settings
 from app.core.dependencies import get_current_user
 from app.core.exceptions import SessionNotFoundError, ValidationError
 from app.openbis_client.client import UserInfo
@@ -107,6 +109,10 @@ class _CommitRequest(BaseModel):
     semester: str | None = None
     exp_description: str | None = None
     device_under_test: str | None = None
+    measurement_purpose: str | None = None
+    keywords: str | None = None
+    data_quality: str | None = None
+    external_parameters: str | None = None
     notes: str | None = None
 
 
@@ -158,22 +164,46 @@ async def commit_session(
     auth_header = request.headers.get("Authorization", "")
     token = auth_header.removeprefix("Bearer ").strip()
 
-    properties: dict[str, str] = {
-        "session_id": session_id,
-        "artifact_count": str(len(flagged)),
+    # Compute derived properties from the flagged artifacts
+    acq_ids = {a.acquisition_id for a in flagged if a.acquisition_id}
+    num_acquisitions = (
+        len(acq_ids)
+        if acq_ids
+        else sum(1 for a in flagged if a.artifact_type == "trace")
+    )
+    num_channels_used = len({a.channel for a in flagged if a.channel is not None})
+    timestamps = [datetime.fromisoformat(a.created_at) for a in flagged]
+    ts_start = min(timestamps)
+    ts_end = max(timestamps)
+    duration_s = (ts_end - ts_start).total_seconds()
+    has_screenshots = any(a.artifact_type == "screenshot" for a in flagged)
+    has_csv = any(a.artifact_type == "trace" for a in flagged)
+
+    properties: dict = {
+        "DATASET.DSO_NUM_ACQUISITIONS": num_acquisitions,
+        "DATASET.DSO_TIMESTAMP_START": ts_start.strftime("%Y-%m-%d %H:%M:%S"),
+        "DATASET.DSO_TIMESTAMP_END": ts_end.strftime("%Y-%m-%d %H:%M:%S"),
+        "DATASET.DSO_DURATION_S": round(duration_s, 6),
+        "DATASET.DSO_HAS_SCREENSHOTS": has_screenshots,
+        "DATASET.DSO_HAS_CSV_EXPORT": has_csv,
     }
-    if body.sample_id:
-        properties["sample"] = body.sample_id
+    if num_channels_used > 0:
+        properties["DATASET.DSO_NUM_CHANNELS_USED"] = num_channels_used
+
     for key, value in (
-        ("lab_course", body.lab_course),
-        ("exp_title", body.exp_title),
-        ("group_name", body.group_name),
-        ("semester", body.semester),
-        ("exp_description", body.exp_description),
-        ("device_under_test", body.device_under_test),
-        ("notes", body.notes),
+        ("DATASET.LAB_COURSE", body.lab_course),
+        ("DATASET.DSO_EXPERIMENT", body.exp_title),
+        ("DATASET.DSO_LAB_GROUP", body.group_name),
+        ("DATASET.DSO_SEMESTER", body.semester),
+        ("DATASET.DSO_DESCRIPTION", body.exp_description),
+        ("DATASET.DSO_DUT_DESCRIPTION", body.device_under_test),
+        ("DATASET.DSO_MEASUREMENT_PURPOSE", body.measurement_purpose),
+        ("DATASET.DSO_KEYWORDS", body.keywords),
+        ("DATASET.DSO_NOTES", body.notes),
+        ("DATASET.DSO_DATA_QUALITY", body.data_quality),
+        ("DATASET.DSO_EXTERNAL_PARAMETERS", body.external_parameters),
     ):
-        if value:
+        if value is not None:
             properties[key] = value
 
     perm_id = await openbis_client.create_dataset(
@@ -181,6 +211,7 @@ async def commit_session(
         experiment_id=body.experiment_id,
         files=all_files,
         properties=properties,
+        dataset_type=settings.OPENBIS_DATASET_TYPE,
     )
 
     return {"permId": perm_id, "artifact_count": len(flagged)}

@@ -49,9 +49,9 @@ pytest tests/test_openbis_integration.py \
 | `test_devices.py`             | Device listing, lock acquire/release/heartbeat, state transitions, command dispatch (run, stop, acquire, screenshot, channel data).                                                                                              |
 | `test_locks.py`               | Lock acquisition, double-acquire conflict, TTL expiry, `renew_lock`, `reset_all_locks`.                                                                                                                                          |
 | `test_buffer.py`              | `store_waveform`, `store_screenshot`, `list_artifacts`, `set_flag`, `export_hdf5`, `index.json` integrity.                                                                                                                       |
-| `test_sessions.py`            | `GET /sessions/{id}/artifacts`, `POST .../flag`, `POST .../commit` (no artifacts, no flagged, success, multiple flagged).                                                                                                        |
+| `test_sessions.py`            | `GET /sessions/{id}/artifacts`, `POST .../flag`, `POST .../commit` (no artifacts, no flagged, success, multiple flagged, OSCILLOSCOPE property mapping, screenshot detection, channel/acquisition counting).                      |
 | `test_admin.py`               | `POST /admin/locks/reset` and `POST /admin/devices/{id}/force-unlock` — admin vs non-admin access.                                                                                                                               |
-| `test_openbis_integration.py` | Live integration tests for every OpenBIS call: `validate_token` (valid, invalid, caching), `create_dataset`, and all three `/openbis/structure/*` API routes. Skipped unless `--openbis-url` and `--openbis-token` are supplied. |
+| `test_openbis_integration.py` | Live integration tests for every OpenBIS call: `validate_token` (valid, invalid, caching), `create_dataset` with `OSCILLOSCOPE` type and `DATASET.*` properties, full commit via `POST /sessions/{id}/commit`, and all three `/openbis/structure/*` API routes. Skipped unless `--openbis-url` and `--openbis-token` are supplied. |
 
 ## Design principles
 

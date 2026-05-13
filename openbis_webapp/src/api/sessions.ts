@@ -69,6 +69,10 @@ export interface CommitRequest {
   semester?: string;
   exp_description?: string;
   device_under_test?: string;
+  measurement_purpose?: string;
+  keywords?: string;
+  data_quality?: string;
+  external_parameters?: string;
   notes?: string;
 }
 
@@ -77,13 +81,9 @@ export function commitSession(
   sessionId: string,
   body: CommitRequest,
 ): Promise<CommitResponse> {
-  return apiFetch<CommitResponse>(
-    `/sessions/${sessionId}/commit`,
-    token,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    },
-  );
+  return apiFetch<CommitResponse>(`/sessions/${sessionId}/commit`, token, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }

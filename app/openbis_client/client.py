@@ -130,8 +130,9 @@ class OpenBISClient:
         experiment_id: str,
         files: list,
         properties: dict,
+        dataset_type: str = "OSCILLOSCOPE",
     ) -> str:
-        """Register a set of files as a new OpenBIS ``RAW_DATA`` dataset.
+        """Register a set of files as a new OpenBIS dataset.
 
         Uses pybis to create the dataset, upload the provided files, and attach
         custom properties. The dataset is linked to the specified experiment.
@@ -141,8 +142,9 @@ class OpenBISClient:
             experiment_id: OpenBIS experiment identifier in the form
                 ``"/SPACE/PROJECT/EXPERIMENT"``.
             files: List of absolute file path strings to upload.
-            properties: Dict of custom property key-value pairs to attach to the
-                dataset (e.g. ``{"session_id": "...", "artifact_count": "3"}``).
+            properties: Dict mapping OpenBIS property type codes to values
+                (e.g. ``{"DATASET.DSO_EXPERIMENT": "...", "DATASET.DSO_NUM_ACQUISITIONS": 1}``).
+            dataset_type: OpenBIS dataset type code. Defaults to ``"OSCILLOSCOPE"``.
 
         Returns:
             The OpenBIS permanent identifier (``permId``) of the created dataset.
@@ -160,7 +162,7 @@ class OpenBISClient:
             o.set_token(token, save_token=False)
 
             ds = o.new_dataset(
-                type="RAW_DATA",
+                type=dataset_type,
                 experiment=experiment_id,
                 files=files,
                 props=properties,
