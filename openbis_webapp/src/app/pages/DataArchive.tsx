@@ -1027,16 +1027,16 @@ export function DataArchive() {
                 </span>
               )}
             </div>
-
-            {commitResult && (
-              <p className="text-xs text-(--lab-success) font-mono">
-                {commitResult}
-              </p>
-            )}
-            {commitError && (
-              <p className="text-xs text-(--lab-danger)">{commitError}</p>
-            )}
           </form>
+        )}
+
+        {commitResult && (
+          <p className="mt-2 text-xs text-(--lab-success) font-mono">
+            {commitResult}
+          </p>
+        )}
+        {commitError && (
+          <p className="mt-2 text-xs text-(--lab-danger)">{commitError}</p>
         )}
       </div>
 

@@ -145,11 +145,11 @@ async def test_create_dataset_returns_perm_id(
         files=[str(csv_file)],
         dataset_type="OSCILLOSCOPE",
         properties={
-            "DATASET.LAB_COURSE": "EE101",
-            "DATASET.DSO_EXPERIMENT": "Integration test acquisition",
-            "DATASET.DSO_DESCRIPTION": "Automated integration test waveform",
-            "DATASET.DSO_NUM_ACQUISITIONS": 1,
-            "DATASET.DSO_TIMESTAMP_START": now.strftime("%Y-%m-%d %H:%M:%S"),
+            "dataset.lab_course": "EE101",
+            "dataset.dso_experiment": "Integration test acquisition",
+            "dataset.dso_description": "Automated integration test waveform",
+            "dataset.dso_num_acquisitions": 1,
+            "dataset.dso_timestamp_start": now.strftime("%Y-%m-%d %H:%M:%S"),
         },
     )
 

@@ -194,17 +194,17 @@ async def test_commit_sends_oscilloscope_properties(app, async_client):
     call_kwargs = mock_create.call_args.kwargs
     assert call_kwargs["dataset_type"] == "OSCILLOSCOPE"
     props = call_kwargs["properties"]
-    assert props["DATASET.LAB_COURSE"] == "EE101"
-    assert props["DATASET.DSO_EXPERIMENT"] == "RC Filter Test"
-    assert props["DATASET.DSO_DESCRIPTION"] == "Measuring RC filter step response"
-    assert props["DATASET.DSO_NOTES"] == "channel 1 only"
-    assert props["DATASET.DSO_NUM_ACQUISITIONS"] == 1
-    assert "DATASET.DSO_TIMESTAMP_START" in props
-    assert "DATASET.DSO_TIMESTAMP_END" in props
-    assert "DATASET.DSO_DURATION_S" in props
-    assert props["DATASET.DSO_HAS_CSV_EXPORT"] is True
-    assert props["DATASET.DSO_HAS_SCREENSHOTS"] is False
-    assert props["DATASET.DSO_NUM_CHANNELS_USED"] == 1
+    assert props["dataset.lab_course"] == "EE101"
+    assert props["dataset.dso_experiment"] == "RC Filter Test"
+    assert props["dataset.dso_description"] == "Measuring RC filter step response"
+    assert props["dataset.dso_notes"] == "channel 1 only"
+    assert props["dataset.dso_num_acquisitions"] == 1
+    assert "dataset.dso_timestamp_start" in props
+    assert "dataset.dso_timestamp_end" in props
+    assert "dataset.dso_duration_s" in props
+    assert props["dataset.dso_has_csv_export"] is True
+    assert props["dataset.dso_has_screenshots"] is False
+    assert props["dataset.dso_num_channels_used"] == 1
 
 
 @pytest.mark.asyncio
@@ -225,8 +225,8 @@ async def test_commit_detects_screenshots(app, async_client):
     )
     assert resp.status_code == 200
     props = mock_create.call_args.kwargs["properties"]
-    assert props["DATASET.DSO_HAS_SCREENSHOTS"] is True
-    assert props["DATASET.DSO_HAS_CSV_EXPORT"] is False
+    assert props["dataset.dso_has_screenshots"] is True
+    assert props["dataset.dso_has_csv_export"] is False
 
 
 @pytest.mark.asyncio
@@ -254,5 +254,5 @@ async def test_commit_counts_channels_and_acquisitions(app, async_client):
     )
     assert resp.status_code == 200
     props = mock_create.call_args.kwargs["properties"]
-    assert props["DATASET.DSO_NUM_CHANNELS_USED"] == 2
-    assert props["DATASET.DSO_NUM_ACQUISITIONS"] == 1  # one shared acquisition_id
+    assert props["dataset.dso_num_channels_used"] == 2
+    assert props["dataset.dso_num_acquisitions"] == 1  # one shared acquisition_id

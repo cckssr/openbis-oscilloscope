@@ -180,28 +180,28 @@ async def commit_session(
     has_csv = any(a.artifact_type == "trace" for a in flagged)
 
     properties: dict = {
-        "DATASET.DSO_NUM_ACQUISITIONS": num_acquisitions,
-        "DATASET.DSO_TIMESTAMP_START": ts_start.strftime("%Y-%m-%d %H:%M:%S"),
-        "DATASET.DSO_TIMESTAMP_END": ts_end.strftime("%Y-%m-%d %H:%M:%S"),
-        "DATASET.DSO_DURATION_S": round(duration_s, 6),
-        "DATASET.DSO_HAS_SCREENSHOTS": has_screenshots,
-        "DATASET.DSO_HAS_CSV_EXPORT": has_csv,
+        "dataset.dso_num_acquisitions": num_acquisitions,
+        "dataset.dso_timestamp_start": ts_start.strftime("%Y-%m-%d %H:%M:%S"),
+        "dataset.dso_timestamp_end": ts_end.strftime("%Y-%m-%d %H:%M:%S"),
+        "dataset.dso_duration_s": round(duration_s, 6),
+        "dataset.dso_has_screenshots": has_screenshots,
+        "dataset.dso_has_csv_export": has_csv,
     }
     if num_channels_used > 0:
-        properties["DATASET.DSO_NUM_CHANNELS_USED"] = num_channels_used
+        properties["dataset.dso_num_channels_used"] = num_channels_used
 
     for key, value in (
-        ("DATASET.LAB_COURSE", body.lab_course),
-        ("DATASET.DSO_EXPERIMENT", body.exp_title),
-        ("DATASET.DSO_LAB_GROUP", body.group_name),
-        ("DATASET.DSO_SEMESTER", body.semester),
-        ("DATASET.DSO_DESCRIPTION", body.exp_description),
-        ("DATASET.DSO_DUT_DESCRIPTION", body.device_under_test),
-        ("DATASET.DSO_MEASUREMENT_PURPOSE", body.measurement_purpose),
-        ("DATASET.DSO_KEYWORDS", body.keywords),
-        ("DATASET.DSO_NOTES", body.notes),
-        ("DATASET.DSO_DATA_QUALITY", body.data_quality),
-        ("DATASET.DSO_EXTERNAL_PARAMETERS", body.external_parameters),
+        ("dataset.lab_course", body.lab_course),
+        ("dataset.dso_experiment", body.exp_title),
+        ("dataset.dso_lab_group", body.group_name),
+        ("dataset.dso_semester", body.semester),
+        ("dataset.dso_description", body.exp_description),
+        ("dataset.dso_dut_description", body.device_under_test),
+        ("dataset.dso_measurement_purpose", body.measurement_purpose),
+        ("dataset.dso_keywords", body.keywords),
+        ("dataset.dso_notes", body.notes),
+        ("dataset.dso_data_quality", body.data_quality),
+        ("dataset.dso_external_parameters", body.external_parameters),
     ):
         if value is not None:
             properties[key] = value
