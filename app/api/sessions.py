@@ -102,7 +102,7 @@ async def flag_artifact(
 
 class _CommitRequest(BaseModel):
     experiment_id: str
-    sample_id: str | None = None
+    object_id: str | None = None
     lab_course: str | None = None
     exp_title: str | None = None
     group_name: str | None = None
@@ -132,7 +132,7 @@ async def commit_session(
     Args:
         session_id: Path parameter; the control session UUID.
         body: JSON body containing ``experiment_id`` (required) and optional
-            metadata fields (``sample_id``, ``lab_course``, ``exp_title``,
+            metadata fields (``object_id``, ``lab_course``, ``exp_title``,
             ``group_name``, ``semester``, ``exp_description``,
             ``device_under_test``, ``notes``).
         request: The current HTTP request.
@@ -212,6 +212,7 @@ async def commit_session(
         files=all_files,
         properties=properties,
         dataset_type=settings.OPENBIS_DATASET_TYPE,
+        object_id=body.object_id or None,
     )
 
     return {"permId": perm_id, "artifact_count": len(flagged)}

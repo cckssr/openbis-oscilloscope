@@ -125,9 +125,10 @@ export function OpenBISObjectSelector({
       });
       return;
     }
-    // Selecting a collection alone is a valid upload target
+    const col = collections.find((c) => c.code === code);
+    // Selecting a collection alone is a valid upload target; use full identifier
     onSelect({
-      experimentId: code,
+      experimentId: col?.identifier ?? code,
       sampleId: "",
       groupName: proj?.group_name ?? "",
       semester: proj?.semester ?? "",
@@ -142,9 +143,11 @@ export function OpenBISObjectSelector({
   const handleObjectChange = (identifier: string) => {
     setSelectedObject(identifier);
     const proj = projects.find((p) => p.code === selectedProject);
+    const col = collections.find((c) => c.code === selectedCollection);
+    // If an object is selected, use it as the upload target; otherwise fall back to collection
     onSelect({
-      experimentId: selectedCollection,
-      sampleId: identifier,
+      experimentId: identifier || col?.identifier || selectedCollection,
+      sampleId: "",
       groupName: proj?.group_name ?? "",
       semester: proj?.semester ?? "",
     });
@@ -161,7 +164,7 @@ export function OpenBISObjectSelector({
 
       <div>
         <label className="block text-xs text-(--lab-text-secondary) mb-1">
-          Gruppe / Wochentag
+          Gruppe (OpenBIS Project)
         </label>
         <select
           value={selectedProject}
@@ -182,7 +185,7 @@ export function OpenBISObjectSelector({
 
       <div>
         <label className="block text-xs text-(--lab-text-secondary) mb-1">
-          Sammlung / Experiment{" "}
+          Collection{" "}
           <span className="text-(--lab-accent) font-medium">← Upload-Ziel</span>
         </label>
         <select
@@ -192,7 +195,7 @@ export function OpenBISObjectSelector({
           className={selectClass}
         >
           <option value="">
-            {loadingCollections ? "Laden…" : "— Sammlung auswählen —"}
+            {loadingCollections ? "Laden…" : "— Collection auswählen —"}
           </option>
           {collections.map((c) => (
             <option key={c.code} value={c.code}>
@@ -204,7 +207,7 @@ export function OpenBISObjectSelector({
 
       <div>
         <label className="block text-xs text-(--lab-text-secondary) mb-1">
-          Probe / Objekt{" "}
+          Objekt{" "}
           <span className="italic">(optional — Upload direkt auf Objekt)</span>
         </label>
         <select

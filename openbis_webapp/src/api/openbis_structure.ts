@@ -10,6 +10,7 @@ export interface ProjectOption {
 export interface CollectionOption {
   code: string;
   display_name: string;
+  identifier: string;
 }
 
 export interface ObjectOption {

@@ -156,7 +156,13 @@ async def list_collections(
         return _collections_cache[cache_key]
 
     if settings.DEBUG:
-        result = [{"code": f"{project}_EXP_1", "display_name": "EXP 1"}]
+        result = [
+            {
+                "code": f"{project}_EXP_1",
+                "display_name": "EXP 1",
+                "identifier": f"/{space_code}/{project}/{project}_EXP_1",
+            }
+        ]
         _collections_cache[cache_key] = result
         return result
 
@@ -176,7 +182,13 @@ async def list_collections(
         for col in collection_list:
             name = col.props.get("$name")
             display = f"{col.code} ({name})" if name else col.code
-            result.append({"code": col.code, "display_name": display})
+            result.append(
+                {
+                    "code": col.code,
+                    "display_name": display,
+                    "identifier": col.identifier,
+                }
+            )
 
         _collections_cache[cache_key] = result
         return result
@@ -199,7 +211,7 @@ async def list_objects(
     """Return all objects (samples) within a collection.
 
     Response items: ``{code, type, identifier}`` where ``identifier`` is
-    the full OpenBIS path suitable for use as ``sample_id`` in the commit form.
+    the full OpenBIS path suitable for use as ``object_id`` in the commit form.
     Results are cached per (token, space, collection) for 5 minutes.
     """
     space_code = space or settings.OPENBIS_SPACE

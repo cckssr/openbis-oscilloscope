@@ -849,7 +849,7 @@ export function DataArchive() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-(--lab-text-secondary) mb-1">
-                    Sammlung-ID *{" "}
+                    Collection-ID *{" "}
                     <span className="italic font-normal">(Upload-Ziel)</span>
                   </label>
                   <input

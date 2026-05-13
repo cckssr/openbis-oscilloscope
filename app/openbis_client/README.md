@@ -16,10 +16,10 @@ Thin wrapper around the `pybis` library. Handles token validation (with TTL cach
 
 **`OpenBISClient`** — methods:
 
-| Method                                                                                        | Description                                                                                                                                                                                                        |
-| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `validate_token(token) -> UserInfo`                                                           | Calls `pybis.Openbis.is_session_active()` and queries the user's roles. Result is cached in a `TTLCache` for `TOKEN_CACHE_SECONDS` seconds. Raises `AuthError` on invalid tokens.                                  |
-| `create_dataset(token, experiment_id, files, properties, dataset_type="OSCILLOSCOPE") -> str` | Creates a new OpenBIS dataset of the given type (default `OSCILLOSCOPE`), uploads the file list, and attaches properties using `DATASET.*` property codes. Returns the `permId`. Raises `OpenBISError` on failure. |
+| Method                                                                                                        | Description                                                                                                                                                                                                                                        |
+| ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `validate_token(token) -> UserInfo`                                                                           | Calls `pybis.Openbis.is_session_active()` and queries the user's roles. Result is cached in a `TTLCache` for `TOKEN_CACHE_SECONDS` seconds. Raises `AuthError` on invalid tokens.                                                                  |
+| `create_dataset(token, experiment_id, files, properties, dataset_type="OSCILLOSCOPE", object_id=None) -> str` | Creates a new OpenBIS dataset. When `object_id` is given the dataset is attached to that object; othesrwise it is linked to `experiment_id` (collection path `/SPACE/PROJECT/COLLECTION`). Returns the `permId`. Raises `OpenBISError` on failure. |
 
 ## DEBUG mode
 
