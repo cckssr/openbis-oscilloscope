@@ -475,7 +475,7 @@ export function DataArchive() {
     try {
       const res = await commitSession(token, sessionId, {
         experiment_id: experimentId.trim(),
-        sample_id: sampleId.trim() || undefined,
+        object_id: sampleId.trim() || undefined,
         lab_course: labCourse || undefined,
         exp_title: expTitle.trim() || undefined,
         group_name: groupName.trim() || undefined,

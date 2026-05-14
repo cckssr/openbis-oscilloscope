@@ -62,7 +62,7 @@ export function fetchArtifactScreenshot(
 
 export interface CommitRequest {
   experiment_id: string;
-  sample_id?: string;
+  object_id?: string;
   lab_course?: string;
   exp_title?: string;
   group_name?: string;

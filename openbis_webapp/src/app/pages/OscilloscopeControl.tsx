@@ -101,6 +101,12 @@ function formatMemoryDepth(n: number): string {
   return `${n} Pkt`;
 }
 
+function formatDuration(secs: number): string {
+  const s = Math.round(Math.abs(secs));
+  if (s >= 60) return `${Math.floor(s / 60)}m ${s % 60}s`;
+  return `${s}s`;
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -132,6 +138,13 @@ export function OscilloscopeControl() {
   const isAcquiringRef = useRef(false); // synchronous guard for overlapping acquires
   const [isAcquiring, setIsAcquiring] = useState(false); // for UI rendering only
   const [isAcquiringMax, setIsAcquiringMax] = useState(false);
+  const [maxAcquireElapsed, setMaxAcquireElapsed] = useState(0);
+  const [maxAcquireEstSecs, setMaxAcquireEstSecs] = useState<number | null>(
+    null,
+  );
+  const maxAcquireTimerRef = useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
   const [isScreenshotting, setIsScreenshotting] = useState(false);
   const [lastAcquisitionId, setLastAcquisitionId] = useState<string | null>(
     null,
@@ -458,7 +471,22 @@ export function OscilloscopeControl() {
       const startTime = performance.now();
       isAcquiringRef.current = true;
       setIsAcquiring(true);
-      if (maxSamples) setIsAcquiringMax(true);
+      if (maxSamples) {
+        setIsAcquiringMax(true);
+        const enabledCount = Math.max(
+          1,
+          Object.values(channelSettings).filter((cfg) => cfg.enabled).length,
+        );
+        setMaxAcquireElapsed(0);
+        setMaxAcquireEstSecs(
+          maxDepth !== null
+            ? Math.ceil((maxDepth / 600_000) * 30 * enabledCount)
+            : null,
+        );
+        maxAcquireTimerRef.current = setInterval(() => {
+          setMaxAcquireElapsed((prev) => prev + 1);
+        }, 1000);
+      }
       setCmdError(null);
       try {
         const enabledNums = Object.entries(channelSettings)
@@ -528,6 +556,7 @@ export function OscilloscopeControl() {
           setActualTimebaseScaleSDiv(actualScale);
           setTimebaseLabel(`Zeitbasis: ${formatTimebase(actualScale)}`);
           setCurrentDepth(firstData.time_s.length);
+          if (maxSamples) setMaxDepth(firstData.time_s.length);
         }
       } catch (err) {
         setCmdError(
@@ -536,13 +565,19 @@ export function OscilloscopeControl() {
       } finally {
         isAcquiringRef.current = false;
         setIsAcquiring(false);
-        setIsAcquiringMax(false);
+        if (maxSamples) {
+          setIsAcquiringMax(false);
+          if (maxAcquireTimerRef.current) {
+            clearInterval(maxAcquireTimerRef.current);
+            maxAcquireTimerRef.current = null;
+          }
+        }
         console.debug(
           `Acquisition completed in ${(performance.now() - startTime).toFixed(2)}ms`,
         );
       }
     },
-    [token, deviceId, sessionId, channelSettings],
+    [token, deviceId, sessionId, channelSettings, maxDepth],
   );
 
   // Continuous acquisition loop — runs while isRunning is true
@@ -891,6 +926,24 @@ export function OscilloscopeControl() {
                   ⓘ
                 </span>
               </div>
+              {isAcquiringMax && (
+                <div className="text-xs font-mono text-(--lab-text-secondary) px-1">
+                  {maxAcquireEstSecs !== null ? (
+                    maxAcquireElapsed < maxAcquireEstSecs ? (
+                      <span>
+                        ~{formatDuration(maxAcquireEstSecs - maxAcquireElapsed)}{" "}
+                        verbleibend
+                      </span>
+                    ) : (
+                      <span>
+                        Noch laufend… ({formatDuration(maxAcquireElapsed)})
+                      </span>
+                    )
+                  ) : (
+                    <span>{formatDuration(maxAcquireElapsed)} vergangen</span>
+                  )}
+                </div>
+              )}
             </div>
 
             <button

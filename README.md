@@ -76,22 +76,24 @@ Tests use `fakeredis` and the mock driver — no Redis or hardware required.
 
 All settings are read from environment variables (or a `.env` file):
 
-| Variable                        | Default                        | Description                                          |
-| ------------------------------- | ------------------------------ | ---------------------------------------------------- |
-| `REDIS_URL`                     | `redis://localhost:6379`       | Redis connection URL                                 |
-| `OPENBIS_URL`                   | _(required)_                   | OpenBIS server URL                                   |
-| `BUFFER_DIR`                    | `./buffer`                     | Root directory for artifact storage                  |
-| `OSCILLOSCOPES_CONFIG`          | `./config/oscilloscopes.yaml`  | Device list                                          |
-| `LOCK_TTL_SECONDS`              | `1800`                         | Lock expiry (seconds)                                |
-| `HEALTH_CHECK_INTERVAL_SECONDS` | `5`                            | TCP health check interval                            |
-| `TOKEN_CACHE_SECONDS`           | `60`                           | Token validation cache TTL                           |
-| `EOD_RESET_TIMEZONE`            | `Europe/Berlin`                | Timezone for end-of-day reset                        |
-| `DEBUG`                         | `False`                        | Mock driver + fakeredis; bypass OpenBIS auth/commit  |
-| `DEBUG_TOKEN`                   | `debug-token`                  | Bearer token accepted in `DEBUG` mode                |
-| `OPENBIS_BOT_USER`              | _(empty)_                      | Bot account for nightly sync; leave blank to disable |
-| `OPENBIS_BOT_PASSWORD`          | _(empty)_                      | Password for `OPENBIS_BOT_USER`                      |
-| `DRIVER_MAPPING_CONFIG`         | `./config/driver_mapping.yaml` | Maps `EQUIPMENT.ALTERNATIV_NAME` → driver/port       |
-| `OPENBIS_EQUIPMENT_IP_FILTER`   | `141.23.109.*`                 | IP filter for OpenBIS EQUIPMENT queries              |
+| Variable                        | Default                        | Description                                                       |
+| ------------------------------- | ------------------------------ | ----------------------------------------------------------------- |
+| `REDIS_URL`                     | `redis://localhost:6379`       | Redis connection URL                                              |
+| `OPENBIS_URL`                   | _(required)_                   | OpenBIS server URL                                                |
+| `BUFFER_DIR`                    | `./buffer`                     | Root directory for artifact storage                               |
+| `OSCILLOSCOPES_CONFIG`          | `./config/oscilloscopes.yaml`  | Device list                                                       |
+| `LOCK_TTL_SECONDS`              | `1800`                         | Lock expiry (seconds)                                             |
+| `HEALTH_CHECK_INTERVAL_SECONDS` | `5`                            | TCP health check interval                                         |
+| `TOKEN_CACHE_SECONDS`           | `60`                           | Token validation cache TTL                                        |
+| `EOD_RESET_TIMEZONE`            | `Europe/Berlin`                | Timezone for end-of-day reset                                     |
+| `DEBUG`                         | `False`                        | Mock driver + fakeredis; bypass OpenBIS auth/commit               |
+| `DEBUG_TOKEN`                   | `debug-token`                  | Bearer token accepted in `DEBUG` mode                             |
+| `OPENBIS_BOT_USER`              | _(empty)_                      | Bot account for nightly sync; leave blank to disable              |
+| `OPENBIS_BOT_PASSWORD`          | _(empty)_                      | Password for `OPENBIS_BOT_USER`                                   |
+| `DRIVER_MAPPING_CONFIG`         | `./config/driver_mapping.yaml` | Maps `EQUIPMENT.ALTERNATIV_NAME` → driver/port                    |
+| `OPENBIS_EQUIPMENT_IP_FILTER`   | `141.23.109.*`                 | IP filter for OpenBIS EQUIPMENT queries                           |
+| `OPENBIS_USE_DROPBOX`           | `False`                        | Copy ZIP to `OPENBIS_DROPBOX_PATH` instead of uploading via pybis |
+| `OPENBIS_DROPBOX_PATH`          | _(empty)_                      | Directory watched by the OpenBIS dropbox ingestion script         |
 
 ## Registering oscilloscopes
 

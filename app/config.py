@@ -41,6 +41,12 @@ class Settings(BaseSettings):
             from OpenBIS. Supports a trailing ``.*`` wildcard (e.g. ``"141.23.109.*"``).
         OPENBIS_DATASET_TYPE: OpenBIS dataset type code used when committing artifacts.
             Must match a dataset type defined in the target OpenBIS instance.
+        OPENBIS_USE_DROPBOX: When ``True``, the commit endpoint compresses artifacts into a
+            ZIP, writes a ``dataset_metadata.json`` sidecar inside it, and copies the ZIP to
+            ``OPENBIS_DROPBOX_PATH`` instead of uploading directly via pybis. An OpenBIS
+            dropbox script at that location handles the actual dataset registration.
+        OPENBIS_DROPBOX_PATH: Filesystem path to the dropbox directory monitored by the
+            OpenBIS ingestion script. Only used when ``OPENBIS_USE_DROPBOX`` is ``True``.
     """
 
     model_config = SettingsConfigDict(
@@ -66,6 +72,8 @@ class Settings(BaseSettings):
     DRIVER_MAPPING_CONFIG: str = "./config/driver_mapping.yaml"
     OPENBIS_EQUIPMENT_IP_FILTER: str = "141.23.109.*"
     OPENBIS_DATASET_TYPE: str = "OSCILLOSCOPE"
+    OPENBIS_USE_DROPBOX: bool = False
+    OPENBIS_DROPBOX_PATH: str = ""
 
 
 settings = Settings()

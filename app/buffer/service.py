@@ -1,9 +1,12 @@
 """Service layer for managing on-disk storage of waveform traces, screenshots, and HDF5 exports."""
 
 import csv
+import io
 import json
 import logging
+import re
 import shutil
+import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,6 +19,30 @@ from app.instruments.base_driver import WaveformData
 from app.core.exceptions import ArtifactNotFoundError, SessionNotFoundError
 
 logger = logging.getLogger(__name__)
+
+
+def _slugify(text: str) -> str:
+    """Convert arbitrary text to a safe filename stem (max 80 chars)."""
+    text = text.strip()
+    text = re.sub(r"[^\w\s\-]", "", text)
+    text = re.sub(r"\s+", "_", text)
+    text = re.sub(r"_+", "_", text).strip("_")
+    return text[:80] or "unnamed"
+
+
+def _unique_name(base: str, ext: str, used: set[str]) -> str:
+    """Return ``base+ext`` (or ``base_N+ext``) guaranteed not in *used*, then add it."""
+    candidate = f"{base}{ext}"
+    if candidate not in used:
+        used.add(candidate)
+        return candidate
+    i = 2
+    while True:
+        candidate = f"{base}_{i}{ext}"
+        if candidate not in used:
+            used.add(candidate)
+            return candidate
+        i += 1
 
 
 @dataclass
@@ -655,6 +682,154 @@ class BufferService:
             shutil.copy(unpack_src, session_dir / "unpack_hdf5.py")
 
         return h5_path
+
+    def create_commit_zip(
+        self,
+        session_id: str,
+        flagged: list[ArtifactInfo],
+        extra_content: dict[str, str] | None = None,
+    ) -> Path:
+        """Bundle flagged artifacts into a compressed ZIP ready for OpenBIS upload.
+
+        Channels that share an ``acquisition_id`` are merged into a single CSV
+        with columns ``time_s, ch1_voltage_V, ch2_voltage_V, …``. When an
+        artifact (or its acquisition group) carries an annotation it is used as
+        the filename; duplicate annotations are disambiguated with a numeric
+        suffix.
+
+        Args:
+            session_id: Control session UUID whose artifacts should be bundled.
+            flagged: List of :class:`ArtifactInfo` entries to include.
+            extra_content: Optional mapping of ``filename → text`` for extra
+                entries to write verbatim into the ZIP (e.g. a metadata JSON).
+
+        Returns:
+            Path to the created ``.zip`` file inside the session directory.
+
+        Raises:
+            SessionNotFoundError: If the session directory does not exist.
+        """
+        result = self._find_session_dir(session_id)
+        if result is None:
+            raise SessionNotFoundError(session_id)
+        session_dir, _ = result
+
+        zip_path = session_dir / f"commit_{session_id}.zip"
+        used_names: set[str] = set()
+
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            # Partition into acquisition groups and ungrouped artifacts.
+            groups: dict[str, list[ArtifactInfo]] = {}
+            ungrouped: list[ArtifactInfo] = []
+            for art in flagged:
+                if art.acquisition_id:
+                    groups.setdefault(art.acquisition_id, []).append(art)
+                else:
+                    ungrouped.append(art)
+
+            for arts in groups.values():
+                self._zip_acquisition_group(session_id, arts, zf, used_names)
+
+            for art in ungrouped:
+                self._zip_single_artifact(session_id, art, zf, used_names)
+
+            if extra_content:
+                for fname, content in extra_content.items():
+                    zf.writestr(fname, content)
+
+        return zip_path
+
+    def _zip_acquisition_group(
+        self,
+        session_id: str,
+        arts: list[ArtifactInfo],
+        zf: zipfile.ZipFile,
+        used: set[str],
+    ) -> None:
+        """Write one acquisition group into *zf*, merging multi-channel traces."""
+        annotation = next((a.annotation for a in arts if a.annotation), None)
+        trace_arts = [a for a in arts if a.artifact_type == "trace"]
+        screenshot_arts = [a for a in arts if a.artifact_type == "screenshot"]
+
+        for art in screenshot_arts:
+            ann = art.annotation or annotation
+            base = _slugify(ann) if ann else f"screenshot_{art.seq:04d}"
+            name = _unique_name(base, ".png", used)
+            for p in self.get_artifact_paths(session_id, art.artifact_id):
+                if p.suffix == ".png" and p.exists():
+                    zf.write(p, name)
+
+        if not trace_arts:
+            return
+
+        trace_arts = sorted(trace_arts, key=lambda a: a.channel or 0)
+
+        if len(trace_arts) == 1:
+            art = trace_arts[0]
+            base = (
+                _slugify(annotation)
+                if annotation
+                else f"trace_{art.seq:04d}_ch{art.channel}"
+            )
+            name = _unique_name(base, ".csv", used)
+            for p in self.get_artifact_paths(session_id, art.artifact_id):
+                if p.suffix == ".csv" and p.exists():
+                    zf.write(p, name)
+            return
+
+        # Multi-channel: build merged CSV in memory.
+        seq_min = min(a.seq for a in trace_arts)
+        base = (
+            _slugify(annotation) if annotation else f"trace_{seq_min:04d}_multichannel"
+        )
+        name = _unique_name(base, ".csv", used)
+
+        channels: list[tuple[int, list[float], list[float]]] = []
+        for art in trace_arts:
+            for p in self.get_artifact_paths(session_id, art.artifact_id):
+                if p.suffix == ".csv" and p.exists():
+                    times, volts = self.read_trace_csv(p)
+                    channels.append((art.channel or 0, times, volts))
+
+        if not channels:
+            return
+
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(["time_s"] + [f"ch{ch}_voltage_V" for ch, _, _ in channels])
+        time_ref = channels[0][1]
+        for i, t in enumerate(time_ref):
+            row = [f"{t:.6e}"] + [
+                f"{volts[i]:.6e}" if i < len(volts) else "" for _, _, volts in channels
+            ]
+            writer.writerow(row)
+        zf.writestr(name, buf.getvalue())
+
+    def _zip_single_artifact(
+        self,
+        session_id: str,
+        art: ArtifactInfo,
+        zf: zipfile.ZipFile,
+        used: set[str],
+    ) -> None:
+        """Write a single (ungrouped) artifact into *zf*."""
+        annotation = art.annotation
+        if art.artifact_type == "trace":
+            base = (
+                _slugify(annotation)
+                if annotation
+                else f"trace_{art.seq:04d}_ch{art.channel}"
+            )
+            name = _unique_name(base, ".csv", used)
+            for p in self.get_artifact_paths(session_id, art.artifact_id):
+                if p.suffix == ".csv" and p.exists():
+                    zf.write(p, name)
+        elif art.artifact_type == "screenshot":
+            base = _slugify(annotation) if annotation else f"screenshot_{art.seq:04d}"
+            name = _unique_name(base, ".png", used)
+            for p in self.get_artifact_paths(session_id, art.artifact_id):
+                if p.suffix == ".png" and p.exists():
+                    zf.write(p, name)
 
 
 buffer_service = BufferService()

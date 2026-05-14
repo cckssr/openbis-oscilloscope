@@ -1,6 +1,11 @@
 """API endpoints for managing control sessions and their artifacts."""
 
+import json
+import logging
+import shutil
 from datetime import datetime, timezone
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import Response
 from pydantic import BaseModel
@@ -9,6 +14,8 @@ from app.config import settings
 from app.core.dependencies import get_current_user
 from app.core.exceptions import SessionNotFoundError, ValidationError
 from app.openbis_client.client import UserInfo
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -156,11 +163,6 @@ async def commit_session(
             raise SessionNotFoundError(session_id)
         raise ValidationError("No artifacts are flagged for commit")
 
-    all_files = []
-    for art in flagged:
-        paths = buffer_service.get_artifact_paths(session_id, art.artifact_id)
-        all_files.extend(str(p) for p in paths if p.exists())
-
     auth_header = request.headers.get("Authorization", "")
     token = auth_header.removeprefix("Bearer ").strip()
 
@@ -206,16 +208,66 @@ async def commit_session(
         if value is not None:
             properties[key] = value
 
+    if settings.OPENBIS_USE_DROPBOX:
+        return await _commit_via_dropbox(
+            token=token,
+            session_id=session_id,
+            flagged=flagged,
+            body=body,
+            properties=properties,
+            buffer_service=buffer_service,
+            openbis_client=openbis_client,
+        )
+
+    zip_path = buffer_service.create_commit_zip(session_id, flagged)
     perm_id = await openbis_client.create_dataset(
         token=token,
         experiment_id=body.experiment_id,
-        files=all_files,
+        files=[str(zip_path)],
         properties=properties,
         dataset_type=settings.OPENBIS_DATASET_TYPE,
         object_id=body.object_id or None,
     )
-
     return {"permId": perm_id, "artifact_count": len(flagged)}
+
+
+async def _commit_via_dropbox(
+    token: str,
+    session_id: str,
+    flagged: list,
+    body: _CommitRequest,
+    properties: dict,
+    buffer_service,
+    openbis_client,
+) -> dict:
+    """Validate the session token, compress artifacts into a ZIP, and drop it
+    into the configured dropbox directory for external OpenBIS ingestion."""
+    await openbis_client.validate_token(token)
+
+    metadata = {
+        "experiment_id": body.experiment_id,
+        "object_id": body.object_id,
+        "dataset_type": settings.OPENBIS_DATASET_TYPE,
+        "properties": properties,
+    }
+    zip_path = buffer_service.create_commit_zip(
+        session_id,
+        flagged,
+        extra_content={"dataset_metadata.json": json.dumps(metadata, indent=2)},
+    )
+
+    dropbox_dir = Path(settings.OPENBIS_DROPBOX_PATH)
+    dropbox_dir.mkdir(parents=True, exist_ok=True)
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    dest = dropbox_dir / f"{ts}_{session_id}.zip"
+    shutil.copy2(zip_path, dest)
+
+    logger.info("Dropbox commit: copied %s → %s", zip_path.name, dest)
+    return {
+        "permId": None,
+        "artifact_count": len(flagged),
+        "dropbox_file": str(dest),
+    }
 
 
 class _AnnotationBody(BaseModel):

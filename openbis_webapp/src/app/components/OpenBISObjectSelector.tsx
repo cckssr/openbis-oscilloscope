@@ -144,10 +144,9 @@ export function OpenBISObjectSelector({
     setSelectedObject(identifier);
     const proj = projects.find((p) => p.code === selectedProject);
     const col = collections.find((c) => c.code === selectedCollection);
-    // If an object is selected, use it as the upload target; otherwise fall back to collection
     onSelect({
-      experimentId: identifier || col?.identifier || selectedCollection,
-      sampleId: "",
+      experimentId: col?.identifier ?? selectedCollection,
+      sampleId: identifier,
       groupName: proj?.group_name ?? "",
       semester: proj?.semester ?? "",
     });
