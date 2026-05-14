@@ -19,7 +19,7 @@ Abstract base class every driver must subclass, plus the data classes used as re
 | `InstrumentInfo` | `idn`, `ip`, `firmware`                                                                      | Identity string and parsed firmware version.                                                |
 
 **Abstract methods every driver must implement:**
-`connect()`, `disconnect()`, `identify()`, `run()`, `stop()`, `acquire_waveform(channel)`, `get_screenshot()`, `get_channel_config(channel)`, `get_timebase()`, `get_trigger()`, `set_channel_config(channel, config)`, `set_timebase(config)`, `set_trigger(config)`
+`connect()`, `disconnect()`, `identify()`, `run()`, `stop()`, `acquire_waveform(channel)`, `get_screenshot()`, `get_channel_config(channel)`, `get_timebase()`, `get_trigger()`, `set_channel_config(channel, config)`, `set_timebase(config)`, `set_trigger(config)`, `get_memory_depth()`
 
 **Non-abstract methods provided by the base class:**
 
@@ -104,6 +104,7 @@ The monitor is **always started**, including in `DEBUG=True` mode. Devices confi
 | `set_channel_config(ch, cfg)`                | Writes `ch{n}.is_enabled`, `.scale`, `.offset`, `.coupling`, `.probe_ratio`.                                                                                                                                                                                                                    |
 | `set_timebase(cfg)`                          | Writes `timebase_scale` and `timebase_offset`. `sample_rate` is read-only on the instrument and is ignored.                                                                                                                                                                                     |
 | `set_trigger(cfg)`                           | Reverse-maps slope/mode to SCPI values; normalises `CH1` → `CHAN1`; writes edge source, level, slope, and sweep mode.                                                                                                                                                                           |
+| `get_memory_depth()`                         | Queries the waveform preamble for the current source and returns the `points` field — the number of samples in acquisition memory.                                                                                                                                                              |
 
 ---
 

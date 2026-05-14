@@ -561,6 +561,36 @@ async def get_settings(
     return await manager.execute_command(device_id, _get)
 
 
+@router.get(
+    "/{device_id}/memory-depth",
+    response_model=dict,
+    summary="Get memory depth",
+    response_description="Current acquisition memory depth in samples.",
+)
+async def get_memory_depth(
+    request: Request,
+    device_id: str = Path(..., description="Device identifier."),
+    _user: UserInfo = Depends(get_current_user),
+) -> dict:
+    """Return the current acquisition memory depth for the device."""
+    manager, _ = _get_services(request)
+    try:
+        entry = manager.get_device(device_id)
+    except KeyError as e:
+        raise DeviceNotFoundError(device_id) from e
+
+    if entry.driver is None:
+        raise DeviceOfflineError(device_id)
+
+    driver = entry.driver
+
+    async def _get():
+        return driver.get_memory_depth()
+
+    depth = await manager.execute_command(device_id, _get)
+    return {"device_id": device_id, "memory_depth": depth}
+
+
 @router.put(
     "/{device_id}/channels/{channel}/config",
     response_model=dict,

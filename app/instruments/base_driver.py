@@ -292,6 +292,14 @@ class BaseOscilloscopeDriver(ABC):
             locked: ``True`` to lock the front-panel keys; ``False`` to unlock.
         """
 
+    @abstractmethod
+    def get_memory_depth(self) -> int:
+        """Return the current acquisition memory depth in samples.
+
+        Returns:
+            Number of samples currently configured in the acquisition memory.
+        """
+
     def get_all_settings(self) -> dict:
         """Collect a complete snapshot of all instrument settings for metadata storage.
 
@@ -499,6 +507,12 @@ class MockOscilloscopeDriver(BaseOscilloscopeDriver):
 
     def set_trigger(self, config: TriggerConfig) -> None:
         self._trigger = config
+
+    def get_memory_depth(self) -> int:
+        num_divs = 10
+        window_s = self._timebase.scale_s_div * num_divs
+        sample_rate = 1e6
+        return min(max(1000, int(sample_rate * window_s)), 100_000)
 
     def set_keyboard_lock(self, locked: bool) -> None:
         self._keyboard_locked = locked

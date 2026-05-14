@@ -16,7 +16,6 @@ from app.instruments.base_driver import (
     WaveformData,
 )
 
-
 _BLANK_PNG: bytes | None = None  # cached after first call
 
 
@@ -292,3 +291,16 @@ class MockOscilloscopeDriver(BaseOscilloscopeDriver):
             config: New :class:`~app.instruments.base_driver.TriggerConfig` to apply.
         """
         self._trigger = config
+
+    def get_memory_depth(self) -> int:
+        """Return the simulated acquisition memory depth in samples.
+
+        Mirrors the record-length calculation used by :meth:`acquire_waveform`.
+
+        Returns:
+            Number of samples that would be acquired at the current timebase setting.
+        """
+        num_divs = 10
+        window_s = self._timebase.scale_s_div * num_divs
+        sample_rate = 1e6
+        return min(max(1000, int(sample_rate * window_s)), 100_000)

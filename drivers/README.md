@@ -31,6 +31,7 @@ Every driver must implement these abstract methods:
 | `run()`                                        | Start continuous acquisition                 |
 | `stop()`                                       | Stop acquisition                             |
 | `acquire_waveform(channel) -> WaveformData`    | Transfer waveform data                       |
+| `get_memory_depth() -> int`                    | Return acquisition memory depth in samples   |
 | `get_screenshot() -> bytes`                    | Capture screen as PNG bytes                  |
 | `get_channel_config(channel) -> ChannelConfig` | Query channel settings                       |
 | `get_timebase() -> TimebaseConfig`             | Query timebase settings                      |

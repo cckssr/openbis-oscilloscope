@@ -304,6 +304,19 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
         self.instrument.trigger_edge_slope = _slope_rev.get(config.slope, config.slope)
         self.instrument.trigger_sweep = _sweep_rev.get(config.mode, config.mode)
 
+    def get_memory_depth(self) -> int:
+        """Return the current acquisition memory depth from the waveform preamble.
+
+        Queries the preamble for the currently selected waveform source and
+        returns the ``points`` field, which reflects the actual number of
+        samples stored in acquisition memory.
+
+        Returns:
+            Number of samples in the current acquisition memory.
+        """
+        preamble = self.instrument.get_waveform_preamble()
+        return int(preamble["points"])
+
     def set_keyboard_lock(self, locked: bool) -> None:
         """Lock or unlock the physical front-panel keys via SCPI.
 
