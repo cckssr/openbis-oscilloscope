@@ -39,9 +39,10 @@ export function TriggerPanel({
         />
       </div>
       <div>
-        <label className="block text-xs text-(--lab-text-secondary) mb-2">
+        <label className="block text-xs text-(--lab-text-secondary) mb-1">
           Triggerquelle
         </label>
+        <p className="text-[10px] text-(--lab-text-secondary) mb-2">Kanal, auf den das Triggersystem reagiert.</p>
         <SegmentedControl
           options={["CH1", "CH2", "CH3", "CH4"]}
           value={triggerSettings.source}

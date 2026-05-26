@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from pathlib import Path
 from typing import Any
@@ -65,12 +66,12 @@ async def sync_oscilloscopes_from_openbis(settings) -> None:
         return
 
     try:
-        await _run_sync(settings)
+        await asyncio.to_thread(_run_sync_blocking, settings)
     except Exception:
         logger.exception("OpenBIS oscilloscope sync failed")
 
 
-async def _run_sync(settings) -> None:
+def _run_sync_blocking(settings) -> None:
     mapping_raw = _load_yaml(settings.DRIVER_MAPPING_CONFIG)
     driver_mapping: dict[str, dict] = mapping_raw.get("driver_mapping", {})
     if not driver_mapping:

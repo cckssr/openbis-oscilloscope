@@ -1,10 +1,16 @@
-import { createBrowserRouter, Navigate } from "react-router";
+import { createBrowserRouter, Navigate, useParams } from "react-router";
 import { createElement } from "react";
 import { DeviceList } from "./pages/DeviceList";
 import { OscilloscopeControl } from "./pages/OscilloscopeControl";
 import { DataArchive } from "./pages/DataArchive";
 import { Login } from "./pages/Login";
 import { useAuth } from "./context/AuthContext";
+
+/** Forces a full remount of OscilloscopeControl when the device route changes. */
+function KeyedOscilloscopeControl() {
+  const { deviceId } = useParams<{ deviceId: string }>();
+  return createElement(OscilloscopeControl, { key: deviceId });
+}
 
 /** Redirect to /login when not authenticated, show spinner while loading. */
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -45,11 +51,7 @@ export const router = createBrowserRouter(
     },
     {
       path: "/device/:deviceId",
-      element: createElement(
-        RequireAuth,
-        null,
-        createElement(OscilloscopeControl),
-      ),
+      element: createElement(RequireAuth, null, createElement(KeyedOscilloscopeControl)),
     },
     {
       path: "/archive/:sessionId",

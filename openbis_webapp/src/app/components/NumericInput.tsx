@@ -52,12 +52,16 @@ export function NumericInput({
       <div className="flex flex-col">
         <button
           onClick={handleIncrement}
+          aria-label="Wert erhöhen"
+          title="Wert erhöhen"
           className="p-0.5 border border-(--lab-border) rounded-t text-(--lab-text-secondary) hover:bg-(--lab-panel) hover:text-(--lab-text-primary)"
         >
           <ChevronUp className="w-3 h-3" />
         </button>
         <button
           onClick={handleDecrement}
+          aria-label="Wert verringern"
+          title="Wert verringern"
           className="p-0.5 border border-(--lab-border) rounded-b text-(--lab-text-secondary) hover:bg-(--lab-panel) hover:text-(--lab-text-primary)"
         >
           <ChevronDown className="w-3 h-3" />

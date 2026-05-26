@@ -22,8 +22,8 @@ Provides exclusive, time-limited control over a single oscilloscope to one user 
 | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `acquire_lock(device_id, user_id) -> LockInfo` | Atomically sets `lock:{device_id}` in Redis (`SET NX EX`). Raises `LockConflictError` if already held by someone else. Returns a fresh `LockInfo` with a new `session_id`. |
 | `get_lock(device_id) -> LockInfo \| None`      | Returns current lock metadata, or `None` if the device is free.                                                                                                            |
-| `release_lock(device_id, session_id, user_id)` | Deletes the Redis key. Raises `LockConflictError` if `session_id` or `user_id` do not match the stored lock.                                                               |
-| `renew_lock(device_id, session_id, user_id)`   | Resets the Redis TTL. Same ownership check as `release_lock`.                                                                                                              |
+| `release_lock(device_id, session_id, user_id)` | Atomically deletes the Redis key using a WATCH/MULTI/EXEC pipeline. Raises `LockConflictError` if `session_id` or `user_id` do not match; returns `False` if key was already gone. Retries automatically on `WatchError` (concurrent modification). |
+| `renew_lock(device_id, session_id, user_id)`   | Resets the Redis TTL using a WATCH/MULTI/EXEC pipeline. Same ownership check and retry-on-`WatchError` semantics as `release_lock`.                                        |
 | `reset_all_locks()`                            | Deletes all `lock:*` keys. Called by the end-of-day scheduler job.                                                                                                         |
 
 ## Redis key format

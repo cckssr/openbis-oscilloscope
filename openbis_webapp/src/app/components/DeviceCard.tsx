@@ -49,8 +49,8 @@ export function DeviceCard({
         disabled={status === "OFFLINE" || status === "ERROR"}
         className={`w-full py-2 px-4 border-2 rounded font-medium text-sm transition-colors ${
           status === "OFFLINE"
-            ? "border-(--lab-border)] bg-(--lab-panel) text-[var(--lab-text-secondary) cursor-not-allowed"
-            : "border-(--lab-accent)] bg-white text-(--lab-accent) hover:bg-[var(--lab-accent) hover:text-white"
+            ? "border-[var(--lab-border)] bg-[var(--lab-panel)] text-[var(--lab-text-secondary)] cursor-not-allowed"
+            : "border-[var(--lab-accent)] bg-white text-[var(--lab-accent)] hover:bg-[var(--lab-accent)] hover:text-white"
         }`}
       >
         Öffnen

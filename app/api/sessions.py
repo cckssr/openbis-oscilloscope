@@ -1,5 +1,6 @@
 """API endpoints for managing control sessions and their artifacts."""
 
+import asyncio
 import json
 import logging
 import shutil
@@ -257,10 +258,14 @@ async def _commit_via_dropbox(
     )
 
     dropbox_dir = Path(settings.OPENBIS_DROPBOX_PATH)
-    dropbox_dir.mkdir(parents=True, exist_ok=True)
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     dest = dropbox_dir / f"{ts}_{session_id}.zip"
-    shutil.copy2(zip_path, dest)
+
+    def _copy_to_dropbox() -> None:
+        dropbox_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(zip_path, dest)
+
+    await asyncio.to_thread(_copy_to_dropbox)
 
     logger.info("Dropbox commit: copied %s → %s", zip_path.name, dest)
     return {

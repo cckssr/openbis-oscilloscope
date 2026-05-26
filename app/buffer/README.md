@@ -21,6 +21,8 @@ Persists waveforms, screenshots, and HDF5 exports to the local file system and m
 | `annotation`     | `str \| None` | User-supplied label for the acquisition group (e.g. `"decay capacitor a"`)                     |
 | `run_id`         | `str \| None` | UUID shared by all acquisitions from a single RUN press; `None` for manual/single acquisitions |
 
+**Thread safety:** All mutating methods (`store_waveform`, `store_screenshot`, `set_flag`, `set_annotation`) acquire a per-session `threading.Lock` around the `_load_index → mutate → _save_index` sequence, so concurrent calls from the thread pool cannot lose index updates. `_save_index` writes atomically via a `.tmp` file + `Path.replace()` (POSIX rename) to prevent readers from seeing partially written JSON. `_load_index` catches `JSONDecodeError` and returns an empty index with a warning log (handles legacy or truncated files).
+
 **`BufferService`** — public methods:
 
 | Method                                                                            | Returns              | Description                                                                                                                                                                                                                                                                                                                                                                      |

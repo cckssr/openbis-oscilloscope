@@ -46,10 +46,12 @@ Abstract base class every driver must subclass, plus the data classes used as re
 **Lifecycle:**
 
 - `startup()` — reads `oscilloscopes.yaml`, creates a `DeviceEntry` per device, spawns one `asyncio` worker task per device.
-- `execute_command(device_id, cmd, ...)` — enqueues a command; the per-device worker picks it up and calls the driver method. Commands to different devices run in parallel; commands to the same device are serialized.
+- `execute_command(device_id, cmd, ...)` — enqueues a command on a bounded `asyncio.Queue(maxsize=32)`; raises `AppError(503, ..., "queue_full")` when full. The per-device worker picks it up and calls the driver method. Commands to different devices run in parallel; commands to the same device are serialized. On `TimeoutError`, a `timed_out` flag is set on the queue item so the worker skips restoring the previous state after the shielded coroutine completes.
 - `instantiate_driver(device_id)` — dynamically imports the driver class from the dotted path in config, or returns `MockOscilloscopeDriver` when `driver: "mock"`. Real drivers are always used regardless of `DEBUG` mode.
-- `update_state(device_id, state)` — called by the health monitor and the app on state changes. Sets `entry.online_since` when transitioning to `ONLINE`; clears it on `OFFLINE`/`ERROR`.
+- `update_state(device_id, state)` — called by the health monitor and the app on state changes. Sets `entry.online_since` when transitioning to `ONLINE`; clears it on `OFFLINE`/`ERROR`. Publishes a `device_state` event to `event_bus` if one is attached.
 - `shutdown()` — cancels all worker tasks, disconnects all drivers.
+
+**`event_bus`** — optional `EventBus` instance (attached at startup via `app.main`). When set, `update_state` publishes `{"type": "device_state", "device_id": ..., "state": ..., "last_error": ...}` for SSE consumers.
 
 ---
 
@@ -62,6 +64,8 @@ Abstract base class every driver must subclass, plus the data classes used as re
 | `OFFLINE` → `ONLINE`            | TCP connect succeeds; driver is instantiated and connected  |
 | `ERROR` → `ONLINE`              | Same as above                                               |
 | `ONLINE` / `LOCKED` → `OFFLINE` | TCP connect fails; driver is disconnected and set to `None` |
+
+Per-device checks run concurrently via `asyncio.gather` so one stalled scope cannot delay others. `driver.connect()` and `driver.identify()` are offloaded to a thread pool via `asyncio.to_thread`.
 
 The check interval is controlled by `HEALTH_CHECK_INTERVAL_SECONDS` (default 5 s). The TCP connection timeout is controlled by `HEALTH_CHECK_TCP_TIMEOUT_SECONDS` (default 2.0 s).
 

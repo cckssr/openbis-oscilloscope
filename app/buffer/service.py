@@ -6,6 +6,7 @@ import json
 import logging
 import re
 import shutil
+import threading
 import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -98,8 +99,12 @@ class BufferService:
         Args:
             buffer_dir: Path to the root storage directory. If ``None``,
                 :attr:`~app.config.Settings.BUFFER_DIR` is used.
+            _session_locks: Per-(device_id, session_id) threading locks that
+                serialize concurrent index mutations from the thread pool.
         """
         self._root = Path(buffer_dir or settings.BUFFER_DIR)
+        self._session_locks: dict[tuple[str, str], threading.Lock] = {}
+        self._meta_lock = threading.Lock()
 
     def _session_dir(self, device_id: str, session_id: str) -> Path:
         """Return (and create) the directory for a device/session pair.
@@ -128,6 +133,18 @@ class BufferService:
         """
         return self._session_dir(device_id, session_id) / "index.json"
 
+    def _get_session_lock(self, device_id: str, session_id: str) -> threading.Lock:
+        """Return (creating if needed) the per-session threading lock.
+
+        The meta-lock serialises dict look-ups so two threads creating a new
+        session key simultaneously do not race.
+        """
+        key = (device_id, session_id)
+        with self._meta_lock:
+            if key not in self._session_locks:
+                self._session_locks[key] = threading.Lock()
+            return self._session_locks[key]
+
     def _load_index(self, device_id: str, session_id: str) -> dict:
         """Load the artifact index for a session from disk.
 
@@ -137,15 +154,25 @@ class BufferService:
 
         Returns:
             The parsed ``index.json`` dict, or ``{"artifacts": []}`` if the
-            file does not yet exist.
+            file does not yet exist or its JSON is corrupt.
         """
         p = self._index_path(device_id, session_id)
         if p.exists():
-            return json.loads(p.read_text())
+            try:
+                return json.loads(p.read_text())
+            except json.JSONDecodeError:
+                logger.warning(
+                    "Corrupt index.json for session %s/%s — resetting to empty",
+                    device_id,
+                    session_id,
+                )
         return {"artifacts": []}
 
     def _save_index(self, device_id: str, session_id: str, index: dict) -> None:
-        """Write the artifact index for a session to disk.
+        """Atomically write the artifact index for a session to disk.
+
+        Writes to a ``.tmp`` sidecar first and then renames over the final path
+        so readers never observe a partially-written file.
 
         Args:
             device_id: Device identifier.
@@ -153,7 +180,9 @@ class BufferService:
             index: The index dict to serialise to ``index.json``.
         """
         p = self._index_path(device_id, session_id)
-        p.write_text(json.dumps(index, indent=2))
+        tmp = p.with_suffix(".tmp")
+        tmp.write_text(json.dumps(index, indent=2))
+        tmp.replace(p)
 
     def _next_seq(self, index: dict) -> int:
         """Compute the next sequence number for a new artifact in a session.
@@ -217,15 +246,33 @@ class BufferService:
             (e.g. ``"trace_0001_ch1"``).
         """
         d = self._session_dir(device_id, session_id)
-        index = self._load_index(device_id, session_id)
-        seq = self._next_seq(index)
-
-        csv_name = f"trace_{seq:04d}_ch{waveform.channel}.csv"
-        meta_name = f"trace_{seq:04d}_meta.json"
-        artifact_id = f"trace_{seq:04d}_ch{waveform.channel}"
         now_iso = datetime.now(timezone.utc).isoformat()
 
-        # Write CSV
+        # Reserve a sequence number and register in the index atomically.
+        with self._get_session_lock(device_id, session_id):
+            index = self._load_index(device_id, session_id)
+            seq = self._next_seq(index)
+            csv_name = f"trace_{seq:04d}_ch{waveform.channel}.csv"
+            meta_name = f"trace_{seq:04d}_meta.json"
+            artifact_id = f"trace_{seq:04d}_ch{waveform.channel}"
+            index["artifacts"].append(
+                {
+                    "artifact_id": artifact_id,
+                    "artifact_type": "trace",
+                    "channel": waveform.channel,
+                    "seq": seq,
+                    "persist": False,
+                    "created_at": now_iso,
+                    "files": [csv_name, meta_name],
+                    "acquisition_id": acquisition_id,
+                    "annotation": None,
+                    "run_id": run_id,
+                }
+            )
+            self._save_index(device_id, session_id, index)
+
+        # Write the data files after releasing the lock; names are unique so
+        # there is no conflict with other sessions or concurrent acquisitions.
         csv_path = d / csv_name
         with csv_path.open("w", newline="") as f:
             f.write(
@@ -241,7 +288,6 @@ class BufferService:
             for t_val, v_val in zip(waveform.time_array, waveform.voltage_array):
                 writer.writerow([f"{t_val:.6e}", f"{v_val:.6e}"])
 
-        # Write metadata JSON
         meta_payload = {
             "artifact_id": artifact_id,
             "device_id": device_id,
@@ -255,23 +301,6 @@ class BufferService:
             "instrument_settings": meta,
         }
         (d / meta_name).write_text(json.dumps(meta_payload, indent=2))
-
-        # Update index
-        index["artifacts"].append(
-            {
-                "artifact_id": artifact_id,
-                "artifact_type": "trace",
-                "channel": waveform.channel,
-                "seq": seq,
-                "persist": False,
-                "created_at": now_iso,
-                "files": [csv_name, meta_name],
-                "acquisition_id": acquisition_id,
-                "annotation": None,
-                "run_id": run_id,
-            }
-        )
-        self._save_index(device_id, session_id, index)
 
         logger.debug("Stored waveform artifact %s", artifact_id)
         return artifact_id
@@ -295,29 +324,29 @@ class BufferService:
             (e.g. ``"screenshot_0002"``).
         """
         d = self._session_dir(device_id, session_id)
-        index = self._load_index(device_id, session_id)
-        seq = self._next_seq(index)
-
-        png_name = f"screenshot_{seq:04d}.png"
-        artifact_id = f"screenshot_{seq:04d}"
         now_iso = datetime.now(timezone.utc).isoformat()
 
-        (d / png_name).write_bytes(png_bytes)
+        with self._get_session_lock(device_id, session_id):
+            index = self._load_index(device_id, session_id)
+            seq = self._next_seq(index)
+            png_name = f"screenshot_{seq:04d}.png"
+            artifact_id = f"screenshot_{seq:04d}"
+            index["artifacts"].append(
+                {
+                    "artifact_id": artifact_id,
+                    "artifact_type": "screenshot",
+                    "channel": None,
+                    "seq": seq,
+                    "persist": False,
+                    "created_at": now_iso,
+                    "files": [png_name],
+                    "acquisition_id": None,
+                    "annotation": None,
+                }
+            )
+            self._save_index(device_id, session_id, index)
 
-        index["artifacts"].append(
-            {
-                "artifact_id": artifact_id,
-                "artifact_type": "screenshot",
-                "channel": None,
-                "seq": seq,
-                "persist": False,
-                "created_at": now_iso,
-                "files": [png_name],
-                "acquisition_id": None,
-                "annotation": None,
-            }
-        )
-        self._save_index(device_id, session_id, index)
+        (d / png_name).write_bytes(png_bytes)
 
         logger.debug("Stored screenshot artifact %s", artifact_id)
         return artifact_id
@@ -394,13 +423,13 @@ class BufferService:
         if result is None:
             raise SessionNotFoundError(session_id)
         _, device_id = result
-        index = self._load_index(device_id, session_id)
-        for artifact in index["artifacts"]:
-            if artifact["artifact_id"] == artifact_id:
-                artifact["persist"] = persist
-                self._save_index(device_id, session_id, index)
-                return
-
+        with self._get_session_lock(device_id, session_id):
+            index = self._load_index(device_id, session_id)
+            for artifact in index["artifacts"]:
+                if artifact["artifact_id"] == artifact_id:
+                    artifact["persist"] = persist
+                    self._save_index(device_id, session_id, index)
+                    return
         raise ArtifactNotFoundError(artifact_id)
 
     def get_flagged_artifacts(self, session_id: str) -> list[ArtifactInfo]:
@@ -432,15 +461,16 @@ class BufferService:
         if result is None:
             raise SessionNotFoundError(session_id)
         _, device_id = result
-        index = self._load_index(device_id, session_id)
-        matched = False
-        for artifact in index["artifacts"]:
-            if artifact.get("acquisition_id") == acquisition_id:
-                artifact["annotation"] = annotation
-                matched = True
-        if not matched:
-            raise ArtifactNotFoundError(acquisition_id)
-        self._save_index(device_id, session_id, index)
+        with self._get_session_lock(device_id, session_id):
+            index = self._load_index(device_id, session_id)
+            matched = False
+            for artifact in index["artifacts"]:
+                if artifact.get("acquisition_id") == acquisition_id:
+                    artifact["annotation"] = annotation
+                    matched = True
+            if not matched:
+                raise ArtifactNotFoundError(acquisition_id)
+            self._save_index(device_id, session_id, index)
 
     def get_trace_data(
         self, session_id: str, artifact_id: str

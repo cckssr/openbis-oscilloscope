@@ -63,6 +63,23 @@ Live OpenBIS hierarchy queries (lazily loaded, 5-minute TTL cache per token+para
 
 ---
 
+### `events.py` — `/devices/events`
+
+Server-Sent Events channel for real-time device and lock state push.
+
+| Method | Path              | Auth   | Description                                                                                                       |
+| ------ | ----------------- | ------ | ----------------------------------------------------------------------------------------------------------------- |
+| GET    | `/devices/events` | Bearer | SSE stream. Sends `data: {type, ...}\n\n` on device state transitions and lock changes. Keepalive `: ping` every 20 s. |
+
+Event types:
+
+- `device_state` — `{type, device_id, state, last_error}` — emitted when a device transitions state.
+- `lock` — `{type, device_id, owner_user, session_id|null}` — emitted on lock acquire/release.
+
+The `EventBus` (in-process fan-out queue) is attached to `app.state.event_bus` at startup. `InstrumentManager` and `LockService` publish events via injected `event_bus`.
+
+---
+
 ### `admin.py` — `/admin`
 
 All endpoints require `require_admin()` (HTTP 403 for non-admins).

@@ -112,7 +112,8 @@ function formatDuration(secs: number): string {
 // Component
 // ---------------------------------------------------------------------------
 
-const HEARTBEAT_INTERVAL_MS = 4 * 60 * 1000;
+// Heartbeat every 60 s — must be well under the server's LOCK_TTL_SECONDS (default 300 s).
+const HEARTBEAT_INTERVAL_MS = 60_000;
 
 const DEFAULT_CHANNEL_CFG: ChannelConfig = {
   enabled: false,
@@ -126,6 +127,13 @@ export function OscilloscopeControl() {
   const { deviceId } = useParams<{ deviceId: string }>();
   const navigate = useNavigate();
   const { token } = useAuth();
+
+  // Tracks whether the component is still mounted; guards setState calls after awaits.
+  const mountedRef = useRef(true);
+  // Always points to the latest handleAcquire; lets the run-loop interval stay stable.
+  const acquireRef = useRef<(maxSamples?: boolean) => Promise<void>>(
+    async () => {},
+  );
 
   const [device, setDevice] = useState<DeviceDetail | null>(null);
   const [deviceError, setDeviceError] = useState<string | null>(null);
@@ -295,6 +303,18 @@ export function OscilloscopeControl() {
     }
   }, [token, deviceId]);
 
+  // Unmount cleanup — mark component gone and clear any running timers.
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (maxAcquireTimerRef.current) {
+        clearInterval(maxAcquireTimerRef.current);
+        maxAcquireTimerRef.current = null;
+      }
+    };
+  }, []);
+
   // Load device info on mount; restore sessionId if we already own the lock
   useEffect(() => {
     if (!token || !deviceId) return;
@@ -316,20 +336,48 @@ export function OscilloscopeControl() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, deviceId]);
 
-  // Heartbeat: renew lock every 4 min while we hold it
+  // Heartbeat: renew lock immediately on acquire, then every HEARTBEAT_INTERVAL_MS.
   useEffect(() => {
     if (!sessionId || !token || !deviceId) return;
-    heartbeatRef.current = setInterval(async () => {
+
+    const beat = async () => {
       try {
         await sendHeartbeat(token, deviceId, sessionId);
       } catch {
+        if (!mountedRef.current) return;
+        // Attempt a best-effort release so the server lock doesn't dangle.
+        releaseLock(token, deviceId, sessionId).catch(() => {});
         setSessionId(null);
+        setIsRunning(false);
         setLockError("Sperre abgelaufen. Bitte erneut sperren.");
       }
-    }, HEARTBEAT_INTERVAL_MS);
+    };
+
+    beat(); // immediate first ping
+    heartbeatRef.current = setInterval(beat, HEARTBEAT_INTERVAL_MS);
     return () => {
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
     };
+  }, [sessionId, token, deviceId]);
+
+  // Release lock via fetch keepalive when the browser tab is closed.
+  useEffect(() => {
+    if (!sessionId || !token || !deviceId) return;
+    const baseUrl =
+      (import.meta as ImportMeta & { env?: { BASE_URL?: string } }).env
+        ?.BASE_URL ?? "/";
+    const handler = () => {
+      fetch(
+        `${baseUrl}api/devices/${deviceId}/unlock?session_id=${encodeURIComponent(sessionId)}`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          keepalive: true,
+        },
+      ).catch(() => {});
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
   }, [sessionId, token, deviceId]);
 
   // ---------------------------------------------------------------------------
@@ -346,6 +394,17 @@ export function OscilloscopeControl() {
       const updated = await getDevice(token, deviceId);
       setDevice(updated);
       await loadSettings();
+      try {
+        const depthResp = await getMemoryDepth(token, deviceId);
+        if (mountedRef.current) setMaxDepth(depthResp.memory_depth);
+      } catch (depthErr) {
+        if (mountedRef.current)
+          setCmdError(
+            depthErr instanceof ApiError
+              ? depthErr.message
+              : "Speichertiefe konnte nicht gelesen werden",
+          );
+      }
     } catch (err) {
       setLockError(
         err instanceof ApiError
@@ -409,6 +468,13 @@ export function OscilloscopeControl() {
     try {
       await setTimebase(token, deviceId, sessionId, timebaseSettings);
       setAppliedTimebase({ ...timebaseSettings });
+      // Timebase change affects memory depth — refresh the cached value.
+      try {
+        const depthResp = await getMemoryDepth(token, deviceId);
+        if (mountedRef.current) setMaxDepth(depthResp.memory_depth);
+      } catch {
+        // Non-fatal — cached maxDepth stays as-is.
+      }
     } catch (err) {
       setApplyError(
         err instanceof Error
@@ -467,7 +533,7 @@ export function OscilloscopeControl() {
 
   const handleAcquire = useCallback(
     async (maxSamples = false) => {
-      if (!token || !deviceId || !sessionId) return;
+      if (!mountedRef.current || !token || !deviceId || !sessionId) return;
       if (isAcquiringRef.current) return;
       const startTime = performance.now();
       isAcquiringRef.current = true;
@@ -479,16 +545,9 @@ export function OscilloscopeControl() {
           Object.values(channelSettings).filter((cfg) => cfg.enabled).length,
         );
         setMaxAcquireElapsed(0);
-        let depth: number | null = null;
-        try {
-          const resp = await getMemoryDepth(token, deviceId);
-          depth = resp.memory_depth;
-        } catch {
-          depth = maxDepth;
-        }
         setMaxAcquireEstSecs(
-          depth !== null
-            ? Math.ceil((depth / 600_000) * 30 * enabledCount)
+          maxDepth !== null
+            ? Math.ceil((maxDepth / 600_000) * 30 * enabledCount)
             : null,
         );
         maxAcquireTimerRef.current = setInterval(() => {
@@ -587,8 +646,12 @@ export function OscilloscopeControl() {
     },
     [token, deviceId, sessionId, channelSettings, maxDepth],
   );
+  // Keep acquireRef current so the stable run-loop interval always calls the
+  // latest version of handleAcquire (correct channelSettings, etc.).
+  acquireRef.current = handleAcquire;
 
-  // Continuous acquisition loop — runs while isRunning is true
+  // Continuous acquisition loop — runs while isRunning is true.
+  // Uses acquireRef so the interval doesn't need handleAcquire in its deps.
   useEffect(() => {
     if (!isRunning || !sessionId) {
       if (runLoopRef.current) {
@@ -598,15 +661,14 @@ export function OscilloscopeControl() {
       return;
     }
     // Immediate first frame, then repeat at 1 Hz
-    handleAcquire(false);
-    runLoopRef.current = setInterval(() => handleAcquire(false), 1000);
+    acquireRef.current(false);
+    runLoopRef.current = setInterval(() => acquireRef.current(false), 1000);
     return () => {
       if (runLoopRef.current) {
         clearInterval(runLoopRef.current);
         runLoopRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRunning, sessionId]);
 
   // ---------------------------------------------------------------------------
@@ -656,7 +718,7 @@ export function OscilloscopeControl() {
       setCmdError(
         err instanceof ApiError
           ? err.message
-          : "Beschriftung konnte nicht gespeichert werden",
+          : "Notiz konnte nicht gespeichert werden",
       );
     } finally {
       setIsSavingAnnotation(false);
@@ -711,6 +773,8 @@ export function OscilloscopeControl() {
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate("/")}
+            aria-label="Zurück zur Geräteliste"
+            title="Zurück zur Geräteliste"
             className="p-1.5 border-2 border-(--lab-border) hover:bg-(--lab-panel) rounded text-(--lab-text-secondary) hover:text-(--lab-text-primary)"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -799,7 +863,7 @@ export function OscilloscopeControl() {
           {/* Acquisition */}
           <div className="space-y-2">
             <h3 className="text-xs font-medium text-(--lab-text-secondary) uppercase">
-              Aufnahme
+              Messung
             </h3>
             <button
               onClick={handleRun}
@@ -821,7 +885,7 @@ export function OscilloscopeControl() {
               }`}
             >
               <Play className="w-5 h-5" />
-              {isRunning ? "LÄUFT" : "START"}
+              {isRunning ? "LÄUFT" : "STARTEN"}
             </button>
 
             <button
@@ -844,7 +908,7 @@ export function OscilloscopeControl() {
                     })
                   }
                   disabled={!canCommand}
-                  title="Einzelmessung: stoppt nach einer Aufnahme"
+                  title="Einzelmessung: stoppt nach einer Messung"
                   className="w-full flex items-center justify-center gap-2 py-2 px-4 border-2 rounded font-medium text-sm bg-white border-(--lab-border) text-(--lab-text-primary) hover:bg-(--lab-panel) transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   EINZEL
@@ -882,7 +946,7 @@ export function OscilloscopeControl() {
             {lastAcquisitionId && (
               <div className="space-y-1 pt-1">
                 <label className="block text-xs text-(--lab-text-secondary)">
-                  Beschriftung
+                  Notizen
                 </label>
                 <input
                   type="text"
@@ -894,8 +958,8 @@ export function OscilloscopeControl() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleSaveAnnotation();
                   }}
-                  placeholder="Messung beschriften…"
-                  title="Freitextbeschriftung für diese Aufnahme — wird im Datenarchiv angezeigt. Speichern markiert die Messung automatisch für den OpenBIS-Upload."
+                  placeholder="Notizen zur Messung…"
+                  title="Freitextnotiz für diese Messung — wird im Datenarchiv angezeigt. Speichern markiert die Messung automatisch für den OpenBIS-Upload."
                   className="w-full border-2 border-(--lab-border) rounded px-2 py-1 text-xs font-mono focus:outline-none focus:border-(--lab-accent)"
                 />
                 <button
@@ -1036,7 +1100,7 @@ export function OscilloscopeControl() {
               <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-white/80 px-2 py-0.5 rounded border border-(--lab-success) pointer-events-none">
                 <span className="w-2 h-2 rounded-full bg-(--lab-success) animate-pulse" />
                 <span className="text-xs font-mono text-(--lab-success)">
-                  LIVE
+                  LIVE-ANSICHT
                 </span>
               </div>
             )}

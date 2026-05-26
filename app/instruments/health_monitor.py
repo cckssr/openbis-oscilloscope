@@ -100,8 +100,13 @@ class HealthMonitor:
                         settings.HEALTH_CHECK_IDLE_TIMEOUT_SECONDS,
                     )
                 else:
-                    for device_id in list(self._manager.devices.keys()):
-                        await self._check_device(device_id)
+                    await asyncio.gather(
+                        *(
+                            self._check_device(device_id)
+                            for device_id in list(self._manager.devices.keys())
+                        ),
+                        return_exceptions=True,
+                    )
                 await asyncio.sleep(settings.HEALTH_CHECK_INTERVAL_SECONDS)
             except asyncio.CancelledError:
                 break
@@ -146,8 +151,8 @@ class HealthMonitor:
                 logger.info("Device %s came online; initializing driver", device_id)
                 try:
                     driver = self._manager.instantiate_driver(device_id)
-                    driver.connect()
-                    info = driver.identify()
+                    await asyncio.to_thread(driver.connect)
+                    info = await asyncio.to_thread(driver.identify)
                     logger.info("Device %s identified: %s", device_id, info.idn)
                     self._manager.update_state(device_id, DeviceState.ONLINE)
                 except Exception as exc:
@@ -159,7 +164,7 @@ class HealthMonitor:
                 logger.info("Device %s reachable again; attempting recovery", device_id)
                 try:
                     driver = self._manager.instantiate_driver(device_id)
-                    driver.connect()
+                    await asyncio.to_thread(driver.connect)
                     entry.last_error = None
                     self._manager.update_state(device_id, DeviceState.ONLINE)
                 except Exception as exc:

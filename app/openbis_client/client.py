@@ -1,6 +1,8 @@
 """Client module for interacting with OpenBIS via the pybis library."""
 
+import asyncio
 import logging
+import threading
 import uuid
 from dataclasses import dataclass
 
@@ -43,15 +45,23 @@ class OpenBISClient:
         self._cache: cachetools.TTLCache = cachetools.TTLCache(
             maxsize=256, ttl=settings.TOKEN_CACHE_SECONDS
         )
+        self._openbis: Openbis | None = None
+        self._openbis_lock = threading.Lock()
 
     def _get_openbis(self) -> Openbis:
-        """Create and return a new unauthenticated pybis :class:`Openbis` instance.
+        """Return a cached unauthenticated pybis :class:`Openbis` instance.
+
+        Reuses a single instance so repeated calls don't each open a new
+        TCP/TLS session to the OpenBIS server.
 
         Returns:
             A :class:`pybis.Openbis` instance pointed at
             :attr:`~app.config.Settings.OPENBIS_URL`.
         """
-        return Openbis(settings.OPENBIS_URL, verify_certificates=True)
+        with self._openbis_lock:
+            if self._openbis is None:
+                self._openbis = Openbis(settings.OPENBIS_URL, verify_certificates=True)
+            return self._openbis
 
     async def validate_token(self, token: str) -> UserInfo:
         """Validate an OpenBIS session token and return the authenticated user.
@@ -86,35 +96,29 @@ class OpenBISClient:
             return self._cache[token]
 
         try:
-            o = self._get_openbis()
-            # pybis login_with_token sets the token and verifies it
-            o.set_token(token, save_token=False)
-            if not o.is_session_active():
-                raise AuthError("Token is invalid or expired")
+            def _do_validate() -> UserInfo:
+                o = self._get_openbis()
+                o.set_token(token, save_token=False)
+                if not o.is_session_active():
+                    raise AuthError("Token is invalid or expired")
 
-            user_id = o.get_session_info().userName
+                user_id = o.get_session_info().userName
 
-            # Determine admin status by checking if user is in instance admin group
-            is_admin = False
-            try:
-                groups = o.get_role_assignments(userId=user_id)
-                for _, row in groups.df.iterrows():
-                    if row.get("role") in ("ADMIN", "INSTANCE_ADMIN") and row.get(
-                        "roleLevel"
-                    ) in (
-                        "INSTANCE",
-                        None,
-                    ):
-                        is_admin = True
-                        break
-            except Exception:
-                logger.debug("Could not determine admin status for %s", user_id)
+                is_admin = False
+                try:
+                    groups = o.get_role_assignments(userId=user_id)
+                    for _, row in groups.df.iterrows():
+                        if row.get("role") in ("ADMIN", "INSTANCE_ADMIN") and row.get(
+                            "roleLevel"
+                        ) in ("INSTANCE", None):
+                            is_admin = True
+                            break
+                except Exception:
+                    logger.debug("Could not determine admin status for %s", user_id)
 
-            info = UserInfo(
-                user_id=user_id,
-                display_name=user_id,
-                is_admin=is_admin,
-            )
+                return UserInfo(user_id=user_id, display_name=user_id, is_admin=is_admin)
+
+            info = await asyncio.to_thread(_do_validate)
             self._cache[token] = info
             return info
 
@@ -162,18 +166,19 @@ class OpenBISClient:
             return fake_id
 
         try:
-            o = self._get_openbis()
-            o.set_token(token, save_token=False)
+            def _do_create() -> str:
+                o = self._get_openbis()
+                o.set_token(token, save_token=False)
+                kwargs: dict = {"type": dataset_type, "files": files, "props": properties}
+                if object_id:
+                    kwargs["object"] = object_id
+                else:
+                    kwargs["experiment"] = experiment_id
+                ds = o.new_dataset(**kwargs)
+                ds.save()
+                return ds.permId
 
-            kwargs: dict = {"type": dataset_type, "files": files, "props": properties}
-            if object_id:
-                kwargs["object"] = object_id
-            else:
-                kwargs["experiment"] = experiment_id
-
-            ds = o.new_dataset(**kwargs)
-            ds.save()
-            return ds.permId
+            return await asyncio.to_thread(_do_create)
 
         except Exception as exc:
             logger.error("OpenBIS dataset creation failed: %s", exc)

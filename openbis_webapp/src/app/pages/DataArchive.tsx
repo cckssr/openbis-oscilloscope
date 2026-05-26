@@ -22,7 +22,7 @@ import {
   Download,
   ChevronDown,
   ChevronRight,
-  Trash2,
+  RotateCcw,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -136,6 +136,7 @@ export function DataArchive() {
   const [notes, setNotes] = useState("");
   const [showCommitForm, setShowCommitForm] = useState(false);
   const [isCommitting, setIsCommitting] = useState(false);
+  const [awaitingConfirm, setAwaitingConfirm] = useState(false);
   const [commitResult, setCommitResult] = useState<string | null>(null);
   const [commitError, setCommitError] = useState<string | null>(null);
 
@@ -146,6 +147,7 @@ export function DataArchive() {
 
   // Download
   const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   // Screenshot thumbnails
   const [screenshotUrls, setScreenshotUrls] = useState<Record<string, string>>(
@@ -406,8 +408,9 @@ export function DataArchive() {
     const selectedArtifacts = artifacts.filter((a) =>
       selected.has(a.artifact_id),
     );
+    setDownloadError(null);
     if (selectedArtifacts.length > 50) {
-      alert(
+      setDownloadError(
         "Maximal 50 Elemente gleichzeitig herunterladen. Bitte Auswahl reduzieren.",
       );
       return;
@@ -468,6 +471,11 @@ export function DataArchive() {
 
   const handleCommit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!awaitingConfirm) {
+      setAwaitingConfirm(true);
+      return;
+    }
+    setAwaitingConfirm(false);
     if (!token || !sessionId) return;
     setIsCommitting(true);
     setCommitError(null);
@@ -555,6 +563,8 @@ export function DataArchive() {
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate(-1)}
+            aria-label="Zurück zur Geräteliste"
+            title="Zurück zur Geräteliste"
             className="p-1.5 border-2 border-(--lab-border) hover:bg-(--lab-panel) rounded text-(--lab-text-secondary) hover:text-(--lab-text-primary)"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -602,6 +612,11 @@ export function DataArchive() {
           {loadError}
         </div>
       )}
+      {downloadError && (
+        <div className="mx-4 mt-4 px-4 py-3 border-2 border-(--lab-danger) rounded text-sm text-(--lab-danger) bg-white">
+          {downloadError}
+        </div>
+      )}
 
       {/* Artifact table */}
       <div className="flex-1 overflow-auto">
@@ -631,7 +646,7 @@ export function DataArchive() {
             <div className="grid grid-cols-4 gap-4">
               <span>Zeitstempel</span>
               <span>Typ</span>
-              <span>Kanal / Beschriftung</span>
+              <span>Kanal / Notizen</span>
               <span>Dateien</span>
             </div>
             <span />
@@ -703,8 +718,8 @@ export function DataArchive() {
                       Messung {rg.run_nr}
                     </span>
                     <span className="font-mono text-xs text-(--lab-text-secondary)">
-                      {formatTimestamp(rg.created_at)} · {acqCount} Aufnahme
-                      {acqCount !== 1 ? "n" : ""} · {artifactCount} Spur
+                      {formatTimestamp(rg.created_at)} · {acqCount} Messung
+                      {acqCount !== 1 ? "en" : ""} · {artifactCount} Spur
                       {artifactCount !== 1 ? "en" : ""}
                     </span>
                   </button>
@@ -849,7 +864,7 @@ export function DataArchive() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-(--lab-text-secondary) mb-1">
-                    Collection-ID *{" "}
+                    Sammlungs-ID *{" "}
                     <span className="italic font-normal">(Upload-Ziel)</span>
                   </label>
                   <input
@@ -930,12 +945,13 @@ export function DataArchive() {
                   value={labCourse}
                   onChange={(e) => setLabCourse(e.target.value)}
                   required
+                  title="Praktikumskurs, dem diese Messung zugeordnet wird — wird als OpenBIS-Eigenschaft DSO_LAB_COURSE gespeichert"
                   className={inputClass}
                 >
                   <option value="">— Auswählen —</option>
-                  <option value="GP1">GP1</option>
-                  <option value="GP2">GP2</option>
-                  <option value="GP3">GP3</option>
+                  <option value="GP1">GP1 – Grundpraktikum 1</option>
+                  <option value="GP2">GP2 – Grundpraktikum 2</option>
+                  <option value="GP3">GP3 – Grundpraktikum 3</option>
                   <option value="Projektlabor">Projektlabor</option>
                 </select>
               </div>
@@ -949,6 +965,7 @@ export function DataArchive() {
                   onChange={(e) => setExpTitle(e.target.value)}
                   placeholder="z.B. RC-Schaltung Frequenzgang"
                   required
+                  title="Kurztitel des Versuchs — wird als OpenBIS-Eigenschaft DSO_EXP_TITLE gespeichert"
                   className={inputClass}
                 />
               </div>
@@ -964,6 +981,7 @@ export function DataArchive() {
                 onChange={(e) => setExpDescription(e.target.value)}
                 placeholder="Optionale Beschreibung des Versuchs"
                 rows={2}
+                title="Ausführliche Versuchsbeschreibung — wird als OpenBIS-Eigenschaft DSO_EXP_DESCRIPTION gespeichert"
                 className={inputClass}
               />
             </div>
@@ -979,6 +997,7 @@ export function DataArchive() {
                   value={deviceUnderTest}
                   onChange={(e) => setDeviceUnderTest(e.target.value)}
                   placeholder="z.B. RC-Filter, Op-Amp LM741"
+                  title="Bezeichnung des gemessenen Bauteils oder der Schaltung — wird als OpenBIS-Eigenschaft DSO_DEVICE_UNDER_TEST gespeichert"
                   className={inputClass}
                 />
               </div>
@@ -991,42 +1010,71 @@ export function DataArchive() {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Optionale Notizen"
+                  title="Freitextnotizen zur Messung — wird als OpenBIS-Eigenschaft DSO_NOTES gespeichert"
                   className={inputClass}
                 />
               </div>
             </div>
 
             {/* Submit row */}
-            <div className="flex items-center gap-3 flex-wrap">
-              <button
-                type="submit"
-                disabled={
-                  isCommitting ||
-                  flaggedCount === 0 ||
-                  !experimentId.trim() ||
-                  !labCourse ||
-                  !expTitle.trim()
-                }
-                className="flex items-center gap-2 px-4 py-1.5 border-2 border-(--lab-accent) bg-white text-(--lab-accent) hover:bg-(--lab-accent) hover:text-white rounded font-medium text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <Upload className="w-4 h-4" />
-                {isCommitting ? "Übertragen…" : "Übertragen"}
-              </button>
-              <button
-                type="button"
-                onClick={handleClearForm}
-                className="flex items-center gap-1.5 px-3 py-1.5 border-2 border-(--lab-border) bg-white text-(--lab-text-secondary) hover:bg-(--lab-panel) rounded text-sm transition-colors"
-                title="Alle Formularfelder zurücksetzen"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                Alles löschen
-              </button>
-              {flaggedCount === 0 && (
-                <span className="text-xs text-(--lab-text-secondary)">
-                  Artefakte zuerst mit dem Markierungs-Button kennzeichnen
-                </span>
-              )}
-            </div>
+            {awaitingConfirm ? (
+              <div className="border-2 border-(--lab-warning) rounded p-3 space-y-2">
+                <p className="text-sm text-(--lab-text-primary)">
+                  <strong>{flaggedCount} Artefakt{flaggedCount !== 1 ? "e" : ""}</strong> werden endgültig nach OpenBIS übertragen
+                  {experimentId.trim() && (
+                    <> an <span className="font-mono text-xs">{experimentId.trim()}</span></>
+                  )}
+                  . Fortfahren?
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    className="flex items-center gap-2 px-4 py-1.5 border-2 border-(--lab-accent) bg-(--lab-accent) text-white rounded font-medium text-sm transition-colors"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Ja, übertragen
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAwaitingConfirm(false)}
+                    className="px-4 py-1.5 border-2 border-(--lab-border) bg-white text-(--lab-text-secondary) hover:bg-(--lab-panel) rounded font-medium text-sm transition-colors"
+                  >
+                    Abbrechen
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 flex-wrap">
+                <button
+                  type="submit"
+                  disabled={
+                    isCommitting ||
+                    flaggedCount === 0 ||
+                    !experimentId.trim() ||
+                    !labCourse ||
+                    !expTitle.trim()
+                  }
+                  className="flex items-center gap-2 px-4 py-1.5 border-2 border-(--lab-accent) bg-white text-(--lab-accent) hover:bg-(--lab-accent) hover:text-white rounded font-medium text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Upload className="w-4 h-4" />
+                  {isCommitting ? "Übertragen…" : "Übertragen"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClearForm}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border-2 border-(--lab-border) bg-white text-(--lab-text-secondary) hover:bg-(--lab-panel) rounded text-sm transition-colors"
+                  title="Alle Formularfelder zurücksetzen"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Formular zurücksetzen
+                </button>
+                {flaggedCount === 0 && (
+                  <span className="text-xs text-(--lab-text-secondary)">
+                    Artefakte zuerst mit dem Markierungs-Button kennzeichnen
+                  </span>
+                )}
+              </div>
+            )}
           </form>
         )}
 
@@ -1066,6 +1114,8 @@ export function DataArchive() {
               </div>
               <button
                 onClick={() => setPreviewGroup(null)}
+                aria-label="Schließen"
+                title="Schließen"
                 className="p-1 hover:bg-(--lab-panel) rounded text-(--lab-text-secondary)"
               >
                 <X className="w-4 h-4" />
@@ -1099,6 +1149,8 @@ export function DataArchive() {
           <div className="relative" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => setPreviewScreenshotUrl(null)}
+              aria-label="Schließen"
+              title="Schließen"
               className="absolute -top-3 -right-3 bg-white border-2 border-(--lab-border) rounded-full p-0.5 text-(--lab-text-secondary) hover:text-(--lab-text-primary)"
             >
               <X className="w-4 h-4" />

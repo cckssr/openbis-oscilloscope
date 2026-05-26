@@ -46,7 +46,7 @@ export function Login() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-(--lab-text-secondary) mb-1">
-              Bearer Token
+              Sitzungstoken
             </label>
             <input
               type="password"

@@ -193,6 +193,11 @@ async def acquire_lock(
         raise LockConflictError(device_id, owner)
 
     manager.update_state(device_id, DeviceState.LOCKED)
+    event_bus = getattr(request.app.state, "event_bus", None)
+    if event_bus:
+        event_bus.publish(
+            {"type": "lock", "device_id": device_id, "owner_user": user.user_id, "session_id": session_id}
+        )
     return {"control_session_id": session_id, "device_id": device_id}
 
 
@@ -220,6 +225,11 @@ async def release_lock(
         raise LockRequiredError(device_id)
 
     manager.update_state(device_id, DeviceState.ONLINE)
+    event_bus = getattr(request.app.state, "event_bus", None)
+    if event_bus:
+        event_bus.publish(
+            {"type": "lock", "device_id": device_id, "owner_user": None, "session_id": None}
+        )
     return {"released": True}
 
 
@@ -313,7 +323,7 @@ async def run_device(
     )
 
     async def _run():
-        driver.run()
+        await asyncio.to_thread(driver.run)
 
     await manager.execute_command(device_id, _run)
     return {"status": "running"}
@@ -337,7 +347,7 @@ async def stop_device(
     )
 
     async def _stop():
-        driver.stop()
+        await asyncio.to_thread(driver.stop)
 
     await manager.execute_command(device_id, _stop)
     return {"status": "stopped"}
@@ -418,7 +428,8 @@ async def acquire(
                 "scale_v_div": cfg.scale_v_div,
                 **({"waveform_mode": "MAX"} if max_samples else {}),
             }
-            art_id = buffer_service.store_waveform(
+            art_id = await asyncio.to_thread(
+                buffer_service.store_waveform,
                 device_id,
                 session_id,
                 waveform,
@@ -528,35 +539,38 @@ async def get_settings(
     driver = entry.driver
 
     async def _get():
-        channels = {}
-        for ch in range(1, 5):
-            try:
-                cfg = driver.get_channel_config(ch)
-                channels[ch] = {
-                    "enabled": cfg.enabled,
-                    "scale_v_div": cfg.scale_v_div,
-                    "offset_v": cfg.offset_v,
-                    "coupling": cfg.coupling,
-                    "probe_attenuation": cfg.probe_attenuation,
-                }
-            except (OSError, TimeoutError, ValueError, KeyError, RuntimeError):
-                pass
-        tb = driver.get_timebase()
-        trig = driver.get_trigger()
-        return {
-            "channels": channels,
-            "timebase": {
-                "scale_s_div": tb.scale_s_div,
-                "offset_s": tb.offset_s,
-                "sample_rate": tb.sample_rate,
-            },
-            "trigger": {
-                "source": trig.source,
-                "level_v": trig.level_v,
-                "slope": trig.slope,
-                "mode": trig.mode,
-            },
-        }
+        def _sync_get() -> dict:
+            channels = {}
+            for ch in range(1, 5):
+                try:
+                    cfg = driver.get_channel_config(ch)
+                    channels[ch] = {
+                        "enabled": cfg.enabled,
+                        "scale_v_div": cfg.scale_v_div,
+                        "offset_v": cfg.offset_v,
+                        "coupling": cfg.coupling,
+                        "probe_attenuation": cfg.probe_attenuation,
+                    }
+                except (OSError, TimeoutError, ValueError, KeyError, RuntimeError):
+                    pass
+            tb = driver.get_timebase()
+            trig = driver.get_trigger()
+            return {
+                "channels": channels,
+                "timebase": {
+                    "scale_s_div": tb.scale_s_div,
+                    "offset_s": tb.offset_s,
+                    "sample_rate": tb.sample_rate,
+                },
+                "trigger": {
+                    "source": trig.source,
+                    "level_v": trig.level_v,
+                    "slope": trig.slope,
+                    "mode": trig.mode,
+                },
+            }
+
+        return await asyncio.to_thread(_sync_get)
 
     return await manager.execute_command(device_id, _get)
 
@@ -585,7 +599,7 @@ async def get_memory_depth(
     driver = entry.driver
 
     async def _get():
-        return driver.get_memory_depth()
+        return await asyncio.to_thread(driver.get_memory_depth)
 
     depth = await manager.execute_command(device_id, _get)
     return {"device_id": device_id, "memory_depth": depth}
@@ -621,7 +635,7 @@ async def set_channel_config(
     )
 
     async def _set():
-        driver.set_channel_config(channel, cfg)
+        await asyncio.to_thread(driver.set_channel_config, channel, cfg)
 
     await manager.execute_command(device_id, _set)
     return {"applied": True, "channel": channel}
@@ -653,7 +667,7 @@ async def set_timebase(
     )
 
     async def _set():
-        driver.set_timebase(tb)
+        await asyncio.to_thread(driver.set_timebase, tb)
 
     await manager.execute_command(device_id, _set)
     return {"applied": True}
@@ -686,7 +700,7 @@ async def set_trigger(
     )
 
     async def _set():
-        driver.set_trigger(trig)
+        await asyncio.to_thread(driver.set_trigger, trig)
 
     await manager.execute_command(device_id, _set)
     return {"applied": True}
@@ -709,7 +723,7 @@ async def get_screenshot(
     )
 
     async def _screenshot():
-        return driver.get_screenshot()
+        return await asyncio.to_thread(driver.get_screenshot)
 
     png_bytes = await manager.execute_command(device_id, _screenshot, timeout=15.0)
     return Response(content=png_bytes, media_type="image/png")
@@ -734,10 +748,10 @@ async def save_screenshot(
     buffer_service = request.app.state.buffer_service
 
     async def _screenshot():
-        return driver.get_screenshot()
+        return await asyncio.to_thread(driver.get_screenshot)
 
     png_bytes = await manager.execute_command(device_id, _screenshot, timeout=15.0)
-    art_id = buffer_service.store_screenshot(device_id, session_id, png_bytes)
+    art_id = await asyncio.to_thread(buffer_service.store_screenshot, device_id, session_id, png_bytes)
     return {"artifact_id": art_id}
 
 

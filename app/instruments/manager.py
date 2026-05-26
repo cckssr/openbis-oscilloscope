@@ -72,7 +72,7 @@ class DeviceEntry:
     config: DeviceConfig
     state: DeviceState = DeviceState.OFFLINE
     driver: BaseOscilloscopeDriver | None = None
-    queue: asyncio.Queue = field(default_factory=asyncio.Queue)
+    queue: asyncio.Queue = field(default_factory=lambda: asyncio.Queue(maxsize=32))
     worker_task: asyncio.Task | None = None
     last_error: str | None = None
     online_since: datetime | None = None  # set when device transitions to ONLINE
@@ -143,6 +143,7 @@ class InstrumentManager:
     def __init__(self) -> None:
         """Initialize the manager with an empty device registry."""
         self.devices: dict[str, DeviceEntry] = {}
+        self.event_bus = None  # set to EventBus instance by app lifespan
 
     async def startup(self) -> None:
         """Load device configuration from YAML and start per-device worker tasks.
@@ -211,8 +212,8 @@ class InstrumentManager:
         """Continuously pull and execute commands from the device's queue.
 
         This coroutine runs as a dedicated asyncio task for each device. It
-        processes ``(coro_fn, future)`` tuples from the queue one at a time,
-        ensuring serial execution. The device state transitions through
+        processes ``[coro_fn, future, timed_out]`` lists from the queue one at a
+        time, ensuring serial execution. The device state transitions through
         ``BUSY`` while a command runs and is restored to ``LOCKED`` or
         ``ONLINE`` on success, or set to ``ERROR`` on failure.
 
@@ -222,7 +223,8 @@ class InstrumentManager:
         entry = self.devices[device_id]
         while True:
             try:
-                coro_fn, future = await entry.queue.get()
+                item = await entry.queue.get()
+                coro_fn, future = item[0], item[1]
                 prev_state = entry.state
                 entry.state = DeviceState.BUSY
                 try:
@@ -238,8 +240,10 @@ class InstrumentManager:
                 finally:
                     entry.queue.task_done()
 
-                # Restore to LOCKED or ONLINE depending on prior state
-                if entry.state == DeviceState.BUSY:
+                # Restore to LOCKED or ONLINE depending on prior state.
+                # Skip if the caller already marked this command as timed out
+                # (execute_command sets item[2] = True and entry.state = ERROR).
+                if entry.state == DeviceState.BUSY and not item[2]:
                     entry.state = (
                         prev_state
                         if prev_state in (DeviceState.LOCKED, DeviceState.ONLINE)
@@ -283,13 +287,20 @@ class InstrumentManager:
         if entry is None:
             raise KeyError(f"Unknown device: {device_id}")
 
+        if entry.queue.full():
+            from app.core.exceptions import AppError
+            raise AppError(503, "Device command queue full", "queue_full")
+
         loop = asyncio.get_running_loop()
         future: asyncio.Future = loop.create_future()
-        await entry.queue.put((coro_fn, future))
+        # item[2] is the timed_out flag; worker skips state-restore when True
+        item: list = [coro_fn, future, False]
+        await entry.queue.put(item)
 
         try:
             return await asyncio.wait_for(asyncio.shield(future), timeout=timeout)
         except asyncio.TimeoutError:
+            item[2] = True  # prevent worker from restoring state over ERROR
             entry.state = DeviceState.ERROR
             entry.last_error = "Command timed out"
             raise
@@ -356,6 +367,15 @@ class InstrumentManager:
                 entry.online_since = datetime.now(timezone.utc)
             elif state in (DeviceState.OFFLINE, DeviceState.ERROR):
                 entry.online_since = None
+            if self.event_bus is not None:
+                self.event_bus.publish(
+                    {
+                        "type": "device_state",
+                        "device_id": device_id,
+                        "state": state.value,
+                        "last_error": entry.last_error,
+                    }
+                )
 
     def instantiate_driver(self, device_id: str) -> BaseOscilloscopeDriver:
         """Create a new driver instance for a device and attach it to the entry.

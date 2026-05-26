@@ -28,7 +28,8 @@ export async function apiFetch<T>(
     ...init,
     headers: {
       Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
+      // Only advertise a JSON body when one is actually present.
+      ...(init.body != null ? { "Content-Type": "application/json" } : {}),
       ...(init.headers ?? {}),
     },
   });

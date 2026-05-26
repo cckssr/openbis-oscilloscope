@@ -17,11 +17,20 @@ export function StatusBadge({ status, className = "" }: StatusBadgeProps) {
     ERROR: "bg-white text-(--lab-danger)] border-[var(--lab-danger) border-2",
   };
 
+  const labels: Record<StatusType, string> = {
+    ONLINE: "Online",
+    LOCKED: "Gesperrt",
+    BUSY: "Beschäftigt",
+    OFFLINE: "Offline",
+    ERROR: "Fehler",
+  };
+
   return (
     <span
       className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded ${styles[status]} ${className}`}
+      data-status={status}
     >
-      {status}
+      {labels[status]}
     </span>
   );
 }

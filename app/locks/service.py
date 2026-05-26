@@ -103,7 +103,10 @@ class LockService:
         return json.loads(raw)
 
     async def release_lock(self, device_id: str, session_id: str) -> bool:
-        """Release the lock if the caller's session owns it.
+        """Atomically release the lock if the caller's session owns it.
+
+        Uses a WATCH/MULTI/EXEC pipeline so the check-then-delete is a single
+        atomic Redis transaction, eliminating the GET→DELETE race condition.
 
         Args:
             device_id: Identifier of the device to unlock.
@@ -113,14 +116,33 @@ class LockService:
             ``True`` if the lock was deleted, ``False`` if no lock exists or
             the session ID does not match (i.e. the caller does not own the lock).
         """
-        d = await self._load(device_id)
-        if d is None or d["session_id"] != session_id:
-            return False
-        await self._redis.delete(self._key(device_id))
-        return True
+        key = self._key(device_id)
+        async with self._redis.pipeline(transaction=True) as pipe:
+            while True:
+                try:
+                    await pipe.watch(key)
+                    raw = await pipe.get(key)
+                    if raw is None:
+                        await pipe.unwatch()
+                        return False
+                    d = json.loads(raw)
+                    if d["session_id"] != session_id:
+                        await pipe.unwatch()
+                        return False
+                    pipe.multi()
+                    pipe.delete(key)
+                    await pipe.execute()
+                    return True
+                except aioredis.WatchError:
+                    continue
 
     async def renew_lock(self, device_id: str, session_id: str) -> bool:
-        """Reset the lock TTL and update the ``last_seen`` timestamp.
+        """Atomically reset the lock TTL and update the ``last_seen`` timestamp.
+
+        Uses a WATCH/MULTI/EXEC pipeline so the check-then-update is a single
+        atomic Redis transaction. The key is only written when it already exists
+        and the session matches, preventing a timed-out lock from being
+        silently re-created.
 
         Clients should call this periodically (heartbeat) to prevent the lock
         from expiring while they are still actively using the device.
@@ -133,14 +155,26 @@ class LockService:
             ``True`` if the TTL was reset, ``False`` if the lock does not exist
             or the session ID does not match.
         """
-        d = await self._load(device_id)
-        if d is None or d["session_id"] != session_id:
-            return False
-        d["last_seen"] = time.time()
-        await self._redis.set(
-            self._key(device_id), json.dumps(d), ex=settings.LOCK_TTL_SECONDS
-        )
-        return True
+        key = self._key(device_id)
+        async with self._redis.pipeline(transaction=True) as pipe:
+            while True:
+                try:
+                    await pipe.watch(key)
+                    raw = await pipe.get(key)
+                    if raw is None:
+                        await pipe.unwatch()
+                        return False
+                    d = json.loads(raw)
+                    if d["session_id"] != session_id:
+                        await pipe.unwatch()
+                        return False
+                    d["last_seen"] = time.time()
+                    pipe.multi()
+                    pipe.set(key, json.dumps(d), ex=settings.LOCK_TTL_SECONDS)
+                    await pipe.execute()
+                    return True
+                except aioredis.WatchError:
+                    continue
 
     async def get_lock(self, device_id: str) -> LockInfo | None:
         """Return the current lock information for a device.

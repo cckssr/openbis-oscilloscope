@@ -6,7 +6,8 @@ from contextlib import asynccontextmanager
 import redis.asyncio as aioredis
 from fastapi import FastAPI, Request
 
-from app.api import admin, auth, devices, openbis_structure, sessions
+from app.api import admin, auth, devices, events, openbis_structure, sessions
+from app.api.events import EventBus
 from app.buffer.service import BufferService
 from app.config import settings
 from app.core.activity import ActivityTracker
@@ -74,8 +75,10 @@ async def lifespan(app: FastAPI):
         logger.info("Connected to Redis: %s", settings.REDIS_URL)
 
     # Core services
+    event_bus = EventBus()
     lock_service = LockService(redis_client)
     instrument_manager = InstrumentManager()
+    instrument_manager.event_bus = event_bus
     buffer_service = BufferService()
     openbis_client = OpenBISClient()
 
@@ -117,6 +120,7 @@ async def lifespan(app: FastAPI):
     app.state.health_monitor = health_monitor
     app.state.activity_tracker = activity_tracker
     app.state.scheduler = scheduler
+    app.state.event_bus = event_bus
 
     yield
 
@@ -165,6 +169,7 @@ def create_app() -> FastAPI:
 
     app.include_router(auth.router)
     app.include_router(devices.router)
+    app.include_router(events.router)
     app.include_router(sessions.router)
     app.include_router(admin.router)
     app.include_router(openbis_structure.router)

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { DeviceCard } from "../components/DeviceCard";
 import { useAuth } from "../context/AuthContext";
@@ -13,9 +13,11 @@ export function DeviceList() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const inFlightRef = useRef(false);
 
   const fetchDevices = useCallback(async () => {
-    if (!token) return;
+    if (!token || inFlightRef.current) return;
+    inFlightRef.current = true;
     setError(null);
     try {
       const data = await listDevices(token);
@@ -28,6 +30,7 @@ export function DeviceList() {
       );
     } finally {
       setIsLoading(false);
+      inFlightRef.current = false;
     }
   }, [token]);
 

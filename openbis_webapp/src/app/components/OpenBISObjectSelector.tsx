@@ -163,7 +163,7 @@ export function OpenBISObjectSelector({
 
       <div>
         <label className="block text-xs text-(--lab-text-secondary) mb-1">
-          Gruppe (OpenBIS Project)
+          Gruppe (OpenBIS-Projekt)
         </label>
         <select
           value={selectedProject}
@@ -184,8 +184,8 @@ export function OpenBISObjectSelector({
 
       <div>
         <label className="block text-xs text-(--lab-text-secondary) mb-1">
-          Collection{" "}
-          <span className="text-(--lab-accent) font-medium">← Upload-Ziel</span>
+          Sammlung{" "}
+          <span className="text-(--lab-accent) font-medium">(Hochlade-Ziel)</span>
         </label>
         <select
           value={selectedCollection}
@@ -194,7 +194,7 @@ export function OpenBISObjectSelector({
           className={selectClass}
         >
           <option value="">
-            {loadingCollections ? "Laden…" : "— Collection auswählen —"}
+            {loadingCollections ? "Laden…" : "— Sammlung auswählen —"}
           </option>
           {collections.map((c) => (
             <option key={c.code} value={c.code}>
