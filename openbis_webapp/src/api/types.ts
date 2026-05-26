@@ -112,3 +112,8 @@ export interface DeviceSettings {
   timebase: TimebaseConfig;
   trigger: TriggerConfig;
 }
+
+export interface MemoryDepthResponse {
+  device_id: string;
+  memory_depth: number;
+}

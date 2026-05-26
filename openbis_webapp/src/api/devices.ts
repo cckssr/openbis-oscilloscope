@@ -6,6 +6,7 @@ import type {
   AcquireResponse,
   WaveformData,
   DeviceSettings,
+  MemoryDepthResponse,
   ChannelConfig,
   TimebaseConfig,
   TriggerConfig,
@@ -299,6 +300,22 @@ export function saveScreenshot(
     `/devices/${deviceId}/screenshot?session_id=${encodeURIComponent(sessionId)}`,
     token,
     { method: "POST" },
+  );
+}
+
+/**
+ * Retrieves the current acquisition memory depth for a device.
+ * @param token - The authentication bearer token
+ * @param deviceId - The unique identifier of the device
+ * @returns A promise resolving to the memory depth in samples
+ */
+export function getMemoryDepth(
+  token: string,
+  deviceId: string,
+): Promise<MemoryDepthResponse> {
+  return apiFetch<MemoryDepthResponse>(
+    `/devices/${deviceId}/memory-depth`,
+    token,
   );
 }
 

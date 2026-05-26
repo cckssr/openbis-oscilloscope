@@ -19,6 +19,7 @@ import {
   getScreenshot,
   saveScreenshot,
   getSettings,
+  getMemoryDepth,
   setChannelConfig,
   setTimebase,
   setTrigger,
@@ -478,9 +479,16 @@ export function OscilloscopeControl() {
           Object.values(channelSettings).filter((cfg) => cfg.enabled).length,
         );
         setMaxAcquireElapsed(0);
+        let depth: number | null = null;
+        try {
+          const resp = await getMemoryDepth(token, deviceId);
+          depth = resp.memory_depth;
+        } catch {
+          depth = maxDepth;
+        }
         setMaxAcquireEstSecs(
-          maxDepth !== null
-            ? Math.ceil((maxDepth / 600_000) * 30 * enabledCount)
+          depth !== null
+            ? Math.ceil((depth / 600_000) * 30 * enabledCount)
             : null,
         );
         maxAcquireTimerRef.current = setInterval(() => {
