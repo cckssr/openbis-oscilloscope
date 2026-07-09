@@ -7,10 +7,10 @@ import cachetools
 from fastapi import APIRouter, Depends, Query, Request
 from pybis import Openbis
 
-from app.config import settings
-from app.core.dependencies import get_current_user
-from app.core.exceptions import OpenBISError
-from app.openbis_client.client import UserInfo
+from backend.config import settings
+from backend.core.dependencies import get_current_user
+from backend.core.exceptions import OpenBISError
+from backend.openbis_client.client import UserInfo
 
 router = APIRouter(prefix="/openbis/structure", tags=["openbis-structure"])
 

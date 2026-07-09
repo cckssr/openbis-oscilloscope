@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 import redis.asyncio as aioredis
 
-from app.config import settings
+from backend.config import settings
 
 
 @dataclass

@@ -6,17 +6,17 @@ from contextlib import asynccontextmanager
 import redis.asyncio as aioredis
 from fastapi import FastAPI, Request
 
-from app.api import admin, auth, devices, events, openbis_structure, sessions
-from app.api.events import EventBus
-from app.buffer.service import BufferService
-from app.config import settings
-from app.core.activity import ActivityTracker
-from app.core.exceptions import register_exception_handlers
-from app.instruments.health_monitor import HealthMonitor
-from app.instruments.manager import DeviceState, InstrumentManager
-from app.locks.service import LockService
-from app.openbis_client.client import OpenBISClient
-from app.scheduler.tasks import create_scheduler
+from backend.api import admin, auth, devices, events, openbis_structure, sessions
+from backend.api.events import EventBus
+from backend.buffer.service import BufferService
+from backend.config import settings
+from backend.core.activity import ActivityTracker
+from backend.core.exceptions import register_exception_handlers
+from backend.instruments.health_monitor import HealthMonitor
+from backend.instruments.manager import DeviceState, InstrumentManager
+from backend.locks.service import LockService
+from backend.openbis_client.client import OpenBISClient
+from backend.scheduler.tasks import create_scheduler
 
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO),

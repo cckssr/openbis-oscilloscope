@@ -11,10 +11,10 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import Response
 from pydantic import BaseModel
 
-from app.config import settings
-from app.core.dependencies import get_current_user
-from app.core.exceptions import SessionNotFoundError, ValidationError
-from app.openbis_client.client import UserInfo
+from backend.config import settings
+from backend.core.dependencies import get_current_user
+from backend.core.exceptions import SessionNotFoundError, ValidationError
+from backend.openbis_client.client import UserInfo
 
 logger = logging.getLogger(__name__)
 

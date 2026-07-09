@@ -7,16 +7,16 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
-from app.buffer.service import BufferService
-from app.instruments.manager import (
+from backend.buffer.service import BufferService
+from backend.instruments.manager import (
     DeviceConfig,
     DeviceEntry,
     DeviceState,
     InstrumentManager,
 )
-from app.instruments.base_driver import MockOscilloscopeDriver
-from app.locks.service import LockService
-from app.openbis_client.client import OpenBISClient, UserInfo
+from backend.instruments.base_driver import MockOscilloscopeDriver
+from backend.locks.service import LockService
+from backend.openbis_client.client import OpenBISClient, UserInfo
 
 
 @pytest_asyncio.fixture
@@ -36,7 +36,7 @@ async def setup(tmp_path):
 
     buf = BufferService(buffer_dir=str(tmp_path / "buffer"))
 
-    from app.main import create_app
+    from backend.main import create_app
 
     app = create_app()
 

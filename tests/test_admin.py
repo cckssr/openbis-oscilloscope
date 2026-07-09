@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from app.instruments.manager import DeviceState
-from app.openbis_client.client import UserInfo
+from backend.instruments.manager import DeviceState
+from backend.openbis_client.client import UserInfo
 
 
 ADMIN_HEADERS = {"Authorization": "Bearer admin-tok"}

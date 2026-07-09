@@ -7,8 +7,8 @@ import logging
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
-from app.core.dependencies import get_current_user
-from app.openbis_client.client import UserInfo
+from backend.core.dependencies import get_current_user
+from backend.openbis_client.client import UserInfo
 
 router = APIRouter(prefix="/devices", tags=["events"])
 logger = logging.getLogger(__name__)

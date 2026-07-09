@@ -3,9 +3,9 @@
 from fastapi import Cookie, Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.core.exceptions import AdminRequiredError, LockRequiredError, AuthError
-from app.locks.service import LockInfo
-from app.openbis_client.client import UserInfo
+from backend.core.exceptions import AdminRequiredError, LockRequiredError, AuthError
+from backend.locks.service import LockInfo
+from backend.openbis_client.client import UserInfo
 
 _bearer = HTTPBearer(auto_error=False)
 

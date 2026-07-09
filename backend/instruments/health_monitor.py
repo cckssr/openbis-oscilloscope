@@ -5,9 +5,9 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from app.config import settings
-from app.core.activity import ActivityTracker
-from app.instruments.manager import DeviceState, InstrumentManager
+from backend.config import settings
+from backend.core.activity import ActivityTracker
+from backend.instruments.manager import DeviceState, InstrumentManager
 
 logger = logging.getLogger(__name__)
 

@@ -20,8 +20,8 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
-from app.core.exceptions import AuthError, OpenBISError
-from app.openbis_client.client import OpenBISClient
+from backend.core.exceptions import AuthError, OpenBISError
+from backend.openbis_client.client import OpenBISClient
 
 # ---------------------------------------------------------------------------
 # Integration-specific fixtures
@@ -31,7 +31,7 @@ from app.openbis_client.client import OpenBISClient
 @pytest_asyncio.fixture
 async def openbis_client(openbis_url, monkeypatch):
     """Real OpenBISClient pointed at the integration server."""
-    from app import config
+    from backend import config
 
     monkeypatch.setattr(config.settings, "OPENBIS_URL", openbis_url)
     monkeypatch.setattr(config.settings, "DEBUG", False)
@@ -43,9 +43,9 @@ async def integration_app(
     openbis_url, fake_redis, instrument_manager, buffer_service, monkeypatch
 ):
     """Full FastAPI app wired to the real OpenBIS URL — no mocked client."""
-    from app import config
-    from app.locks.service import LockService
-    from app.main import create_app
+    from backend import config
+    from backend.locks.service import LockService
+    from backend.main import create_app
 
     monkeypatch.setattr(config.settings, "OPENBIS_URL", openbis_url)
     monkeypatch.setattr(config.settings, "DEBUG", False)
@@ -164,7 +164,7 @@ async def test_api_commit_creates_oscilloscope_dataset(
     """POST /sessions/{id}/commit uploads flagged artifacts as an OSCILLOSCOPE dataset."""
     import uuid
     import numpy as np
-    from app.instruments.base_driver import WaveformData
+    from backend.instruments.base_driver import WaveformData
 
     sess = str(uuid.uuid4())
     buf = integration_app.state.buffer_service

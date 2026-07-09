@@ -7,7 +7,7 @@ import zlib
 
 import numpy as np
 
-from app.instruments.base_driver import (
+from backend.instruments.base_driver import (
     BaseOscilloscopeDriver,
     ChannelConfig,
     InstrumentInfo,

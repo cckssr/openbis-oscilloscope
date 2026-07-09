@@ -2,8 +2,8 @@
 
 from fastapi import APIRouter, Depends
 
-from app.core.dependencies import get_current_user
-from app.openbis_client.client import UserInfo
+from backend.core.dependencies import get_current_user
+from backend.openbis_client.client import UserInfo
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

@@ -6,8 +6,8 @@ import zipfile
 import numpy as np
 import pytest
 
-from app.buffer.service import BufferService, _slugify, _unique_name
-from app.instruments.base_driver import WaveformData
+from backend.buffer.service import BufferService, _slugify, _unique_name
+from backend.instruments.base_driver import WaveformData
 
 
 @pytest.fixture
@@ -96,7 +96,7 @@ def test_flag_unknown_artifact(svc):
     wf = _make_waveform()
     svc.store_waveform("scope-01", "sess-001", wf, meta={})
 
-    from app.core.exceptions import ArtifactNotFoundError
+    from backend.core.exceptions import ArtifactNotFoundError
 
     with pytest.raises(ArtifactNotFoundError):
         svc.set_flag("sess-001", "nonexistent_0099_ch1", persist=True)

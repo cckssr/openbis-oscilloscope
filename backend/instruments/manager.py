@@ -11,8 +11,11 @@ from typing import Any, Callable, Coroutine
 
 import yaml
 
-from app.config import settings
-from app.instruments.base_driver import BaseOscilloscopeDriver, MockOscilloscopeDriver
+from backend.config import settings
+from backend.instruments.base_driver import (
+    BaseOscilloscopeDriver,
+    MockOscilloscopeDriver,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -288,7 +291,8 @@ class InstrumentManager:
             raise KeyError(f"Unknown device: {device_id}")
 
         if entry.queue.full():
-            from app.core.exceptions import AppError
+            from backend.core.exceptions import AppError
+
             raise AppError(503, "Device command queue full", "queue_full")
 
         loop = asyncio.get_running_loop()

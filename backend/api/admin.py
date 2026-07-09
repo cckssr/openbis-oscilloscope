@@ -4,10 +4,10 @@ import logging
 
 from fastapi import APIRouter, Depends, Query, Request
 
-from app.core.dependencies import require_admin
-from app.core.exceptions import DeviceNotFoundError, DeviceOfflineError
-from app.openbis_client.client import UserInfo
-from app.instruments.manager import DeviceState
+from backend.core.dependencies import require_admin
+from backend.core.exceptions import DeviceNotFoundError, DeviceOfflineError
+from backend.openbis_client.client import UserInfo
+from backend.instruments.manager import DeviceState
 
 logger = logging.getLogger(__name__)
 

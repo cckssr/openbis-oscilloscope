@@ -8,8 +8,8 @@ from unittest.mock import AsyncMock, patch
 import numpy as np
 import pytest
 
-from app.instruments.base_driver import WaveformData
-from app.openbis_client.client import UserInfo
+from backend.instruments.base_driver import WaveformData
+from backend.openbis_client.client import UserInfo
 
 
 def _make_waveform(channel: int = 1, n: int = 50) -> WaveformData:

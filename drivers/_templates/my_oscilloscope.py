@@ -8,7 +8,7 @@ Register your driver in config/oscilloscopes.yaml:
     driver: "drivers.my_oscilloscope.MyOscilloscope"
 """
 
-from app.instruments.base_driver import (
+from backend.instruments.base_driver import (
     BaseOscilloscopeDriver,
     ChannelConfig,
     InstrumentInfo,

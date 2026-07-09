@@ -5,10 +5,10 @@ import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from app.instruments.manager import DeviceState
+from backend.instruments.manager import DeviceState
 
-from app.config import settings
-from app.scheduler.openbis_sync import sync_oscilloscopes_from_openbis
+from backend.config import settings
+from backend.scheduler.openbis_sync import sync_oscilloscopes_from_openbis
 
 logger = logging.getLogger(__name__)
 

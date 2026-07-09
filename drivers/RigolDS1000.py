@@ -3,7 +3,7 @@
 import logging
 import numpy as np
 
-from app.instruments.base_driver import (
+from backend.instruments.base_driver import (
     BaseOscilloscopeDriver,
     ChannelConfig,
     InstrumentInfo,
@@ -12,7 +12,9 @@ from app.instruments.base_driver import (
     WaveformData,
 )
 
-from app.instruments.pymeasure_rigol_ds1000 import RigolDS1000ZSeries as _RigolDS1000Z
+from backend.instruments.pymeasure_rigol_ds1000 import (
+    RigolDS1000ZSeries as _RigolDS1000Z,
+)
 
 _SLOPE_MAP = {"POS": "RISE", "NEG": "FALL", "RFAL": "EITHER"}
 _SWEEP_MAP = {"AUTO": "AUTO", "NORM": "NORMAL", "SING": "SINGLE"}

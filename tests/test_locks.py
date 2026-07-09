@@ -2,7 +2,7 @@ import pytest
 import pytest_asyncio
 import fakeredis.aioredis as fakeredis
 
-from app.locks.service import LockService
+from backend.locks.service import LockService
 
 
 @pytest_asyncio.fixture

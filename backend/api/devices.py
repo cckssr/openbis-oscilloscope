@@ -9,23 +9,27 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Body, Depends, Path, Query, Request
 from fastapi.responses import Response
 
-from app.core.dependencies import get_current_user
-from app.core.exceptions import (
+from backend.core.dependencies import get_current_user
+from backend.core.exceptions import (
     DeviceNotFoundError,
     DeviceOfflineError,
     LockConflictError,
     LockRequiredError,
     ArtifactNotFoundError,
 )
-from app.instruments.manager import DeviceState, InstrumentManager, _load_driver_class
-from app.instruments.base_driver import (
+from backend.instruments.manager import (
+    DeviceState,
+    InstrumentManager,
+    _load_driver_class,
+)
+from backend.instruments.base_driver import (
     BaseOscilloscopeDriver,
     TriggerConfig,
     ChannelConfig,
     TimebaseConfig,
 )
-from app.locks.service import LockService
-from app.openbis_client.client import UserInfo
+from backend.locks.service import LockService
+from backend.openbis_client.client import UserInfo
 
 router = APIRouter(prefix="/devices", tags=["devices"])
 
@@ -196,7 +200,12 @@ async def acquire_lock(
     event_bus = getattr(request.app.state, "event_bus", None)
     if event_bus:
         event_bus.publish(
-            {"type": "lock", "device_id": device_id, "owner_user": user.user_id, "session_id": session_id}
+            {
+                "type": "lock",
+                "device_id": device_id,
+                "owner_user": user.user_id,
+                "session_id": session_id,
+            }
         )
     return {"control_session_id": session_id, "device_id": device_id}
 
@@ -228,7 +237,12 @@ async def release_lock(
     event_bus = getattr(request.app.state, "event_bus", None)
     if event_bus:
         event_bus.publish(
-            {"type": "lock", "device_id": device_id, "owner_user": None, "session_id": None}
+            {
+                "type": "lock",
+                "device_id": device_id,
+                "owner_user": None,
+                "session_id": None,
+            }
         )
     return {"released": True}
 
@@ -502,7 +516,6 @@ async def get_channel_data(
     paths = buffer_service.get_artifact_paths(session_id, latest.artifact_id)
     csv_path = next((p for p in paths if p.suffix == ".csv"), None)
     if csv_path is None:
-
         raise ArtifactNotFoundError(latest.artifact_id)
 
     times, volts = buffer_service.read_trace_csv(csv_path)
@@ -751,7 +764,9 @@ async def save_screenshot(
         return await asyncio.to_thread(driver.get_screenshot)
 
     png_bytes = await manager.execute_command(device_id, _screenshot, timeout=15.0)
-    art_id = await asyncio.to_thread(buffer_service.store_screenshot, device_id, session_id, png_bytes)
+    art_id = await asyncio.to_thread(
+        buffer_service.store_screenshot, device_id, session_id, png_bytes
+    )
     return {"artifact_id": art_id}
 
 

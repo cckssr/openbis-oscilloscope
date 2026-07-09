@@ -9,8 +9,8 @@ from dataclasses import dataclass
 import cachetools
 from pybis import Openbis
 
-from app.config import settings
-from app.core.exceptions import AuthError, OpenBISError
+from backend.config import settings
+from backend.core.exceptions import AuthError, OpenBISError
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +96,7 @@ class OpenBISClient:
             return self._cache[token]
 
         try:
+
             def _do_validate() -> UserInfo:
                 o = self._get_openbis()
                 o.set_token(token, save_token=False)
@@ -116,7 +117,9 @@ class OpenBISClient:
                 except Exception:
                     logger.debug("Could not determine admin status for %s", user_id)
 
-                return UserInfo(user_id=user_id, display_name=user_id, is_admin=is_admin)
+                return UserInfo(
+                    user_id=user_id, display_name=user_id, is_admin=is_admin
+                )
 
             info = await asyncio.to_thread(_do_validate)
             self._cache[token] = info
@@ -166,10 +169,15 @@ class OpenBISClient:
             return fake_id
 
         try:
+
             def _do_create() -> str:
                 o = self._get_openbis()
                 o.set_token(token, save_token=False)
-                kwargs: dict = {"type": dataset_type, "files": files, "props": properties}
+                kwargs: dict = {
+                    "type": dataset_type,
+                    "files": files,
+                    "props": properties,
+                }
                 if object_id:
                     kwargs["object"] = object_id
                 else:
