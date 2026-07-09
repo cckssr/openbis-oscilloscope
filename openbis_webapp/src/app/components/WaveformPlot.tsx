@@ -27,6 +27,7 @@ interface WaveformPlotProps {
   sampleRate: string;
   memoryDepth?: string;
   timebaseScaleSDiv: number;
+  dataRevision?: number;
 }
 
 const NUM_X_DIVS = 10;
@@ -53,6 +54,7 @@ export function WaveformPlot({
   sampleRate,
   memoryDepth,
   timebaseScaleSDiv,
+  dataRevision,
 }: WaveformPlotProps) {
   const channels = ["ch1", "ch2", "ch3", "ch4"] as const;
 
@@ -200,6 +202,8 @@ export function WaveformPlot({
     dragmode: "zoom",
     hovermode: "x unified",
     autosize: true,
+    // Incrementing uirevision resets Plotly's zoom/pan state when new data arrives.
+    uirevision: dataRevision,
   };
 
   return (
@@ -207,6 +211,7 @@ export function WaveformPlot({
       <Plot
         data={traces}
         layout={layout}
+        revision={dataRevision}
         style={{ width: "100%", height: "100%" }}
         useResizeHandler
         config={{

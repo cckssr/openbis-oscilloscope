@@ -125,7 +125,7 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
         time_array = x_origin + (np.arange(n_points) - x_ref) * x_inc
         sample_rate = 1.0 / x_inc
 
-        # RAW mode stops the scope; restart so continuous acquisition resumes.
+        # MAX mode stops the scope; restart so continuous acquisition resumes.
         try:
             self.set_keyboard_lock(False)
             self.instrument.run()

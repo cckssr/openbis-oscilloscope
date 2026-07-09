@@ -3,12 +3,17 @@ Description=OpenBIS Oscilloscope Service
 After=network.target redis.service
 
 [Service]
+Type=simple
 User=lab
 WorkingDirectory=/opt/openbis-oscilloscope
 EnvironmentFile=/opt/openbis-oscilloscope/.env
-ExecStart=/opt/openbis-oscilloscope/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+ExecStart=/opt/openbis-oscilloscope/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+StandardOutput=journal
+StandardError=journal
 SyslogIdentifier=openbis-oscilloscope
 Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
 
 [Install]
 WantedBy=multi-user.target

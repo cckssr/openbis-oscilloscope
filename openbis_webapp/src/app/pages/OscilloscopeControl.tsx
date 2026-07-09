@@ -71,12 +71,15 @@ function buildPlotData(
 ): PlotPoint[] {
   const entries = Object.entries(channelData) as [string, WaveformData][];
   if (!entries.length) return [];
+  // Pre-compute all downsampled voltage arrays once to avoid O(N×M) calls inside the map.
+  const downsampled = Object.fromEntries(
+    entries.map(([ch, data]) => [ch, downsample(data.voltage_V, maxPoints)]),
+  );
   const firstTime = downsample(entries[0][1].time_s, maxPoints);
   return firstTime.map((time, i) => {
     const point: PlotPoint = { time };
-    for (const [ch, data] of entries) {
-      const volts = downsample(data.voltage_V, maxPoints);
-      (point as Record<string, number>)[`ch${ch}`] = volts[i] ?? 0;
+    for (const [ch] of entries) {
+      (point as Record<string, number>)[`ch${ch}`] = downsampled[ch][i] ?? 0;
     }
     return point;
   });
@@ -164,6 +167,7 @@ export function OscilloscopeControl() {
   const [isSavingAnnotation, setIsSavingAnnotation] = useState(false);
   const [cmdError, setCmdError] = useState<string | null>(null);
   const [waveformData, setWaveformData] = useState<PlotPoint[]>([]);
+  const [plotRevision, setPlotRevision] = useState(0);
   // Full-resolution channel data kept for CSV export (not downsampled)
   const [rawChannelData, setRawChannelData] = useState<
     Record<number, WaveformData>
@@ -610,6 +614,7 @@ export function OscilloscopeControl() {
         setRawChannelData(channelDataMap);
         const plot = buildPlotData(channelDataMap);
         setWaveformData(plot);
+        setPlotRevision((r) => r + 1);
         if (plot.length > 0) tStartRef.current = plot[0].time;
 
         const firstData = Object.values(channelDataMap)[0];
@@ -730,11 +735,10 @@ export function OscilloscopeControl() {
     setCmdError(null);
     setIsScreenshotting(true);
     try {
-      // Capture live display for download AND save to buffer in parallel
-      const [blob] = await Promise.all([
-        getScreenshot(token, deviceId, sessionId),
-        saveScreenshot(token, deviceId, sessionId).catch(() => null),
-      ]);
+      // Capture first; fire-and-forget the buffer save so a second round-trip
+      // through the (serialized) device queue can't block or timeout the download.
+      const blob = await getScreenshot(token, deviceId, sessionId);
+      saveScreenshot(token, deviceId, sessionId).catch(() => null);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -781,7 +785,7 @@ export function OscilloscopeControl() {
           </button>
           <div className="flex items-center gap-3">
             <h1 className="text-lg font-semibold text-(--lab-text-primary)">
-              {device?.label + " (" + deviceId + ")"}
+              {device ? `${device.label} (${deviceId})` : deviceId}
             </h1>
             {device && <StatusBadge status={device.state} />}
           </div>
@@ -1093,6 +1097,7 @@ export function OscilloscopeControl() {
                     : undefined
                 }
                 timebaseScaleSDiv={actualTimebaseScaleSDiv}
+                dataRevision={plotRevision}
               />
             )}
             {/* Live indicator */}
