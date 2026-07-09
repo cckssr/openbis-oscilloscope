@@ -1,6 +1,6 @@
-# `app/api/` — HTTP Route Handlers
+# `backend/api/` — HTTP Route Handlers
 
-All FastAPI routers. Each file is a single router mounted in `app/main.py`.
+All FastAPI routers. Each file is a single router mounted in `backend/main.py`.
 
 ## Files
 
@@ -67,8 +67,8 @@ Live OpenBIS hierarchy queries (lazily loaded, 5-minute TTL cache per token+para
 
 Server-Sent Events channel for real-time device and lock state push.
 
-| Method | Path              | Auth   | Description                                                                                                       |
-| ------ | ----------------- | ------ | ----------------------------------------------------------------------------------------------------------------- |
+| Method | Path              | Auth   | Description                                                                                                            |
+| ------ | ----------------- | ------ | ---------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/devices/events` | Bearer | SSE stream. Sends `data: {type, ...}\n\n` on device state transitions and lock changes. Keepalive `: ping` every 20 s. |
 
 Event types:
@@ -99,4 +99,4 @@ All errors raised via the `AppError` hierarchy return JSON with two fields:
 { "error": "lock_conflict", "detail": "Device 'scope-01' is locked by 'alice'" }
 ```
 
-The `error` field is a snake_case slug; see `app/core/exceptions.py` for the full list.
+The `error` field is a snake_case slug; see `backend/core/exceptions.py` for the full list.

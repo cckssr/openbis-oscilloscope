@@ -34,14 +34,14 @@ async def lifespan(app: FastAPI):
 
     Startup order:
         1. Connect to Redis (or create an in-memory fake in ``DEBUG`` mode).
-        2. Instantiate core services: :class:`~app.locks.service.LockService`,
-           :class:`~app.instruments.manager.InstrumentManager`,
-           :class:`~app.buffer.service.BufferService`,
-           :class:`~app.openbis_client.client.OpenBISClient`.
+        2. Instantiate core services: :class:`~backend.locks.service.LockService`,
+           :class:`~backend.instruments.manager.InstrumentManager`,
+           :class:`~backend.buffer.service.BufferService`,
+           :class:`~backend.openbis_client.client.OpenBISClient`.
         3. Load device config and start per-device worker tasks.
         4. In ``DEBUG`` mode: immediately connect mock drivers so devices
            appear as ``ONLINE`` without the health monitor.
-        5. Start :class:`~app.instruments.health_monitor.HealthMonitor`
+        5. Start :class:`~backend.instruments.health_monitor.HealthMonitor`
            (skipped in ``DEBUG`` mode).
         6. Start the APScheduler end-of-day cron job.
         7. Attach all service instances to ``app.state`` for dependency access.
@@ -137,7 +137,7 @@ def create_app() -> FastAPI:
     """Create and configure the FastAPI application instance.
 
     Constructs the :class:`~fastapi.FastAPI` app with the :func:`lifespan`
-    context manager, registers the global :class:`~app.core.exceptions.AppError`
+    context manager, registers the global :class:`~backend.core.exceptions.AppError`
     exception handler, and mounts all API routers under their respective prefixes:
 
     - ``/auth`` — authentication endpoints

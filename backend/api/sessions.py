@@ -28,7 +28,7 @@ def _get_buffer(request: Request):
         request: The current HTTP request.
 
     Returns:
-        The :class:`~app.buffer.service.BufferService` instance from
+        The :class:`~backend.buffer.service.BufferService` instance from
         ``request.app.state``.
     """
     return request.app.state.buffer_service
@@ -134,7 +134,7 @@ async def commit_session(
     """Upload all flagged artifacts to OpenBIS as a new RAW_DATA dataset.
 
     Collects every artifact whose ``persist`` flag is ``true``, resolves their
-    file paths, and calls :meth:`~app.openbis_client.client.OpenBISClient.create_dataset`
+    file paths, and calls :meth:`~backend.openbis_client.client.OpenBISClient.create_dataset`
     to register them in OpenBIS.
 
     Args:

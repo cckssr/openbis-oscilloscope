@@ -65,10 +65,10 @@ The backend listens on `localhost:8000`.
 ### 4. Frontend (Vite build)
 
 ```bash
-cd /opt/openbis-oscilloscope/openbis_webapp
+cd /opt/openbis-oscilloscope/frontend
 npm ci
 npm run build
-# Built files land in openbis_webapp/dist/
+# Built files land in frontend/dist/
 ```
 
 ## Apache2 VirtualHost
@@ -102,9 +102,9 @@ Replace `oscilloscope.example.org` with your actual domain throughout.
     ProxyPassReverse /api/ http://127.0.0.1:8000/
 
     # --- SPA static files ---
-    DocumentRoot /opt/openbis-oscilloscope/openbis_webapp/dist
+    DocumentRoot /opt/openbis-oscilloscope/frontend/dist
 
-    <Directory /opt/openbis-oscilloscope/openbis_webapp/dist>
+    <Directory /opt/openbis-oscilloscope/frontend/dist>
         Options -Indexes
         AllowOverride None
         Require all granted
@@ -186,5 +186,5 @@ pip install -e .
 systemctl restart openbis-oscilloscope
 
 # Rebuild frontend if changed
-cd openbis_webapp && npm ci && npm run build
+cd frontend && npm ci && npm run build
 ```

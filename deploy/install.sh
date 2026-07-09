@@ -45,8 +45,8 @@ rsync -a --delete \
     --exclude='*.pyc' \
     --exclude='.env' \
     --exclude='buffer/' \
-    --exclude='openbis_webapp/node_modules' \
-    --exclude='openbis_webapp/dist' \
+    --exclude='frontend/node_modules' \
+    --exclude='frontend/dist' \
     "$REPO_ROOT/" "$APP_DIR/"
 
 # ── .env file ──────────────────────────────────────────────────────────────────
@@ -70,7 +70,7 @@ python3 -m venv "$APP_DIR/.venv"
 
 # ── Frontend build ─────────────────────────────────────────────────────────────
 echo "--> Building Vite frontend"
-cd "$APP_DIR/openbis_webapp"
+cd "$APP_DIR/frontend"
 pnpm install --frozen-lockfile
 pnpm build
 cd "$REPO_ROOT"
@@ -105,7 +105,7 @@ systemctl enable --now openbis-oscilloscope-restart.timer
 # ── Nginx ──────────────────────────────────────────────────────────────────────
 echo "--> Configuring nginx"
 # Patch the root path in the nginx config to match the chosen app dir
-sed "s|root .*openbis_webapp/dist;|root $APP_DIR/openbis_webapp/dist;|" \
+sed "s|root .*frontend/dist;|root $APP_DIR/frontend/dist;|" \
     "$SCRIPT_DIR/nginx.conf" \
     > /etc/nginx/sites-available/openbis-oscilloscope
 

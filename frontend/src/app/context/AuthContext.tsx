@@ -40,11 +40,19 @@ function getOpenBISTokenFragment(): string | null {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(
-    () => localStorage.getItem(STORAGE_KEY) ?? getOpenBISCookie() ?? getOpenBISTokenFragment(),
+    () =>
+      localStorage.getItem(STORAGE_KEY) ??
+      getOpenBISCookie() ??
+      getOpenBISTokenFragment(),
   );
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(
-    () => !!(localStorage.getItem(STORAGE_KEY) ?? getOpenBISCookie() ?? getOpenBISTokenFragment()),
+    () =>
+      !!(
+        localStorage.getItem(STORAGE_KEY) ??
+        getOpenBISCookie() ??
+        getOpenBISTokenFragment()
+      ),
   );
 
   // Validate the stored token once on mount.

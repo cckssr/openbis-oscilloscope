@@ -29,7 +29,7 @@ async def reset_all_locks(
     Args:
         request: The current HTTP request.
         admin: The authenticated admin user, enforced by
-            :func:`~app.core.dependencies.require_admin`.
+            :func:`~backend.core.dependencies.require_admin`.
 
     Returns:
         A dict with ``locks_cleared`` (integer count of deleted Redis keys).
@@ -66,7 +66,7 @@ async def force_unlock(
         device_id: Path parameter identifying the device to forcibly unlock.
         request: The current HTTP request.
         admin: The authenticated admin user, enforced by
-            :func:`~app.core.dependencies.require_admin`.
+            :func:`~backend.core.dependencies.require_admin`.
 
     Returns:
         A dict with ``device_id`` and ``released`` (``true`` if a lock key was
@@ -113,7 +113,7 @@ async def set_keyboard_lock(
         locked: Query parameter — ``true`` to lock, ``false`` to unlock.
         request: The current HTTP request.
         admin: The authenticated admin user, enforced by
-            :func:`~app.core.dependencies.require_admin`.
+            :func:`~backend.core.dependencies.require_admin`.
 
     Returns:
         A dict with ``device_id`` and ``keyboard_locked`` reflecting the new state.

@@ -61,7 +61,7 @@ pip install -e ".[dev]"
 DEBUG=True uvicorn app.main:app --reload
 
 # Terminal 2 — Vite frontend (proxies /api/ to FastAPI automatically)
-cd openbis_webapp && pnpm install && pnpm dev
+cd frontend && pnpm install && pnpm dev
 ```
 
 ## Running tests

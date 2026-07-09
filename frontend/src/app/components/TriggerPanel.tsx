@@ -25,7 +25,10 @@ export function TriggerPanel({
         <label className="block text-xs text-(--lab-text-secondary) mb-1">
           Triggermodus
         </label>
-        <p className="text-[10px] text-(--lab-text-secondary) mb-2">AUTO: ohne Trigger · NORMAL: wartet auf Trigger · SINGLE: eine Aufnahme</p>
+        <p className="text-[10px] text-(--lab-text-secondary) mb-2">
+          AUTO: ohne Trigger · NORMAL: wartet auf Trigger · SINGLE: eine
+          Aufnahme
+        </p>
         <SegmentedControl
           options={["AUTO", "NORMAL", "SINGLE"]}
           value={triggerSettings.mode}
@@ -42,7 +45,9 @@ export function TriggerPanel({
         <label className="block text-xs text-(--lab-text-secondary) mb-1">
           Triggerquelle
         </label>
-        <p className="text-[10px] text-(--lab-text-secondary) mb-2">Kanal, auf den das Triggersystem reagiert.</p>
+        <p className="text-[10px] text-(--lab-text-secondary) mb-2">
+          Kanal, auf den das Triggersystem reagiert.
+        </p>
         <SegmentedControl
           options={["CH1", "CH2", "CH3", "CH4"]}
           value={triggerSettings.source}
@@ -56,7 +61,9 @@ export function TriggerPanel({
         <label className="block text-xs text-(--lab-text-secondary) mb-1">
           Triggerflanke
         </label>
-        <p className="text-[10px] text-(--lab-text-secondary) mb-2">RISE: steigend · FALL: fallend · EITHER: beide Flanken</p>
+        <p className="text-[10px] text-(--lab-text-secondary) mb-2">
+          RISE: steigend · FALL: fallend · EITHER: beide Flanken
+        </p>
         <SegmentedControl
           options={["RISE", "FALL", "EITHER"]}
           value={triggerSettings.slope}
@@ -73,7 +80,9 @@ export function TriggerPanel({
         <label className="block text-xs text-(--lab-text-secondary) mb-1">
           Triggerpegel
         </label>
-        <p className="text-[10px] text-(--lab-text-secondary) mb-1">Spannungsschwelle, bei der der Trigger auslöst</p>
+        <p className="text-[10px] text-(--lab-text-secondary) mb-1">
+          Spannungsschwelle, bei der der Trigger auslöst
+        </p>
         <NumericInput
           value={triggerSettings.level_v}
           unit="V"

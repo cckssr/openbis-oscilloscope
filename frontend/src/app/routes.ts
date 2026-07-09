@@ -51,7 +51,11 @@ export const router = createBrowserRouter(
     },
     {
       path: "/device/:deviceId",
-      element: createElement(RequireAuth, null, createElement(KeyedOscilloscopeControl)),
+      element: createElement(
+        RequireAuth,
+        null,
+        createElement(KeyedOscilloscopeControl),
+      ),
     },
     {
       path: "/archive/:sessionId",

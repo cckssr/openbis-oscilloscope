@@ -99,7 +99,9 @@ export function ChannelsPanel({
                   <label className="block text-xs text-(--lab-text-secondary) mb-1">
                     Vertikale Skalierung
                   </label>
-                  <p className="text-[10px] text-(--lab-text-secondary) mb-1">Volt pro Division (V/div)</p>
+                  <p className="text-[10px] text-(--lab-text-secondary) mb-1">
+                    Volt pro Division (V/div)
+                  </p>
                   <NumericInput
                     value={cfg.scale_v_div}
                     unit="V/div"
@@ -136,7 +138,9 @@ export function ChannelsPanel({
                   <label className="block text-xs text-(--lab-text-secondary) mb-1">
                     Kopplung
                   </label>
-                  <p className="text-[10px] text-(--lab-text-secondary) mb-1">AC: Gleichanteil blockiert · DC: vollständig · GND: Masse</p>
+                  <p className="text-[10px] text-(--lab-text-secondary) mb-1">
+                    AC: Gleichanteil blockiert · DC: vollständig · GND: Masse
+                  </p>
                   <SegmentedControl
                     options={["AC", "DC", "GND"]}
                     value={cfg.coupling}
@@ -156,7 +160,9 @@ export function ChannelsPanel({
                   <label className="block text-xs text-(--lab-text-secondary) mb-1">
                     Tastkopf
                   </label>
-                  <p className="text-[10px] text-(--lab-text-secondary) mb-1">Dämpfungsfaktor der Tastleitung</p>
+                  <p className="text-[10px] text-(--lab-text-secondary) mb-1">
+                    Dämpfungsfaktor der Tastleitung
+                  </p>
                   <SegmentedControl
                     options={["1×", "10×", "100×"]}
                     value={probeLabel}

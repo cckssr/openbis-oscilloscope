@@ -7,20 +7,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+WORKDIR /backend
 
 # Install Python deps first (layer cache)
 COPY pyproject.toml .
 RUN pip install --no-cache-dir -e .
 
 # Copy application code
-COPY app/ ./app/
+COPY backend/ ./backend/
 COPY drivers/ ./drivers/
 COPY scripts/ ./scripts/
 COPY config/ ./config/
 
 # Create buffer directory
-RUN mkdir -p /app/buffer
+RUN mkdir -p /backend/buffer
 
 EXPOSE 8000
 

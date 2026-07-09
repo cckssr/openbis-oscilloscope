@@ -1,4 +1,4 @@
-# `app/openbis_client/` — OpenBIS Integration
+# `backend/openbis_client/` — OpenBIS Integration
 
 Thin wrapper around the `pybis` library. Handles token validation (with TTL caching) and dataset registration for committing flagged artifacts from a session.
 
@@ -16,9 +16,9 @@ Thin wrapper around the `pybis` library. Handles token validation (with TTL cach
 
 **`OpenBISClient`** — methods:
 
-| Method                                                                                                        | Description                                                                                                                                                                                                                                        |
-| ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `validate_token(token) -> UserInfo`                                                                           | Calls `pybis.Openbis.is_session_active()` and queries the user's roles via a reused singleton `Openbis` instance. Blocking pybis I/O is offloaded to a thread pool (`asyncio.to_thread`). Result is cached in a `TTLCache` for `TOKEN_CACHE_SECONDS` seconds. Raises `AuthError` on invalid tokens. |
+| Method                                                                                                        | Description                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `validate_token(token) -> UserInfo`                                                                           | Calls `pybis.Openbis.is_session_active()` and queries the user's roles via a reused singleton `Openbis` instance. Blocking pybis I/O is offloaded to a thread pool (`asyncio.to_thread`). Result is cached in a `TTLCache` for `TOKEN_CACHE_SECONDS` seconds. Raises `AuthError` on invalid tokens.                                                                                                      |
 | `create_dataset(token, experiment_id, files, properties, dataset_type="OSCILLOSCOPE", object_id=None) -> str` | Creates a new OpenBIS dataset via the reused singleton `Openbis` instance (lazy-initialised, guarded by a `threading.Lock`). Blocking pybis I/O is offloaded via `asyncio.to_thread`. When `object_id` is given the dataset is attached to that object; otherwise it is linked to `experiment_id` (collection path `/SPACE/PROJECT/COLLECTION`). Returns the `permId`. Raises `OpenBISError` on failure. |
 
 ## DEBUG mode

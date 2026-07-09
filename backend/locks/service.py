@@ -32,7 +32,7 @@ class LockService:
     """Distributed, exclusive device-locking service backed by Redis.
 
     Each lock is stored at the key ``lock:{device_id}`` as a JSON string with a
-    TTL of :attr:`~app.config.Settings.LOCK_TTL_SECONDS`. Locks are acquired
+    TTL of :attr:`~backend.config.Settings.LOCK_TTL_SECONDS`. Locks are acquired
     atomically with ``SET NX EX`` so that only one session can hold a lock at a
     time. If a client disappears without calling :meth:`release_lock`, the key
     expires automatically.
@@ -62,7 +62,7 @@ class LockService:
 
         Uses Redis ``SET NX EX`` so the operation succeeds only when no lock
         exists for the given device. The lock is stored with a TTL of
-        :attr:`~app.config.Settings.LOCK_TTL_SECONDS`.
+        :attr:`~backend.config.Settings.LOCK_TTL_SECONDS`.
 
         Args:
             device_id: Identifier of the device to lock.

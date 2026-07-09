@@ -17,7 +17,7 @@ def create_scheduler(lock_service, instrument_manager) -> AsyncIOScheduler:
     """Build and return a configured :class:`~apscheduler.schedulers.asyncio.AsyncIOScheduler`.
 
     Registers two end-of-day cron jobs in the timezone defined by
-    :attr:`~app.config.Settings.EOD_RESET_TIMEZONE`:
+    :attr:`~backend.config.Settings.EOD_RESET_TIMEZONE`:
 
     - ``eod_openbis_sync`` (23:55): queries OpenBIS for EQUIPMENT objects and
       updates ``oscilloscopes.yaml``. No-op when ``OPENBIS_BOT_USER`` is empty.
@@ -29,9 +29,9 @@ def create_scheduler(lock_service, instrument_manager) -> AsyncIOScheduler:
     management.
 
     Args:
-        lock_service: The :class:`~app.locks.service.LockService` instance whose
+        lock_service: The :class:`~backend.locks.service.LockService` instance whose
             ``reset_all_locks`` method will be called by the job.
-        instrument_manager: The :class:`~app.instruments.manager.InstrumentManager`
+        instrument_manager: The :class:`~backend.instruments.manager.InstrumentManager`
             instance used to reset device states after locks are cleared.
 
     Returns:

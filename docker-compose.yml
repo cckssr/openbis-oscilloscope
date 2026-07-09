@@ -25,9 +25,9 @@ services:
     env_file:
       - .env
     volumes:
-      - ./buffer:/app/buffer
-      - ./config:/app/config:ro
-      - ./drivers:/app/drivers:ro
+      - ./buffer:/backend/buffer
+      - ./config:/backend/config:ro
+      - ./drivers:/backend/drivers:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s

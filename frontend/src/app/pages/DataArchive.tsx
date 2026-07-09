@@ -1020,9 +1020,18 @@ export function DataArchive() {
             {awaitingConfirm ? (
               <div className="border-2 border-(--lab-warning) rounded p-3 space-y-2">
                 <p className="text-sm text-(--lab-text-primary)">
-                  <strong>{flaggedCount} Artefakt{flaggedCount !== 1 ? "e" : ""}</strong> werden endgültig nach OpenBIS übertragen
+                  <strong>
+                    {flaggedCount} Artefakt{flaggedCount !== 1 ? "e" : ""}
+                  </strong>{" "}
+                  werden endgültig nach OpenBIS übertragen
                   {experimentId.trim() && (
-                    <> an <span className="font-mono text-xs">{experimentId.trim()}</span></>
+                    <>
+                      {" "}
+                      an{" "}
+                      <span className="font-mono text-xs">
+                        {experimentId.trim()}
+                      </span>
+                    </>
                   )}
                   . Fortfahren?
                 </p>

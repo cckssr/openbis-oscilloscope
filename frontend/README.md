@@ -26,7 +26,7 @@ The `dist/` folder is served by Nginx in the Docker Compose setup. Nginx also pr
 ```
 src/
   api/          # Typed API client (client.ts, devices.ts, sessions.ts, auth.ts, types.ts)
-  app/
+  backend/
     context/    # AuthContext — token storage and user state
     pages/      # DeviceList, OscilloscopeControl, DataArchive, Login
     components/ # Reusable UI components

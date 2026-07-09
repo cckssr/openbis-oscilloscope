@@ -276,7 +276,7 @@ def _verify_lock_ownership(lock, user_id: str, session_id: str, device_id: str) 
     """Assert that the given user and session currently own the device lock.
 
     Args:
-        lock: The current :class:`~app.locks.service.LockInfo`, or ``None`` if
+        lock: The current :class:`~backend.locks.service.LockInfo`, or ``None`` if
             the device is unlocked.
         user_id: Authenticated user's ID to verify against ``lock.owner_user``.
         session_id: Control session UUID to verify against ``lock.session_id``.

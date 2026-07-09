@@ -4,10 +4,10 @@ This directory contains the custom driver(s) for your oscilloscope model. Driver
 
 ## Available drivers
 
-| File                       | Class         | Hardware                                                                                                                                                                                  |
-| -------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `RigolDS1000.py`           | `RigolDS1000` | Rigol DS1000Z series (DS1054Z, DS1074Z, DS1104Z, MSO variants). Full read/write driver using PyMeasure over VXI-11 (`TCPIP::ip::INSTR`). Set `port: 111` in the YAML (VXI-11 portmapper). |
-| `_templates/my_oscilloscope.py` | —        | Annotated stub — copy this to add a new driver. Kept under `_templates/` so it cannot be accidentally referenced in `oscilloscopes.yaml`.                                                |
+| File                            | Class         | Hardware                                                                                                                                                                                  |
+| ------------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RigolDS1000.py`                | `RigolDS1000` | Rigol DS1000Z series (DS1054Z, DS1074Z, DS1104Z, MSO variants). Full read/write driver using PyMeasure over VXI-11 (`TCPIP::ip::INSTR`). Set `port: 111` in the YAML (VXI-11 portmapper). |
+| `_templates/my_oscilloscope.py` | —             | Annotated stub — copy this to add a new driver. Kept under `_templates/` so it cannot be accidentally referenced in `oscilloscopes.yaml`.                                                 |
 
 ---
 
@@ -99,7 +99,7 @@ The `driver` field is a Python dotted import path. The class is loaded dynamical
 
 ```python
 import numpy as np
-from app.instruments.base_driver import (
+from backend.instruments.base_driver import (
     BaseOscilloscopeDriver, WaveformData, ChannelConfig,
     TimebaseConfig, TriggerConfig, InstrumentInfo,
 )

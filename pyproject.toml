@@ -35,4 +35,4 @@ testpaths = ["tests"]
 # addopts = "--openbis-url=openbis.physik.tu-berlin.de --openbis-token=${OPENBIS_TOKEN}"
 
 [tool.hatch.build.targets.wheel]
-packages = ["app"]
+packages = ["backend"]

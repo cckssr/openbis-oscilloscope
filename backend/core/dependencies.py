@@ -29,7 +29,7 @@ async def get_current_user(
         openbis: Value of the ``openbis`` cookie, used as a fallback token.
 
     Returns:
-        A :class:`~app.openbis_client.client.UserInfo` dataclass with the
+        A :class:`~backend.openbis_client.client.UserInfo` dataclass with the
         authenticated user's ID, display name, and admin flag.
 
     Raises:
@@ -46,13 +46,13 @@ async def require_admin(user: UserInfo = Depends(get_current_user)) -> UserInfo:
     """Dependency that enforces admin privileges for a route.
 
     Wraps :func:`get_current_user` and additionally checks the ``is_admin`` flag
-    on the returned :class:`~app.openbis_client.client.UserInfo`.
+    on the returned :class:`~backend.openbis_client.client.UserInfo`.
 
     Args:
         user: The authenticated user, injected via :func:`get_current_user`.
 
     Returns:
-        The same :class:`~app.openbis_client.client.UserInfo` object if the user
+        The same :class:`~backend.openbis_client.client.UserInfo` object if the user
         has admin privileges.
 
     Raises:
@@ -72,12 +72,12 @@ def make_lock_dependency(lock_service):
     match the stored lock record.
 
     Args:
-        lock_service: The :class:`~app.locks.service.LockService` instance used
+        lock_service: The :class:`~backend.locks.service.LockService` instance used
             to look up the current lock.
 
     Returns:
         An async dependency callable that accepts ``device_id``, ``session_id``,
-        and ``user`` and returns the current :class:`~app.locks.service.LockInfo`
+        and ``user`` and returns the current :class:`~backend.locks.service.LockInfo`
         when ownership is verified.
     """
 
@@ -94,7 +94,7 @@ def make_lock_dependency(lock_service):
             user: The authenticated user, injected via :func:`get_current_user`.
 
         Returns:
-            The :class:`~app.locks.service.LockInfo` for the device if ownership
+            The :class:`~backend.locks.service.LockInfo` for the device if ownership
             is confirmed.
 
         Raises:

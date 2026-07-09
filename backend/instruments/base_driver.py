@@ -107,7 +107,7 @@ class BaseOscilloscopeDriver(ABC):
 
     Concrete drivers subclass this and implement all abstract methods using the
     instrument's communication protocol (SCPI over TCP, vendor SDK, etc.).
-    The :class:`~app.instruments.manager.InstrumentManager` instantiates drivers
+    The :class:`~backend.instruments.manager.InstrumentManager` instantiates drivers
     dynamically based on the ``driver`` field in ``oscilloscopes.yaml``.
 
     Attributes:

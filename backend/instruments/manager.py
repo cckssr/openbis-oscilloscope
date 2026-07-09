@@ -136,8 +136,8 @@ class InstrumentManager:
     device never interleave. Devices run in parallel with one another.
 
     Device configuration is loaded from the YAML file pointed to by
-    :attr:`~app.config.Settings.OSCILLOSCOPES_CONFIG`. In ``DEBUG`` mode all
-    devices are forced to use :class:`~app.instruments.mock_driver.MockOscilloscopeDriver`.
+    :attr:`~backend.config.Settings.OSCILLOSCOPES_CONFIG`. In ``DEBUG`` mode all
+    devices are forced to use :class:`~backend.instruments.mock_driver.MockOscilloscopeDriver`.
 
     Attributes:
         devices: Mapping from device ID string to its :class:`DeviceEntry`.
@@ -151,7 +151,7 @@ class InstrumentManager:
     async def startup(self) -> None:
         """Load device configuration from YAML and start per-device worker tasks.
 
-        Reads :attr:`~app.config.Settings.OSCILLOSCOPES_CONFIG`, creates a
+        Reads :attr:`~backend.config.Settings.OSCILLOSCOPES_CONFIG`, creates a
         :class:`DeviceEntry` for each oscilloscope, and spawns an asyncio task
         running :meth:`_device_worker` for each device. In ``DEBUG`` mode the
         driver path is overridden to ``"mock"`` for every device.
@@ -392,7 +392,7 @@ class InstrumentManager:
             device_id: Identifier of the device for which to create a driver.
 
         Returns:
-            The newly created :class:`~app.instruments.base_driver.BaseOscilloscopeDriver`
+            The newly created :class:`~backend.instruments.base_driver.BaseOscilloscopeDriver`
             instance (also stored in ``entry.driver``).
         """
         entry = self.devices[device_id]

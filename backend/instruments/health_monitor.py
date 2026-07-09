@@ -16,12 +16,12 @@ class HealthMonitor:
     """Background service that periodically checks device reachability over TCP.
 
     Runs as a single asyncio task that wakes every
-    :attr:`~app.config.Settings.HEALTH_CHECK_INTERVAL_SECONDS` and attempts a
+    :attr:`~backend.config.Settings.HEALTH_CHECK_INTERVAL_SECONDS` and attempts a
     TCP connection to each registered device. Based on the result and the
     device's current state it drives the following transitions:
 
     - ``OFFLINE`` → ``ONLINE``: device became reachable; driver is instantiated
-      and :meth:`~app.instruments.base_driver.BaseOscilloscopeDriver.connect`
+      and :meth:`~backend.instruments.base_driver.BaseOscilloscopeDriver.connect`
       is called.
     - ``ERROR`` → ``ONLINE``: device is reachable again after an error;
       reconnection is attempted.
@@ -29,9 +29,9 @@ class HealthMonitor:
       driver is disconnected and the reference cleared.
     - ``BUSY``: skipped entirely so as not to interfere with active commands.
 
-    When an :class:`~app.core.activity.ActivityTracker` is supplied, poll
+    When an :class:`~backend.core.activity.ActivityTracker` is supplied, poll
     cycles are skipped while the system has been idle for longer than
-    :attr:`~app.config.Settings.HEALTH_CHECK_IDLE_TIMEOUT_SECONDS`. Checks
+    :attr:`~backend.config.Settings.HEALTH_CHECK_IDLE_TIMEOUT_SECONDS`. Checks
     resume automatically on the next incoming request.
     """
 
@@ -43,7 +43,7 @@ class HealthMonitor:
         """Initialize the HealthMonitor.
 
         Args:
-            manager: The :class:`~app.instruments.manager.InstrumentManager`
+            manager: The :class:`~backend.instruments.manager.InstrumentManager`
                 whose devices will be monitored.
             activity_tracker: Optional tracker used to skip poll cycles when no
                 users are actively using the service. Pass ``None`` to disable
@@ -78,9 +78,9 @@ class HealthMonitor:
         The first pass runs without delay so real devices show their actual
         state as soon as the application is ready.
 
-        When an :class:`~app.core.activity.ActivityTracker` is configured,
+        When an :class:`~backend.core.activity.ActivityTracker` is configured,
         poll cycles are skipped if no API request has been seen within
-        :attr:`~app.config.Settings.HEALTH_CHECK_IDLE_TIMEOUT_SECONDS` seconds.
+        :attr:`~backend.config.Settings.HEALTH_CHECK_IDLE_TIMEOUT_SECONDS` seconds.
         """
         first_run = True
         while True:

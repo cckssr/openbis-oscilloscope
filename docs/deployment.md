@@ -141,10 +141,10 @@ Run this as the user who owns `/opt/openbis-oscilloscope` (nvm is per-user).
 Build from the root path (default):
 
 ```bash
-cd /opt/openbis-oscilloscope/openbis_webapp
+cd /opt/openbis-oscilloscope/frontend
 pnpm install --frozen-lockfile
 pnpm run build
-# Built files land in openbis_webapp/dist/
+# Built files land in frontend/dist/
 ```
 
 ### Sub-path on existing host
@@ -152,10 +152,10 @@ pnpm run build
 Pass `--base` with your chosen path so Vite rewrites all asset references and React Router sets the correct basename automatically:
 
 ```bash
-cd /opt/openbis-oscilloscope/openbis_webapp
+cd /opt/openbis-oscilloscope/frontend
 pnpm install --frozen-lockfile
 pnpm run build -- --base=/oscilloscope/
-# Built files land in openbis_webapp/dist/
+# Built files land in frontend/dist/
 ```
 
 Replace `/oscilloscope/` with your actual sub-path if different. The trailing slash is required.
@@ -200,7 +200,7 @@ server {
         proxy_set_header   X-Forwarded-Proto $scheme;
     }
 
-    root  /opt/openbis-oscilloscope/openbis_webapp/dist;
+    root  /opt/openbis-oscilloscope/frontend/dist;
     index index.html;
 
     location / {
@@ -239,9 +239,9 @@ certbot --nginx -d oscilloscope.example.org
     ProxyPass        /api/ http://127.0.0.1:8000/
     ProxyPassReverse /api/ http://127.0.0.1:8000/
 
-    DocumentRoot /opt/openbis-oscilloscope/openbis_webapp/dist
+    DocumentRoot /opt/openbis-oscilloscope/frontend/dist
 
-    <Directory /opt/openbis-oscilloscope/openbis_webapp/dist>
+    <Directory /opt/openbis-oscilloscope/frontend/dist>
         Options -Indexes
         AllowOverride None
         Require all granted
@@ -286,7 +286,7 @@ location /oscilloscope/api/ {
 
 # Oscilloscope SPA static files
 location /oscilloscope/ {
-    alias /opt/openbis-oscilloscope/openbis_webapp/dist/;
+    alias /opt/openbis-oscilloscope/frontend/dist/;
     try_files $uri $uri/ /oscilloscope/index.html;
 }
 ```
@@ -305,9 +305,9 @@ ProxyPass        /oscilloscope/api/ http://127.0.0.1:8000/
 ProxyPassReverse /oscilloscope/api/ http://127.0.0.1:8000/
 
 # Oscilloscope SPA static files
-Alias /oscilloscope /opt/openbis-oscilloscope/openbis_webapp/dist
+Alias /oscilloscope /opt/openbis-oscilloscope/frontend/dist
 
-<Directory /opt/openbis-oscilloscope/openbis_webapp/dist>
+<Directory /opt/openbis-oscilloscope/frontend/dist>
     Options -Indexes
     AllowOverride None
     Require all granted
@@ -385,10 +385,10 @@ docker compose pull
 docker compose up -d
 ```
 
-**Rebuild frontend** (if `openbis_webapp/` changed) — use the same `--base` flag as the initial build:
+**Rebuild frontend** (if `frontend/` changed) — use the same `--base` flag as the initial build:
 
 ```bash
-cd /opt/openbis-oscilloscope/openbis_webapp
+cd /opt/openbis-oscilloscope/frontend
 pnpm install --frozen-lockfile
 
 # Dedicated subdomain:

@@ -185,7 +185,9 @@ export function OpenBISObjectSelector({
       <div>
         <label className="block text-xs text-(--lab-text-secondary) mb-1">
           Sammlung{" "}
-          <span className="text-(--lab-accent) font-medium">(Hochlade-Ziel)</span>
+          <span className="text-(--lab-accent) font-medium">
+            (Hochlade-Ziel)
+          </span>
         </label>
         <select
           value={selectedCollection}

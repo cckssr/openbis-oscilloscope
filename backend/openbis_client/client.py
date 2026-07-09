@@ -36,7 +36,7 @@ class OpenBISClient:
     """Thin wrapper around the pybis library for token validation and dataset registration.
 
     Token validation results are cached in a :class:`cachetools.TTLCache` for
-    :attr:`~app.config.Settings.TOKEN_CACHE_SECONDS` seconds to avoid making a
+    :attr:`~backend.config.Settings.TOKEN_CACHE_SECONDS` seconds to avoid making a
     round-trip to OpenBIS on every API request.
     """
 
@@ -56,7 +56,7 @@ class OpenBISClient:
 
         Returns:
             A :class:`pybis.Openbis` instance pointed at
-            :attr:`~app.config.Settings.OPENBIS_URL`.
+            :attr:`~backend.config.Settings.OPENBIS_URL`.
         """
         with self._openbis_lock:
             if self._openbis is None:

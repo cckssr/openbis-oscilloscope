@@ -126,11 +126,16 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family:
+      "Inter",
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
   }
 
   .font-mono {
-    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-family: "JetBrains Mono", "Courier New", monospace;
   }
 
   /**
@@ -187,19 +192,19 @@
 
 /* Laboratory oscilloscope color tokens - Wireframe style */
 :root {
-  --lab-bg: #FFFFFF;
-  --lab-panel: #FAFAFA;
-  --lab-border: #D1D5DB;
-  --lab-accent: #2563EB;
+  --lab-bg: #ffffff;
+  --lab-panel: #fafafa;
+  --lab-border: #d1d5db;
+  --lab-accent: #2563eb;
   --lab-success: #059669;
-  --lab-danger: #DC2626;
-  --lab-warning: #D97706;
+  --lab-danger: #dc2626;
+  --lab-warning: #d97706;
   --lab-text-primary: #111827;
-  --lab-text-secondary: #6B7280;
+  --lab-text-secondary: #6b7280;
 
   /* Oscilloscope channel colors */
-  --ch1-color: #DC2626;
-  --ch2-color: #2563EB;
+  --ch1-color: #dc2626;
+  --ch2-color: #2563eb;
   --ch3-color: #059669;
-  --ch4-color: #D97706;
+  --ch4-color: #d97706;
 }

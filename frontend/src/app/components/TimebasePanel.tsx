@@ -41,7 +41,9 @@ export function TimebasePanel({
         <label className="block text-xs text-(--lab-text-secondary) mb-1">
           Zeitbasis
         </label>
-        <p className="text-[10px] text-(--lab-text-secondary) mb-2">Zeit pro Division — 10 Divisionen = volle Bildbreite</p>
+        <p className="text-[10px] text-(--lab-text-secondary) mb-2">
+          Zeit pro Division — 10 Divisionen = volle Bildbreite
+        </p>
         <select
           value={timebaseSettings.scale_s_div}
           onChange={(e) =>
@@ -63,7 +65,9 @@ export function TimebasePanel({
         <label className="block text-xs text-(--lab-text-secondary) mb-1">
           Zeitlicher Offset
         </label>
-        <p className="text-[10px] text-(--lab-text-secondary) mb-1">Horizontale Verschiebung des Trigger-Referenzpunkts</p>
+        <p className="text-[10px] text-(--lab-text-secondary) mb-1">
+          Horizontale Verschiebung des Trigger-Referenzpunkts
+        </p>
         <NumericInput
           value={timebaseSettings.offset_s}
           unit="s"

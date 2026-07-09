@@ -1,4 +1,4 @@
-# `app/instruments/` — Hardware Interface Layer
+# `backend/instruments/` — Hardware Interface Layer
 
 Manages the full lifecycle of oscilloscope connections: driver loading, per-device command serialization, TCP health checking, and the abstract driver contract.
 
@@ -51,7 +51,7 @@ Abstract base class every driver must subclass, plus the data classes used as re
 - `update_state(device_id, state)` — called by the health monitor and the app on state changes. Sets `entry.online_since` when transitioning to `ONLINE`; clears it on `OFFLINE`/`ERROR`. Publishes a `device_state` event to `event_bus` if one is attached.
 - `shutdown()` — cancels all worker tasks, disconnects all drivers.
 
-**`event_bus`** — optional `EventBus` instance (attached at startup via `app.main`). When set, `update_state` publishes `{"type": "device_state", "device_id": ..., "state": ..., "last_error": ...}` for SSE consumers.
+**`event_bus`** — optional `EventBus` instance (attached at startup via `backend.main`). When set, `update_state` publishes `{"type": "device_state", "device_id": ..., "state": ..., "last_error": ...}` for SSE consumers.
 
 ---
 

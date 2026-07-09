@@ -1,6 +1,6 @@
-# `app/core/` — Cross-Cutting Concerns
+# `backend/core/` — Cross-Cutting Concerns
 
-Shared infrastructure used by every other package: dependency injection helpers, the exception hierarchy, and (via `app/config.py`) application settings.
+Shared infrastructure used by every other package: dependency injection helpers, the exception hierarchy, and (via `backend/config.py`) application settings.
 
 ## Files
 

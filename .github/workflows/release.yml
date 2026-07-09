@@ -72,7 +72,7 @@ jobs:
           sed -i "s/^version = \"$CURRENT\"/version = \"$NEXT\"/" pyproject.toml
 
       - name: Build frontend
-        working-directory: openbis_webapp
+        working-directory: frontend
         run: |
           npm install -g pnpm
           pnpm install

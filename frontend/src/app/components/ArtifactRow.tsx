@@ -51,7 +51,11 @@ export function ArtifactRow({
         <span className="text-(--lab-text-primary)">{timestamp}</span>
         <div className="flex items-center gap-2">
           {thumbnailUrl && (
-            <img src={thumbnailUrl} className="h-8 w-auto rounded border border-(--lab-border)" alt="Screenshot" />
+            <img
+              src={thumbnailUrl}
+              className="h-8 w-auto rounded border border-(--lab-border)"
+              alt="Screenshot"
+            />
           )}
           <span className="text-(--lab-text-secondary)">{type}</span>
         </div>
@@ -61,7 +65,11 @@ export function ArtifactRow({
             return (
               <span
                 className="font-medium"
-                style={{ color: chNum ? `var(--ch${chNum}-color)` : "var(--lab-text-secondary)" }}
+                style={{
+                  color: chNum
+                    ? `var(--ch${chNum}-color)`
+                    : "var(--lab-text-secondary)",
+                }}
               >
                 {channel ?? "—"}
               </span>
@@ -89,7 +97,10 @@ export function ArtifactRow({
       />
 
       {/* Actions */}
-      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="flex items-center gap-1"
+        onClick={(e) => e.stopPropagation()}
+      >
         {onPreview && (
           <button
             onClick={onPreview}
@@ -106,7 +117,9 @@ export function ArtifactRow({
               ? "border-(--lab-warning) text-(--lab-warning) bg-white"
               : "border-transparent hover:border-(--lab-border) hover:bg-(--lab-panel) text-(--lab-text-secondary) hover:text-(--lab-warning)"
           }`}
-          title={persist ? "Markierung entfernen" : "Für OpenBIS-Upload markieren"}
+          title={
+            persist ? "Markierung entfernen" : "Für OpenBIS-Upload markieren"
+          }
         >
           <Flag className="w-4 h-4" />
         </button>

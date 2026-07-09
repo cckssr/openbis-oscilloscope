@@ -53,25 +53,25 @@ Client (Bearer token) → FastAPI → OpenBIS token validation (TTLCache)
 
 - All commands to a given device are **serialized** through a per-device `asyncio.Queue` worker task. Calls across different devices execute in parallel.
 - Device locks are stored in Redis as `lock:{device_id}` keys with TTL. Lock ownership requires matching both `session_id` and `user_id`.
-- Services are attached to `app.state` at startup and accessed in route handlers via FastAPI dependency injection (`app/core/dependencies.py`).
+- Services are attached to `app.state` at startup and accessed in route handlers via FastAPI dependency injection (`backend/core/dependencies.py`).
 
 **`DEBUG=True` mode** replaces Redis with `fakeredis`, uses `MockOscilloscopeDriver` for all devices, skips the health monitor, and accepts a fixed `DEBUG_TOKEN` bearer token — no external dependencies needed.
 
 ## Key files
 
-| File                                                             | Role                                                                    |
-| ---------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| [app/main.py](app/main.py)                                       | App factory + service startup/shutdown lifecycle                        |
-| [app/config.py](app/config.py)                                   | Pydantic settings loaded from env / `.env`                              |
-| [app/core/dependencies.py](app/core/dependencies.py)             | FastAPI DI: `get_current_user`, `require_admin`, `make_lock_dependency` |
-| [app/core/exceptions.py](app/core/exceptions.py)                 | `AppError` hierarchy with HTTP status codes; global handler             |
-| [app/instruments/manager.py](app/instruments/manager.py)         | Device lifecycle, per-device worker tasks, driver dynamic import        |
-| [app/instruments/base_driver.py](app/instruments/base_driver.py) | Abstract driver interface + `WaveformData`, `ChannelConfig`, etc.       |
-| [app/locks/service.py](app/locks/service.py)                     | Redis-backed exclusive locks (`SET NX EX`)                              |
-| [app/buffer/service.py](app/buffer/service.py)                   | Disk artifact storage (CSV/PNG/HDF5) and `index.json` registry          |
-| [app/openbis_client/client.py](app/openbis_client/client.py)     | pybis wrapper for token validation + dataset registration               |
-| [config/oscilloscopes.yaml](config/oscilloscopes.yaml)           | Device inventory (id, ip, port, driver class path)                      |
-| [drivers/my_oscilloscope.py](drivers/my_oscilloscope.py)         | Template for new hardware drivers — copy and implement TODOs            |
+| File                                                                     | Role                                                                    |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| [backend/main.py](backend/main.py)                                       | backend factory + service startup/shutdown lifecycle                    |
+| [backend/config.py](backend/config.py)                                   | Pydantic settings loaded from env / `.env`                              |
+| [backend/core/dependencies.py](backend/core/dependencies.py)             | FastAPI DI: `get_current_user`, `require_admin`, `make_lock_dependency` |
+| [backend/core/exceptions.py](backend/core/exceptions.py)                 | `AppError` hierarchy with HTTP status codes; global handler             |
+| [backend/instruments/manager.py](backend/instruments/manager.py)         | Device lifecycle, per-device worker tasks, driver dynamic import        |
+| [backend/instruments/base_driver.py](backend/instruments/base_driver.py) | Abstract driver interface + `WaveformData`, `ChannelConfig`, etc.       |
+| [backend/locks/service.py](backend/locks/service.py)                     | Redis-backed exclusive locks (`SET NX EX`)                              |
+| [backend/buffer/service.py](backend/buffer/service.py)                   | Disk artifact storage (CSV/PNG/HDF5) and `index.json` registry          |
+| [backend/openbis_client/client.py](backend/openbis_client/client.py)     | pybis wrapper for token validation + dataset registration               |
+| [config/oscilloscopes.yaml](config/oscilloscopes.yaml)                   | Device inventory (id, ip, port, driver class path)                      |
+| [drivers/my_oscilloscope.py](drivers/my_oscilloscope.py)                 | Template for new hardware drivers — copy and implement TODOs            |
 
 ## Adding a hardware driver
 
@@ -84,20 +84,20 @@ Client (Bearer token) → FastAPI → OpenBIS token validation (TTLCache)
 
 Every package folder has a `README.md` that documents its files, public classes, and how it fits into the overall architecture:
 
-| Folder                | README                                                       |
-| --------------------- | ------------------------------------------------------------ |
-| `app/`                | [app/README.md](app/README.md)                               |
-| `app/api/`            | [app/api/README.md](app/api/README.md)                       |
-| `app/core/`           | [app/core/README.md](app/core/README.md)                     |
-| `app/instruments/`    | [app/instruments/README.md](app/instruments/README.md)       |
-| `app/locks/`          | [app/locks/README.md](app/locks/README.md)                   |
-| `app/buffer/`         | [app/buffer/README.md](app/buffer/README.md)                 |
-| `app/openbis_client/` | [app/openbis_client/README.md](app/openbis_client/README.md) |
-| `app/scheduler/`      | [app/scheduler/README.md](app/scheduler/README.md)           |
-| `config/`             | [config/README.md](config/README.md)                         |
-| `drivers/`            | [drivers/README.md](drivers/README.md)                       |
-| `tests/`              | [tests/README.md](tests/README.md)                           |
-| `scripts/`            | [scripts/README.md](scripts/README.md)                       |
+| Folder                    | README                                                               |
+| ------------------------- | -------------------------------------------------------------------- |
+| `backend/`                | [backend/README.md](backend/README.md)                               |
+| `backend/api/`            | [backend/api/README.md](backend/api/README.md)                       |
+| `backend/core/`           | [backend/core/README.md](backend/core/README.md)                     |
+| `backend/instruments/`    | [backend/instruments/README.md](backend/instruments/README.md)       |
+| `backend/locks/`          | [backend/locks/README.md](backend/locks/README.md)                   |
+| `backend/buffer/`         | [backend/buffer/README.md](backend/buffer/README.md)                 |
+| `backend/openbis_client/` | [backend/openbis_client/README.md](backend/openbis_client/README.md) |
+| `backend/scheduler/`      | [backend/scheduler/README.md](backend/scheduler/README.md)           |
+| `config/`                 | [config/README.md](config/README.md)                                 |
+| `drivers/`                | [drivers/README.md](drivers/README.md)                               |
+| `tests/`                  | [tests/README.md](tests/README.md)                                   |
+| `scripts/`                | [scripts/README.md](scripts/README.md)                               |
 
 **Keep these READMEs in sync.** Whenever you add, remove, or significantly change a file in one of these folders — new class, renamed method, changed return type, new endpoint, new driver — update the corresponding `README.md` in the same edit session. Changes that warrant an update include:
 

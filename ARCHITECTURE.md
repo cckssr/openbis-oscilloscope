@@ -18,7 +18,7 @@
 
 ```text
 openbis-oscilloscope/
-├── app/                        # Main application package
+├── backend/                        # Main application package
 │   ├── main.py                 # App factory + startup/shutdown lifecycle
 │   ├── config.py               # Environment-based settings (Pydantic)
 │   ├── api/                    # HTTP route handlers
@@ -58,7 +58,7 @@ openbis-oscilloscope/
 
 ## Component Breakdown
 
-### `app/main.py` — App Factory & Lifecycle
+### `backend/main.py` — App Factory & Lifecycle
 
 The entry point. `create_app()` builds the FastAPI instance and registers a `lifespan` context manager that orchestrates the startup and shutdown of every background service.
 
@@ -74,11 +74,11 @@ The entry point. `create_app()` builds the FastAPI instance and registers a `lif
 
 **Shutdown** tears down these in reverse, draining queues and disconnecting drivers cleanly.
 
-Routes are registered from `app/api/` under their respective prefixes (`/auth`, `/devices`, `/sessions`, `/admin`). A simple `/health` endpoint is also added directly.
+Routes are registered from `backend/api/` under their respective prefixes (`/auth`, `/devices`, `/sessions`, `/admin`). A simple `/health` endpoint is also added directly.
 
 ---
 
-### `app/config.py` — Settings
+### `backend/config.py` — Settings
 
 Uses `pydantic-settings` to load configuration from environment variables (or a `.env` file). All settings have documented defaults.
 
@@ -97,7 +97,7 @@ Uses `pydantic-settings` to load configuration from environment variables (or a 
 
 ---
 
-### `app/core/exceptions.py` — Error Handling
+### `backend/core/exceptions.py` — Error Handling
 
 Defines a hierarchy of typed exceptions, all subclassing `AppError`. Each carries an HTTP status code and a machine-readable `error_code` string.
 
@@ -123,7 +123,7 @@ A global FastAPI exception handler catches any `AppError` and returns a consiste
 
 ---
 
-### `app/core/dependencies.py` — Dependency Injection
+### `backend/core/dependencies.py` — Dependency Injection
 
 Provides reusable FastAPI dependencies injected into route handlers.
 
@@ -138,7 +138,7 @@ Provides reusable FastAPI dependencies injected into route handlers.
 
 ---
 
-### `app/locks/service.py` — Lock Service
+### `backend/locks/service.py` — Lock Service
 
 Provides distributed, exclusive device locks stored in Redis with an automatic TTL.
 
@@ -169,7 +169,7 @@ If a client crashes without calling unlock, the lock expires after `LOCK_TTL_SEC
 
 ---
 
-### `app/buffer/service.py` — Buffer Service
+### `backend/buffer/service.py` — Buffer Service
 
 Manages on-disk persistence of all acquisition artifacts. Each device/session combination gets its own subdirectory:
 
@@ -209,7 +209,7 @@ The `index.json` file is the source of truth for what artifacts exist in a sessi
 
 ---
 
-### `app/openbis_client/client.py` — OpenBIS Client
+### `backend/openbis_client/client.py` — OpenBIS Client
 
 Wraps the `pybis` library for two purposes: **token validation** and **dataset registration**.
 
@@ -226,7 +226,7 @@ The method:
 
 ---
 
-### `app/instruments/manager.py` — Instrument Manager
+### `backend/instruments/manager.py` — Instrument Manager
 
 The central component for device lifecycle and command dispatch. At startup it reads `oscilloscopes.yaml`, creates a `DeviceEntry` for each oscilloscope, and spawns a dedicated async worker task per device.
 
@@ -265,7 +265,7 @@ This design guarantees **serial execution per device** while allowing **parallel
 
 ---
 
-### `app/instruments/base_driver.py` — Base Driver
+### `backend/instruments/base_driver.py` — Base Driver
 
 Defines the abstract interface every oscilloscope driver must implement. Real hardware drivers (and the mock) subclass `BaseOscilloscopeDriver`.
 
@@ -298,7 +298,7 @@ get_trigger() -> TriggerConfig
 
 ---
 
-### `app/instruments/mock_driver.py` — Mock Driver
+### `backend/instruments/mock_driver.py` — Mock Driver
 
 A fully functional in-memory driver that generates synthetic data. Used during development (`DEBUG=True`) and in tests.
 
@@ -309,7 +309,7 @@ A fully functional in-memory driver that generates synthetic data. Used during d
 
 ---
 
-### `app/instruments/health_monitor.py` — Health Monitor
+### `backend/instruments/health_monitor.py` — Health Monitor
 
 A background async task that periodically (every `HEALTH_CHECK_INTERVAL_SECONDS`) attempts a TCP connection to each device's IP and port.
 
@@ -326,7 +326,7 @@ Health monitoring is disabled entirely in `DEBUG` mode since mock drivers never 
 
 ---
 
-### `app/scheduler/tasks.py` — Scheduler
+### `backend/scheduler/tasks.py` — Scheduler
 
 Uses `APScheduler` to run a single cron job: **`eod_lock_reset`** fires at **23:59 every day** (in the configured `EOD_RESET_TIMEZONE`).
 
@@ -513,7 +513,7 @@ services:
     image: redis:7-alpine
 
   webapp:
-    build: ./openbis_webapp
+    build: ./frontend
     ports:
       - "80:80"
     depends_on:
@@ -526,7 +526,7 @@ No ports are exposed for `api` or `redis` — they are only reachable inside the
 
 ### Nginx configuration
 
-**`openbis_webapp/nginx.conf`**
+**`frontend/nginx.conf`**
 
 ```nginx
 server {
@@ -553,16 +553,16 @@ server {
 
 ### Webapp Dockerfile
 
-**`openbis_webapp/Dockerfile`**
+**`frontend/Dockerfile`**
 
 ```dockerfile
 FROM node:20-alpine AS build
-WORKDIR /app
+WORKDIR /backend
 COPY . .
 RUN npm install -g pnpm && pnpm install && pnpm build
 
 FROM nginx:alpine
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build /backend/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 ```
 
@@ -579,10 +579,10 @@ No Docker needed during development. Run FastAPI and the Vite dev server directl
 DEBUG=True uvicorn app.main:app --reload
 
 # Terminal 2 — Vite dev server
-cd openbis_webapp && pnpm dev
+cd frontend && pnpm dev
 ```
 
-The Vite dev server proxies `/api/` calls to FastAPI. Add this to `openbis_webapp/vite.config.ts`:
+The Vite dev server proxies `/api/` calls to FastAPI. Add this to `frontend/vite.config.ts`:
 
 ```ts
 server: {

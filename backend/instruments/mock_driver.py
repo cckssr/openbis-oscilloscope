@@ -127,7 +127,7 @@ class MockOscilloscopeDriver(BaseOscilloscopeDriver):
         """Return a fixed mock instrument identity string.
 
         Returns:
-            An :class:`~app.instruments.base_driver.InstrumentInfo` with a
+            An :class:`~backend.instruments.base_driver.InstrumentInfo` with a
             hard-coded IDN string identifying this as a mock device.
         """
         return InstrumentInfo(
@@ -163,7 +163,7 @@ class MockOscilloscopeDriver(BaseOscilloscopeDriver):
             channel: 1-based channel number (1–4).
 
         Returns:
-            A :class:`~app.instruments.base_driver.WaveformData` containing the
+            A :class:`~backend.instruments.base_driver.WaveformData` containing the
             computed time and voltage arrays.
         """
         # Derive window from the stored timebase (10 divisions wide).
@@ -240,7 +240,7 @@ class MockOscilloscopeDriver(BaseOscilloscopeDriver):
             channel: 1-based channel number (1–4).
 
         Returns:
-            The :class:`~app.instruments.base_driver.ChannelConfig` for that channel.
+            The :class:`~backend.instruments.base_driver.ChannelConfig` for that channel.
         """
         return self._channels[channel]
 
@@ -248,7 +248,7 @@ class MockOscilloscopeDriver(BaseOscilloscopeDriver):
         """Return the current mock timebase configuration.
 
         Returns:
-            The :class:`~app.instruments.base_driver.TimebaseConfig` last set via
+            The :class:`~backend.instruments.base_driver.TimebaseConfig` last set via
             :meth:`set_timebase`, or the default (1 µs/div, 0 offset, 1 GSa/s).
         """
         return self._timebase
@@ -257,7 +257,7 @@ class MockOscilloscopeDriver(BaseOscilloscopeDriver):
         """Return the current mock trigger configuration.
 
         Returns:
-            The :class:`~app.instruments.base_driver.TriggerConfig` last set via
+            The :class:`~backend.instruments.base_driver.TriggerConfig` last set via
             :meth:`set_trigger`, or the default (CH1, 0 V, RISE, AUTO).
         """
         return self._trigger
@@ -267,7 +267,7 @@ class MockOscilloscopeDriver(BaseOscilloscopeDriver):
 
         Args:
             channel: 1-based channel number (1–4).
-            config: New :class:`~app.instruments.base_driver.ChannelConfig` to apply.
+            config: New :class:`~backend.instruments.base_driver.ChannelConfig` to apply.
         """
         self._channels[channel] = config
 
@@ -280,7 +280,7 @@ class MockOscilloscopeDriver(BaseOscilloscopeDriver):
         stored value is returned faithfully by :meth:`get_timebase`.
 
         Args:
-            config: New :class:`~app.instruments.base_driver.TimebaseConfig` to apply.
+            config: New :class:`~backend.instruments.base_driver.TimebaseConfig` to apply.
         """
         self._timebase = config
 
@@ -288,7 +288,7 @@ class MockOscilloscopeDriver(BaseOscilloscopeDriver):
         """Store the given trigger configuration.
 
         Args:
-            config: New :class:`~app.instruments.base_driver.TriggerConfig` to apply.
+            config: New :class:`~backend.instruments.base_driver.TriggerConfig` to apply.
         """
         self._trigger = config
 
