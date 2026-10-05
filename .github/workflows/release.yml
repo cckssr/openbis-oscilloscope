@@ -71,6 +71,9 @@ jobs:
           # Write new version into pyproject.toml
           sed -i "s/^version = \"$CURRENT\"/version = \"$NEXT\"/" pyproject.toml
 
+          # Keep the FastAPI app version in sync
+          sed -i "s/^\( *\)version=\"[^\"]*\",/\1version=\"$NEXT\",/" backend/main.py
+
       - uses: pnpm/action-setup@v4
         with:
           package_json_file: frontend/package.json
@@ -91,7 +94,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add pyproject.toml
+          git add pyproject.toml backend/main.py
           git commit -m "chore: release v${{ steps.version.outputs.next }}"
           git push
 
