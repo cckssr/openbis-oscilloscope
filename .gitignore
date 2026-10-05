@@ -119,5 +119,5 @@ dist/
 package-lock.json
 
 # Buffer
-buffer/
+/buffer/
 config/oscilloscopes.yaml
