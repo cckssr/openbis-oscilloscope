@@ -154,7 +154,7 @@ def create_app() -> FastAPI:
         title="OpenBIS Oscilloscope Control Service",
         description="REST API for controlling LAN-connected oscilloscopes and storing "
         "acquisitions in OpenBIS",
-        version="0.1.0",
+        version="0.2.2",
         lifespan=lifespan,
     )
 
