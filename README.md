@@ -1,7 +1,6 @@
 # OpenBIS Oscilloscope Control Service
 
 A three-part system for remotely controlling LAN-connected oscilloscopes from a browser. A **Vite web UI** talks to a **FastAPI backend** (oscilloscope control, locking, buffering) which in turn connects to an external **OpenBIS server** for authentication and dataset archiving.
-A three-part system for remotely controlling LAN-connected oscilloscopes from a browser. A **Vite web UI** talks to a **FastAPI backend** (oscilloscope control, locking, buffering) which in turn connects to an external **OpenBIS server** for authentication and dataset archiving.
 
 ## Features
 
