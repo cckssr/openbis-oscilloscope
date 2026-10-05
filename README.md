@@ -19,7 +19,7 @@ A three-part system for remotely controlling LAN-connected oscilloscopes from a 
 
 ## Architecture
 
-```
+```sh
 Browser
   │
   ▼
