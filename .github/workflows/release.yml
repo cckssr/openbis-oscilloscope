@@ -71,11 +71,20 @@ jobs:
           # Write new version into pyproject.toml
           sed -i "s/^version = \"$CURRENT\"/version = \"$NEXT\"/" pyproject.toml
 
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
       - name: Build frontend
         working-directory: frontend
         run: |
-          npm install -g pnpm
-          pnpm install
+          pnpm install --frozen-lockfile
           pnpm run build
 
       - name: Commit version bump
