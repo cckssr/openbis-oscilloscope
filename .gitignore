@@ -116,8 +116,7 @@ settings.json
 node_modules/
 dist/
 .vite/
-package-lock.json
 
 # Buffer
-/buffer/
-config/oscilloscopes.yaml
+/backend/buffer/
+/backend/config/oscilloscopes.yaml

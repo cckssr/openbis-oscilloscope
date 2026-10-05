@@ -43,8 +43,8 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the full component breakdown, deplo
 ## Quick start (Docker)
 
 ```bash
-cp .env.example .env
-# edit .env: set OPENBIS_URL, optionally DEBUG=True for mock mode
+cp backend/.env.example backend/.env
+# edit backend/.env: set OPENBIS_URL, optionally DEBUG=True for mock mode
 
 docker compose up
 ```
@@ -56,25 +56,26 @@ Interactive API docs: `http://localhost:8000/docs` (also accessible via Nginx at
 
 ```bash
 # Terminal 1 — FastAPI backend (mock hardware, no Redis or OpenBIS needed)
+cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-DEBUG=True uvicorn backend.main:app --reload
+DEBUG=True uvicorn app.main:app --reload
 
 # Terminal 2 — Vite frontend (proxies /api/ to FastAPI automatically)
-cd frontend && pnpm install && pnpm dev
+cd frontend && npm ci && npm run dev
 ```
 
 ## Running tests
 
 ```bash
-pytest
+cd backend && pytest
 ```
 
 Tests use `fakeredis` and the mock driver — no Redis or hardware required.
 
 ## Configuration
 
-All settings are read from environment variables (or a `.env` file):
+All settings are read from environment variables (or `backend/.env`). Relative paths resolve against `backend/`, the directory the service is started from:
 
 | Variable                        | Default                        | Description                                                       |
 | ------------------------------- | ------------------------------ | ----------------------------------------------------------------- |
@@ -97,7 +98,7 @@ All settings are read from environment variables (or a `.env` file):
 
 ## Registering oscilloscopes
 
-Edit `config/oscilloscopes.yaml`:
+Edit `backend/config/oscilloscopes.yaml`:
 
 ```yaml
 oscilloscopes:
@@ -132,10 +133,10 @@ Set `driver: "mock"` to use the built-in mock driver for a specific device regar
 
 ## Adding a real oscilloscope driver
 
-1. Copy `drivers/my_oscilloscope.py` and implement the `TODO` methods
-2. Register it in `config/oscilloscopes.yaml`
+1. Copy `backend/drivers/_templates/my_oscilloscope.py` and implement the `TODO` methods
+2. Register it in `backend/config/oscilloscopes.yaml`
 
-See [`drivers/README.md`](drivers/README.md) for detailed instructions.
+See [`backend/drivers/README.md`](backend/drivers/README.md) for detailed instructions.
 
 ## API overview
 
@@ -161,7 +162,7 @@ See [`drivers/README.md`](drivers/README.md) for detailed instructions.
 ## Buffer layout
 
 ```shell
-buffer/
+backend/buffer/
 └── {device_id}/
     └── {session_id}/
         ├── trace_0001_ch1.csv       # time_s, voltage_V + metadata header

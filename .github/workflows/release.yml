@@ -39,7 +39,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Bump version in pyproject.toml
+      - name: Bump version in backend/pyproject.toml
         id: version
         run: |
           BUMP_TYPE="${{ steps.bump.outputs.type }}"
@@ -47,7 +47,7 @@ jobs:
           # Read current version
           CURRENT=$(python - <<'EOF'
           import tomllib
-          with open("pyproject.toml", "rb") as f:
+          with open("backend/pyproject.toml", "rb") as f:
               print(tomllib.load(f)["project"]["version"])
           EOF
           )
@@ -68,33 +68,29 @@ jobs:
           echo "next=$NEXT" >> "$GITHUB_OUTPUT"
           echo "Bumping $CURRENT → $NEXT ($BUMP_TYPE)"
 
-          # Write new version into pyproject.toml
-          sed -i "s/^version = \"$CURRENT\"/version = \"$NEXT\"/" pyproject.toml
+          # Write new version into backend/pyproject.toml
+          sed -i "s/^version = \"$CURRENT\"/version = \"$NEXT\"/" backend/pyproject.toml
 
           # Keep the FastAPI app version in sync
-          sed -i "s/^\( *\)version=\"[^\"]*\",/\1version=\"$NEXT\",/" backend/main.py
-
-      - uses: pnpm/action-setup@v4
-        with:
-          package_json_file: frontend/package.json
+          sed -i "s/^\( *\)version=\"[^\"]*\",/\1version=\"$NEXT\",/" backend/app/main.py
 
       - uses: actions/setup-node@v5
         with:
           node-version: "20"
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Build frontend
         working-directory: frontend
         run: |
-          pnpm install --frozen-lockfile
-          pnpm run build
+          npm ci
+          npm run build
 
       - name: Commit version bump
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add pyproject.toml backend/main.py
+          git add backend/pyproject.toml backend/app/main.py
           git commit -m "chore: release v${{ steps.version.outputs.next }}"
           git push
 

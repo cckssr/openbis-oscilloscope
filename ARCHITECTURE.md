@@ -18,47 +18,54 @@
 
 ```text
 openbis-oscilloscope/
-├── backend/                        # Main application package
-│   ├── main.py                 # App factory + startup/shutdown lifecycle
-│   ├── config.py               # Environment-based settings (Pydantic)
-│   ├── api/                    # HTTP route handlers
-│   │   ├── auth.py             # GET /auth/me
-│   │   ├── devices.py          # Device control endpoints
-│   │   ├── sessions.py         # Session/artifact management
-│   │   └── admin.py            # Admin-only operations
-│   ├── core/                   # Shared utilities
-│   │   ├── exceptions.py       # Custom exception classes + FastAPI handler
-│   │   └── dependencies.py     # FastAPI dependency injection (auth, lock check)
-│   ├── instruments/            # Oscilloscope driver layer
-│   │   ├── base_driver.py      # Abstract driver interface + data classes
-│   │   ├── manager.py          # Device lifecycle + per-device command queues
-│   │   ├── health_monitor.py   # Background TCP reachability checks
-│   │   └── mock_driver.py      # Synthetic driver (sine waves) for development
-│   ├── locks/
-│   │   └── service.py          # Redis-backed exclusive locks with TTL
-│   ├── buffer/
-│   │   └── service.py          # Disk-based artifact storage (CSV / PNG / HDF5)
-│   ├── openbis_client/
-│   │   └── client.py           # Token validation + dataset registration via pybis
-│   └── scheduler/
-│       └── tasks.py            # APScheduler cron job (end-of-day lock reset)
-├── drivers/
-│   └── my_oscilloscope.py      # Template for implementing a real hardware driver
-├── scripts/
-│   └── unpack_hdf5.py          # Standalone script bundled into HDF5 exports
-├── tests/                      # Pytest test suite
-├── config/
-│   └── oscilloscopes.yaml      # Device inventory (id, ip, port, driver class)
-├── .env.example                # All supported environment variables
-├── docker-compose.yml          # Redis + FastAPI container setup
-└── Dockerfile
+├── backend/                        # Python service (started from this directory)
+│   ├── pyproject.toml          # Package metadata (openbis-oscilloscope-backend), pytest config
+│   ├── app/                    # FastAPI package — `app.main:app`
+│   │   ├── main.py             # App factory + startup/shutdown lifecycle
+│   │   ├── config.py           # Environment-based settings (Pydantic)
+│   │   ├── api/                # HTTP route handlers
+│   │   │   ├── auth.py         # GET /auth/me
+│   │   │   ├── devices.py      # Device control endpoints
+│   │   │   ├── sessions.py     # Session/artifact management
+│   │   │   └── admin.py        # Admin-only operations
+│   │   ├── core/               # Shared utilities
+│   │   │   ├── exceptions.py   # Custom exception classes + FastAPI handler
+│   │   │   └── dependencies.py # FastAPI dependency injection (auth, lock check)
+│   │   ├── instruments/        # Oscilloscope driver layer
+│   │   │   ├── base_driver.py  # Abstract driver interface + data classes
+│   │   │   ├── manager.py      # Device lifecycle + per-device command queues
+│   │   │   ├── health_monitor.py # Background TCP reachability checks
+│   │   │   └── mock_driver.py  # Synthetic driver (sine waves) for development
+│   │   ├── locks/
+│   │   │   └── service.py      # Redis-backed exclusive locks with TTL
+│   │   ├── buffer/
+│   │   │   └── service.py      # Disk-based artifact storage (CSV / PNG / HDF5)
+│   │   ├── openbis_client/
+│   │   │   └── client.py       # Token validation + dataset registration via pybis
+│   │   └── scheduler/
+│   │       └── tasks.py        # APScheduler cron jobs (lock reset, OpenBIS sync)
+│   ├── drivers/                # Hardware drivers, imported as `drivers.<module>.<Class>`
+│   │   └── _templates/my_oscilloscope.py # Template for a real hardware driver
+│   ├── config/
+│   │   ├── oscilloscopes.yaml  # Device inventory (id, ip, port, driver class)
+│   │   └── driver_mapping.yaml # OpenBIS equipment name → driver/port
+│   ├── scripts/
+│   │   └── unpack_hdf5.py      # Standalone script bundled into HDF5 exports
+│   ├── tests/                  # Pytest test suite
+│   ├── buffer/                 # Runtime artifact storage (gitignored)
+│   ├── .env.example            # All supported environment variables
+│   └── Dockerfile
+├── frontend/                   # Vite + React SPA (npm, package-lock.json)
+├── deploy/                     # systemd units, nginx.conf, install.sh
+├── docs/                       # Deployment guides
+└── docker-compose.yml          # Redis + FastAPI container setup
 ```
 
 ---
 
 ## Component Breakdown
 
-### `backend/main.py` — App Factory & Lifecycle
+### `backend/app/main.py` — App Factory & Lifecycle
 
 The entry point. `create_app()` builds the FastAPI instance and registers a `lifespan` context manager that orchestrates the startup and shutdown of every background service.
 
@@ -74,13 +81,13 @@ The entry point. `create_app()` builds the FastAPI instance and registers a `lif
 
 **Shutdown** tears down these in reverse, draining queues and disconnecting drivers cleanly.
 
-Routes are registered from `backend/api/` under their respective prefixes (`/auth`, `/devices`, `/sessions`, `/admin`). A simple `/health` endpoint is also added directly.
+Routes are registered from `backend/app/api/` under their respective prefixes (`/auth`, `/devices`, `/sessions`, `/admin`). A simple `/health` endpoint is also added directly.
 
 ---
 
-### `backend/config.py` — Settings
+### `backend/app/config.py` — Settings
 
-Uses `pydantic-settings` to load configuration from environment variables (or a `.env` file). All settings have documented defaults.
+Uses `pydantic-settings` to load configuration from environment variables (or `backend/.env`). All settings have documented defaults.
 
 | Variable                        | Default                       | Purpose                                             |
 | ------------------------------- | ----------------------------- | --------------------------------------------------- |
@@ -97,7 +104,7 @@ Uses `pydantic-settings` to load configuration from environment variables (or a 
 
 ---
 
-### `backend/core/exceptions.py` — Error Handling
+### `backend/app/core/exceptions.py` — Error Handling
 
 Defines a hierarchy of typed exceptions, all subclassing `AppError`. Each carries an HTTP status code and a machine-readable `error_code` string.
 
@@ -123,7 +130,7 @@ A global FastAPI exception handler catches any `AppError` and returns a consiste
 
 ---
 
-### `backend/core/dependencies.py` — Dependency Injection
+### `backend/app/core/dependencies.py` — Dependency Injection
 
 Provides reusable FastAPI dependencies injected into route handlers.
 
@@ -138,7 +145,7 @@ Provides reusable FastAPI dependencies injected into route handlers.
 
 ---
 
-### `backend/locks/service.py` — Lock Service
+### `backend/app/locks/service.py` — Lock Service
 
 Provides distributed, exclusive device locks stored in Redis with an automatic TTL.
 
@@ -169,12 +176,12 @@ If a client crashes without calling unlock, the lock expires after `LOCK_TTL_SEC
 
 ---
 
-### `backend/buffer/service.py` — Buffer Service
+### `backend/app/buffer/service.py` — Buffer Service
 
 Manages on-disk persistence of all acquisition artifacts. Each device/session combination gets its own subdirectory:
 
 ```text
-buffer/
+backend/buffer/
 └── {device_id}/
     └── {session_id}/
         ├── trace_0001_ch1.csv      # Time/voltage pairs with metadata header
@@ -209,7 +216,7 @@ The `index.json` file is the source of truth for what artifacts exist in a sessi
 
 ---
 
-### `backend/openbis_client/client.py` — OpenBIS Client
+### `backend/app/openbis_client/client.py` — OpenBIS Client
 
 Wraps the `pybis` library for two purposes: **token validation** and **dataset registration**.
 
@@ -226,7 +233,7 @@ The method:
 
 ---
 
-### `backend/instruments/manager.py` — Instrument Manager
+### `backend/app/instruments/manager.py` — Instrument Manager
 
 The central component for device lifecycle and command dispatch. At startup it reads `oscilloscopes.yaml`, creates a `DeviceEntry` for each oscilloscope, and spawns a dedicated async worker task per device.
 
@@ -265,7 +272,7 @@ This design guarantees **serial execution per device** while allowing **parallel
 
 ---
 
-### `backend/instruments/base_driver.py` — Base Driver
+### `backend/app/instruments/base_driver.py` — Base Driver
 
 Defines the abstract interface every oscilloscope driver must implement. Real hardware drivers (and the mock) subclass `BaseOscilloscopeDriver`.
 
@@ -298,7 +305,7 @@ get_trigger() -> TriggerConfig
 
 ---
 
-### `backend/instruments/mock_driver.py` — Mock Driver
+### `backend/app/instruments/mock_driver.py` — Mock Driver
 
 A fully functional in-memory driver that generates synthetic data. Used during development (`DEBUG=True`) and in tests.
 
@@ -309,7 +316,7 @@ A fully functional in-memory driver that generates synthetic data. Used during d
 
 ---
 
-### `backend/instruments/health_monitor.py` — Health Monitor
+### `backend/app/instruments/health_monitor.py` — Health Monitor
 
 A background async task that periodically (every `HEALTH_CHECK_INTERVAL_SECONDS`) attempts a TCP connection to each device's IP and port.
 
@@ -326,7 +333,7 @@ Health monitoring is disabled entirely in `DEBUG` mode since mock drivers never 
 
 ---
 
-### `backend/scheduler/tasks.py` — Scheduler
+### `backend/app/scheduler/tasks.py` — Scheduler
 
 Uses `APScheduler` to run a single cron job: **`eod_lock_reset`** fires at **23:59 every day** (in the configured `EOD_RESET_TIMEZONE`).
 
@@ -334,13 +341,13 @@ The job calls `lock_service.reset_all_locks()`, which deletes every `lock:*` key
 
 ---
 
-### `drivers/my_oscilloscope.py` — Driver Template
+### `backend/drivers/_templates/my_oscilloscope.py` — Driver Template
 
 A skeleton file with `pass` implementations of all abstract methods. Copy this file, implement the methods using your instrument's SCPI or vendor SDK, and register it in `oscilloscopes.yaml`.
 
 ---
 
-### `scripts/unpack_hdf5.py` — HDF5 Unpacker
+### `backend/scripts/unpack_hdf5.py` — HDF5 Unpacker
 
 A standalone Python script that extracts all datasets from an HDF5 export into individual CSV files. It is bundled directly inside the HDF5 file (as a string dataset) so recipients who receive only the `.h5` file can extract and run it without needing the full service installed.
 
@@ -443,8 +450,8 @@ If the client disappears without calling `/unlock`, the Redis key expires after 
 
 ### Adding a Real Oscilloscope Driver
 
-1. Copy `drivers/my_oscilloscope.py`, rename it, and implement all abstract methods using the instrument's communication protocol (SCPI over TCP/socket, vendor SDK via `pymeasure`, etc.). `drivers/RigolDS1000.py` is a worked example using `pymeasure` for a Rigol DS1000Z-series scope.
-2. Add the device to `config/oscilloscopes.yaml`:
+1. Copy `backend/drivers/_templates/my_oscilloscope.py`, rename it, and implement all abstract methods using the instrument's communication protocol (SCPI over TCP/socket, vendor SDK via `pymeasure`, etc.). `backend/drivers/RigolDS1000.py` is a worked example using `pymeasure` for a Rigol DS1000Z-series scope.
+2. Add the device to `backend/config/oscilloscopes.yaml`:
 
    ```yaml
    oscilloscopes:
@@ -557,12 +564,12 @@ server {
 
 ```dockerfile
 FROM node:20-alpine AS build
-WORKDIR /backend
+WORKDIR /frontend
 COPY . .
-RUN npm install -g pnpm && pnpm install && pnpm build
+RUN npm ci && npm run build
 
 FROM nginx:alpine
-COPY --from=build /backend/dist /usr/share/nginx/html
+COPY --from=build /frontend/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 ```
 
@@ -576,10 +583,10 @@ No Docker needed during development. Run FastAPI and the Vite dev server directl
 
 ```bash
 # Terminal 1 — FastAPI with mock hardware and in-memory Redis
-DEBUG=True uvicorn backend.main:app --reload
+cd backend && DEBUG=True uvicorn app.main:app --reload
 
 # Terminal 2 — Vite dev server
-cd frontend && pnpm dev
+cd frontend && npm run dev
 ```
 
 The Vite dev server proxies `/api/` calls to FastAPI. Add this to `frontend/vite.config.ts`:

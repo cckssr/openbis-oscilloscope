@@ -9,7 +9,7 @@
 #   --app-dir  /opt/openbis-oscilloscope
 #   --user     lab
 #
-# Prerequisites: python3.11+, pip, pnpm, nginx, redis-server
+# Prerequisites: python3.11+, pip, node 20+ (npm), nginx, redis-server
 
 set -euo pipefail
 
@@ -44,40 +44,40 @@ rsync -a --delete \
     --exclude='__pycache__' \
     --exclude='*.pyc' \
     --exclude='.env' \
-    --exclude='buffer/' \
-    --exclude='frontend/node_modules' \
-    --exclude='frontend/dist' \
+    --exclude='/backend/buffer/' \
+    --exclude='/frontend/node_modules' \
+    --exclude='/frontend/dist' \
     "$REPO_ROOT/" "$APP_DIR/"
 
 # ── .env file ──────────────────────────────────────────────────────────────────
-if [[ ! -f "$APP_DIR/.env" ]]; then
-    if [[ -f "$REPO_ROOT/.env" ]]; then
-        echo "--> Copying .env from repo (edit $APP_DIR/.env to configure)"
-        cp "$REPO_ROOT/.env" "$APP_DIR/.env"
+if [[ ! -f "$APP_DIR/backend/.env" ]]; then
+    if [[ -f "$REPO_ROOT/backend/.env" ]]; then
+        echo "--> Copying .env from repo (edit $APP_DIR/backend/.env to configure)"
+        cp "$REPO_ROOT/backend/.env" "$APP_DIR/backend/.env"
     else
-        echo "--> Creating .env from example (edit $APP_DIR/.env before starting)"
-        cp "$APP_DIR/.env.example" "$APP_DIR/.env"
+        echo "--> Creating .env from example (edit $APP_DIR/backend/.env before starting)"
+        cp "$APP_DIR/backend/.env.example" "$APP_DIR/backend/.env"
     fi
 fi
-chmod 640 "$APP_DIR/.env"
-chown "root:$APP_USER" "$APP_DIR/.env"
+chmod 640 "$APP_DIR/backend/.env"
+chown "root:$APP_USER" "$APP_DIR/backend/.env"
 
 # ── Python virtualenv ──────────────────────────────────────────────────────────
 echo "--> Setting up Python virtualenv"
-python3 -m venv "$APP_DIR/.venv"
-"$APP_DIR/.venv/bin/pip" install --quiet --upgrade pip
-"$APP_DIR/.venv/bin/pip" install --quiet -e "$APP_DIR"
+python3 -m venv "$APP_DIR/backend/.venv"
+"$APP_DIR/backend/.venv/bin/pip" install --quiet --upgrade pip
+"$APP_DIR/backend/.venv/bin/pip" install --quiet -e "$APP_DIR/backend"
 
 # ── Frontend build ─────────────────────────────────────────────────────────────
 echo "--> Building Vite frontend"
 cd "$APP_DIR/frontend"
-pnpm install --frozen-lockfile
-pnpm build
+npm ci
+npm run build
 cd "$REPO_ROOT"
 
 # ── Buffer directory ───────────────────────────────────────────────────────────
-mkdir -p "$APP_DIR/buffer"
-chown -R "$APP_USER:$APP_USER" "$APP_DIR/buffer"
+mkdir -p "$APP_DIR/backend/buffer"
+chown -R "$APP_USER:$APP_USER" "$APP_DIR/backend/buffer"
 
 # ── File ownership ─────────────────────────────────────────────────────────────
 chown -R "root:$APP_USER" "$APP_DIR"
@@ -88,9 +88,9 @@ chmod -R u+rw "$APP_DIR"
 echo "--> Installing systemd units"
 # Patch WorkingDirectory and User in the service file to match chosen values
 sed \
-    -e "s|WorkingDirectory=.*|WorkingDirectory=$APP_DIR|" \
-    -e "s|EnvironmentFile=.*|EnvironmentFile=$APP_DIR/.env|" \
-    -e "s|ExecStart=.*|ExecStart=$APP_DIR/.venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8000|" \
+    -e "s|WorkingDirectory=.*|WorkingDirectory=$APP_DIR/backend|" \
+    -e "s|EnvironmentFile=.*|EnvironmentFile=$APP_DIR/backend/.env|" \
+    -e "s|ExecStart=.*|ExecStart=$APP_DIR/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000|" \
     -e "s|User=.*|User=$APP_USER|" \
     "$SCRIPT_DIR/openbis-oscilloscope.service" \
     > /etc/systemd/system/openbis-oscilloscope.service
@@ -131,5 +131,5 @@ echo ""
 echo "    UI:  http://<host>/oscilloscope/"
 echo "    API: http://<host>/oscilloscope/api/docs"
 echo ""
-echo "    Edit $APP_DIR/.env then: systemctl restart openbis-oscilloscope"
+echo "    Edit $APP_DIR/backend/.env then: systemctl restart openbis-oscilloscope"
 echo "    Logs: journalctl -u openbis-oscilloscope -f"

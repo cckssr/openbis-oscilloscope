@@ -13,7 +13,7 @@ services:
       retries: 5
 
   app:
-    build: .
+    build: ./backend
     restart: unless-stopped
     depends_on:
       redis:
@@ -23,11 +23,11 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379
     env_file:
-      - .env
+      - ./backend/.env
     volumes:
-      - ./buffer:/backend/buffer
-      - ./config:/backend/config:ro
-      - ./drivers:/backend/drivers:ro
+      - ./backend/buffer:/backend/buffer
+      - ./backend/config:/backend/config:ro
+      - ./backend/drivers:/backend/drivers:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
