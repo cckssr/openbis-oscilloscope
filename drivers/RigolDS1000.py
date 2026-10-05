@@ -1,9 +1,9 @@
 """Openbis-compatible driver for Rigol DS1000 series oscilloscopes."""
 
-import numpy as np
 import logging
+import numpy as np
 
-from app.instruments.base_driver import (
+from backend.instruments.base_driver import (
     BaseOscilloscopeDriver,
     ChannelConfig,
     InstrumentInfo,
@@ -12,7 +12,9 @@ from app.instruments.base_driver import (
     WaveformData,
 )
 
-from app.instruments.pymeasure_rigol_ds1000 import RigolDS1000ZSeries as _RigolDS1000Z
+from backend.instruments.pymeasure_rigol_ds1000 import (
+    RigolDS1000ZSeries as _RigolDS1000Z,
+)
 
 _SLOPE_MAP = {"POS": "RISE", "NEG": "FALL", "RFAL": "EITHER"}
 _SWEEP_MAP = {"AUTO": "AUTO", "NORM": "NORMAL", "SING": "SINGLE"}
@@ -79,7 +81,7 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
         """Stop acquisition (STOP mode)."""
         self.instrument.stop()
 
-    def acquire_waveform(self, channel: int) -> WaveformData:
+    def acquire_waveform(self, channel: int, max_samples: bool = False) -> WaveformData:
         """Acquire and return waveform data from the specified channel.
 
         Stops the oscilloscope, reads waveform data in BYTE format from internal
@@ -88,6 +90,7 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
 
         Args:
             channel: 1-based channel number (1–4).
+            max_samples: If ``True``, acquire the maximum number of samples available.
 
         Returns:
             WaveformData with time/voltage arrays and sampling metadata.
@@ -99,7 +102,13 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
             raise ValueError(f"Channel must be 1–4, got {channel}")
 
         self.instrument.waveform_source = f"CHAN{channel}"
-        self.instrument.waveform_mode = "RAW"
+        if max_samples:
+            self.instrument.stop()
+            self.set_keyboard_lock(True)
+            self.instrument.waveform_mode = "MAX"
+        else:
+            self.instrument.waveform_mode = "NORM"
+
         self.instrument.waveform_format = "BYTE"
 
         voltages, preamble = self.instrument.get_waveform_data(
@@ -118,8 +127,9 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
         time_array = x_origin + (np.arange(n_points) - x_ref) * x_inc
         sample_rate = 1.0 / x_inc
 
-        # RAW mode stops the scope; restart so continuous acquisition resumes.
+        # MAX mode stops the scope; restart so continuous acquisition resumes.
         try:
+            self.set_keyboard_lock(False)
             self.instrument.run()
         except Exception:
             pass  # Non-fatal — the next explicit run() call will recover
@@ -131,6 +141,10 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
             sample_rate=sample_rate,
             record_length=n_points,
         )
+
+    def acquire_waveform_max(self, channel: int) -> WaveformData:
+        """Acquire full memory depth by delegating to acquire_waveform(max_samples=True)."""
+        return self.acquire_waveform(channel, max_samples=True)
 
     def get_screenshot(self) -> bytes:
         """Capture the current oscilloscope display and return it as PNG bytes.
@@ -291,3 +305,24 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
         self.instrument.trigger_edge_level = config.level_v
         self.instrument.trigger_edge_slope = _slope_rev.get(config.slope, config.slope)
         self.instrument.trigger_sweep = _sweep_rev.get(config.mode, config.mode)
+
+    def get_memory_depth(self) -> int:
+        """Return the current acquisition memory depth from the waveform preamble.
+
+        Queries the preamble for the currently selected waveform source and
+        returns the ``points`` field, which reflects the actual number of
+        samples stored in acquisition memory.
+
+        Returns:
+            Number of samples in the current acquisition memory.
+        """
+        preamble = self.instrument.get_waveform_preamble()
+        return int(preamble["points"])
+
+    def set_keyboard_lock(self, locked: bool) -> None:
+        """Lock or unlock the physical front-panel keys via SCPI.
+
+        Args:
+            locked: ``True`` to lock the keys; ``False`` to restore normal operation.
+        """
+        self.instrument.system_locked = locked

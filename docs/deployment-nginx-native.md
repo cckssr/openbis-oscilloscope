@@ -47,7 +47,7 @@ After=network.target redis.service
 User=www-data
 WorkingDirectory=/opt/openbis-oscilloscope
 EnvironmentFile=/opt/openbis-oscilloscope/.env
-ExecStart=/opt/openbis-oscilloscope/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+ExecStart=/opt/openbis-oscilloscope/.venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8000
 Restart=on-failure
 
 [Install]
@@ -64,10 +64,10 @@ The backend listens on `localhost:8000`.
 ### 4. Frontend (Vite build)
 
 ```bash
-cd /opt/openbis-oscilloscope/openbis_webapp
+cd /opt/openbis-oscilloscope/frontend
 npm ci
 npm run build
-# Built files land in openbis_webapp/dist/
+# Built files land in frontend/dist/
 ```
 
 ## nginx server block
@@ -108,7 +108,7 @@ server {
     }
 
     # --- SPA static files ---
-    root /opt/openbis-oscilloscope/openbis_webapp/dist;
+    root /opt/openbis-oscilloscope/frontend/dist;
     index index.html;
 
     location / {
@@ -175,5 +175,5 @@ pip install -e .
 systemctl restart openbis-oscilloscope
 
 # Rebuild frontend if changed
-cd openbis_webapp && npm ci && npm run build
+cd frontend && npm ci && npm run build
 ```

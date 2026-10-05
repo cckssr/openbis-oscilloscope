@@ -49,6 +49,7 @@ coverage.xml
 *,cover
 .hypothesis/
 .pytest_cache
+*.test.yaml
 
 # Translations
 *.mo
@@ -118,4 +119,5 @@ dist/
 package-lock.json
 
 # Buffer
-buffer/
+/buffer/
+config/oscilloscopes.yaml

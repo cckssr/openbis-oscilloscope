@@ -20,9 +20,8 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
-from app.core.exceptions import AuthError, OpenBISError
-from app.openbis_client.client import OpenBISClient
-
+from backend.core.exceptions import AuthError, OpenBISError
+from backend.openbis_client.client import OpenBISClient
 
 # ---------------------------------------------------------------------------
 # Integration-specific fixtures
@@ -32,7 +31,7 @@ from app.openbis_client.client import OpenBISClient
 @pytest_asyncio.fixture
 async def openbis_client(openbis_url, monkeypatch):
     """Real OpenBISClient pointed at the integration server."""
-    from app import config
+    from backend import config
 
     monkeypatch.setattr(config.settings, "OPENBIS_URL", openbis_url)
     monkeypatch.setattr(config.settings, "DEBUG", False)
@@ -44,9 +43,9 @@ async def integration_app(
     openbis_url, fake_redis, instrument_manager, buffer_service, monkeypatch
 ):
     """Full FastAPI app wired to the real OpenBIS URL — no mocked client."""
-    from app import config
-    from app.locks.service import LockService
-    from app.main import create_app
+    from backend import config
+    from backend.locks.service import LockService
+    from backend.main import create_app
 
     monkeypatch.setattr(config.settings, "OPENBIS_URL", openbis_url)
     monkeypatch.setattr(config.settings, "DEBUG", False)
@@ -133,19 +132,70 @@ async def test_validate_token_invalid_raises_auth_error(openbis_client):
 async def test_create_dataset_returns_perm_id(
     openbis_client, openbis_token, openbis_experiment, tmp_path
 ):
-    """create_dataset uploads a CSV and returns a non-empty permId string."""
+    """create_dataset uploads a CSV as OSCILLOSCOPE type and returns a non-empty permId."""
+    from datetime import datetime, timezone
+
     csv_file = tmp_path / "waveform.csv"
     csv_file.write_text("time,voltage\n0.0,0.0\n1e-6,0.5\n2e-6,1.0\n")
+    now = datetime.now(timezone.utc)
 
     perm_id = await openbis_client.create_dataset(
         token=openbis_token,
         experiment_id=openbis_experiment,
         files=[str(csv_file)],
-        properties={"session_id": "integration-test", "artifact_count": "1"},
+        dataset_type="OSCILLOSCOPE",
+        properties={
+            "dataset.lab_course": "EE101",
+            "dataset.dso_experiment": "Integration test acquisition",
+            "dataset.dso_description": "Automated integration test waveform",
+            "dataset.dso_num_acquisitions": 1,
+            "dataset.dso_timestamp_start": now.strftime("%Y-%m-%d %H:%M:%S"),
+        },
     )
 
     assert perm_id
     assert isinstance(perm_id, str)
+
+
+@pytest.mark.asyncio
+async def test_api_commit_creates_oscilloscope_dataset(
+    integration_client, integration_app, openbis_token, openbis_experiment
+):
+    """POST /sessions/{id}/commit uploads flagged artifacts as an OSCILLOSCOPE dataset."""
+    import uuid
+    import numpy as np
+    from backend.instruments.base_driver import WaveformData
+
+    sess = str(uuid.uuid4())
+    buf = integration_app.state.buffer_service
+    t = np.linspace(0, 1e-3, 100)
+    v = np.sin(2 * np.pi * 1000 * t)
+    wf = WaveformData(
+        channel=1,
+        time_array=t,
+        voltage_array=v,
+        sample_rate=1e6,
+        record_length=100,
+    )
+    art_id = buf.store_waveform("scope-01", sess, wf, meta={})
+    buf.set_flag(sess, art_id, persist=True)
+
+    resp = await integration_client.post(
+        f"/sessions/{sess}/commit",
+        json={
+            "experiment_id": openbis_experiment,
+            "lab_course": "EE101",
+            "exp_title": "API integration test acquisition",
+            "exp_description": "Full-stack commit test via POST /sessions/commit",
+        },
+        headers={"Authorization": f"Bearer {openbis_token}"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["permId"]
+    assert isinstance(data["permId"], str)
+    assert data["artifact_count"] == 1
 
 
 @pytest.mark.asyncio

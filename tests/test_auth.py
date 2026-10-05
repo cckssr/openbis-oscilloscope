@@ -2,8 +2,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from app.core.exceptions import AuthError
-from app.openbis_client.client import UserInfo
+from backend.core.exceptions import AuthError
+from backend.openbis_client.client import UserInfo
 
 
 @pytest.mark.asyncio
