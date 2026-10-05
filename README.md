@@ -40,17 +40,9 @@ Nginx (:80)  ─── /        → Vite UI (static files)
 
 See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the full component breakdown, deployment guide, and API documentation reference.
 
-## Quick start (Docker)
+## Deployment
 
-```bash
-cp backend/.env.example backend/.env
-# edit backend/.env: set OPENBIS_URL, optionally DEBUG=True for mock mode
-
-docker compose up
-```
-
-The UI is available at `http://localhost:80`.
-Interactive API docs: `http://localhost:8000/docs` (also accessible via Nginx at `http://localhost/api/docs`).
+See [`deploy/README.md`](deploy/README.md) (`install.sh`, systemd units, nginx) and [`docs/deployment.md`](docs/deployment.md).
 
 ## Development setup
 

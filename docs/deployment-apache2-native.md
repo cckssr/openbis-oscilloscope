@@ -1,6 +1,6 @@
-# Deployment: Apache2 Reverse Proxy (no Docker)
+# Deployment: Apache2 Reverse Proxy
 
-This guide covers deploying the openbis-oscilloscope service behind Apache2 on a Linux server **without Docker**, using systemd and a native Redis installation.
+This guide covers deploying the openbis-oscilloscope service behind Apache2 on a Linux server, using systemd and a native Redis installation.
 
 ## Prerequisites
 

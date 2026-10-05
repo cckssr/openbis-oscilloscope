@@ -39,12 +39,6 @@ npm run dev     # Vite dev server on :5173, proxies /api to :8000
 npm run build   # outputs to dist/
 ```
 
-**Docker (from repo root):**
-
-```bash
-docker compose up
-```
-
 ## Repo layout
 
 ```text
@@ -54,10 +48,10 @@ docker compose up
     app/             # FastAPI package; app/main.py exposes `app` → app.main:app
     drivers/         # hardware drivers, imported by dotted path (drivers.X.Y)
     config/          # oscilloscopes.yaml, driver_mapping.yaml
-    tests/  scripts/  Dockerfile  .env(.example)  buffer/ (runtime, gitignored)
+    tests/  scripts/  .env(.example)  buffer/ (runtime, gitignored)
   frontend/          # Vite + React; npm, package-lock.json committed
   deploy/            # systemd units, nginx.conf, install.sh
-  docs/  README.md  CLAUDE.md  docker-compose.yml
+  docs/  README.md  CLAUDE.md
 ```
 
 The backend is always started **from `backend/`**: `./config/…` and `./buffer` defaults, `.env`, and the `drivers.*` import paths are all relative to that directory.

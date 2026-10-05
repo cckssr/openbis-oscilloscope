@@ -1,6 +1,6 @@
-# Deployment: nginx Reverse Proxy (no Docker)
+# Deployment: nginx Reverse Proxy
 
-This guide covers deploying the openbis-oscilloscope service behind nginx on a Linux server **without Docker**, using systemd and a native Redis installation.
+This guide covers deploying the openbis-oscilloscope service behind nginx on a Linux server, using systemd and a native Redis installation.
 
 ## Prerequisites
 

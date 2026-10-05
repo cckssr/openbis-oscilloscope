@@ -4,14 +4,7 @@ This guide covers all supported deployment configurations for openbis-oscillosco
 
 ## Deployment variants
 
-Two dimensions to choose:
-
-**Backend runtime** — how the FastAPI process and Redis are managed:
-
-| Backend          | When to use                                    |
-| ---------------- | ---------------------------------------------- |
-| Native (systemd) | Recommended; no Docker required                |
-| Docker Compose   | If you prefer containerised process management |
+The backend runs natively under systemd with a native Redis install. Choose the hosting:
 
 **Hosting** — where the app lives relative to OpenBIS:
 
@@ -30,23 +23,16 @@ All variants proxy `/api/*` requests to the FastAPI backend on `localhost:8000`.
 
 ### System packages
 
-**nginx (native):**
+**nginx:**
 
 ```bash
 apt install nginx certbot python3-certbot-nginx redis-server python3-venv git
 ```
 
-**Apache2 (native):**
+**Apache2:**
 
 ```bash
 apt install apache2 libapache2-mod-proxy-httptunnel certbot python3-certbot-apache redis-server python3-venv git
-a2enmod proxy proxy_http ssl rewrite headers
-```
-
-**Apache2 (Docker):**
-
-```bash
-apt install apache2 libapache2-mod-proxy-httptunnel certbot python3-certbot-apache docker.io docker-compose-plugin git
 a2enmod proxy proxy_http ssl rewrite headers
 ```
 
@@ -84,8 +70,6 @@ See [Environment file](#6-environment-file) for key settings.
 
 ## 3. Backend
 
-### Option A — Native (systemd)
-
 ```bash
 cd /opt/openbis-oscilloscope/backend
 python3 -m venv .venv
@@ -119,15 +103,6 @@ WantedBy=multi-user.target
 systemctl daemon-reload
 systemctl enable --now openbis-oscilloscope
 ```
-
-### Option B — Docker Compose
-
-```bash
-cd /opt/openbis-oscilloscope
-docker compose up -d
-```
-
-The backend and Redis are both started by Docker Compose. The backend is exposed on `localhost:8000`; Redis stays internal to the compose network.
 
 ---
 
@@ -376,13 +351,6 @@ cd backend
 source .venv/bin/activate
 pip install -e .
 systemctl restart openbis-oscilloscope
-```
-
-**Docker backend:**
-
-```bash
-docker compose pull
-docker compose up -d
 ```
 
 **Rebuild frontend** (if `frontend/` changed) — use the same `--base` flag as the initial build:

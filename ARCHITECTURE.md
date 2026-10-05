@@ -53,12 +53,10 @@ openbis-oscilloscope/
 │   │   └── unpack_hdf5.py      # Standalone script bundled into HDF5 exports
 │   ├── tests/                  # Pytest test suite
 │   ├── buffer/                 # Runtime artifact storage (gitignored)
-│   ├── .env.example            # All supported environment variables
-│   └── Dockerfile
+│   └── .env.example            # All supported environment variables
 ├── frontend/                   # Vite + React SPA (npm, package-lock.json)
 ├── deploy/                     # systemd units, nginx.conf, install.sh
-├── docs/                       # Deployment guides
-└── docker-compose.yml          # Redis + FastAPI container setup
+└── docs/                       # Deployment guides
 ```
 
 ---
@@ -468,13 +466,13 @@ If the client disappears without calling `/unlock`, the Redis key expires after 
 
 ## Deployment
 
-The system has three distinct parts. OpenBIS is an external institutional server you do not run yourself. The FastAPI backend and the Vite frontend are both yours, run together via Docker Compose.
+The system has three distinct parts. OpenBIS is an external institutional server you do not run yourself. The FastAPI backend and the Vite frontend are both yours, run natively with systemd and nginx (see [`deploy/`](deploy/README.md) and [`docs/deployment.md`](docs/deployment.md)).
 
 ### System overview
 
 ```
                     ┌─────────────────────────────────┐
-                    │         docker-compose          │
+                    │        Linux host (systemd)     │
                     │                                 │
 Browser ────────────┤  Nginx (:80)                    │
                     │    /        → Vite dist (static)│
@@ -497,89 +495,42 @@ Nginx acts as a reverse proxy. Everything is reachable on a single domain and po
 | Part             | Role                                                      | Runs where                    |
 | ---------------- | --------------------------------------------------------- | ----------------------------- |
 | **OpenBIS**      | Bearer token validation, dataset archiving                | External institutional server |
-| **FastAPI**      | Oscilloscope control, Redis locks, buffer, OpenBIS client | Your Docker Compose           |
-| **Nginx + Vite** | UI served as static files; proxies `/api/` to FastAPI     | Your Docker Compose           |
-| **Redis**        | Distributed device locks with TTL                         | Your Docker Compose           |
-
----
-
-### Docker Compose
-
-**`docker-compose.yml`**
-
-```yaml
-services:
-  api:
-    build: .
-    environment:
-      - OPENBIS_URL=${OPENBIS_URL}
-    depends_on:
-      - redis
-
-  redis:
-    image: redis:7-alpine
-
-  webapp:
-    build: ./frontend
-    ports:
-      - "80:80"
-    depends_on:
-      - api
-```
-
-No ports are exposed for `api` or `redis` — they are only reachable inside the Compose network. Only Nginx (the `webapp` service) is exposed to the outside.
+| **FastAPI**      | Oscilloscope control, Redis locks, buffer, OpenBIS client | Your host (systemd)           |
+| **Nginx + Vite** | UI served as static files; proxies `/api/` to FastAPI     | Your host (systemd)           |
+| **Redis**        | Distributed device locks with TTL                         | Your host (systemd)           |
 
 ---
 
 ### Nginx configuration
 
-**`frontend/nginx.conf`**
+**`deploy/nginx.conf`** (simplified)
 
 ```nginx
 server {
   listen 80;
 
-  # API — proxied to the FastAPI container
+  # API — proxied to FastAPI on localhost
   location /api/ {
-    proxy_pass http://api:8000/;
+    proxy_pass http://127.0.0.1:8000/;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
   }
 
   # SPA — serve static files with fallback for client-side routing
   location / {
-    root /usr/share/nginx/html;
+    root /opt/openbis-oscilloscope/frontend/dist;
     try_files $uri $uri/ /index.html;
   }
 }
 ```
 
-`api` resolves to the FastAPI container via Docker's internal DNS. The trailing slash on `proxy_pass` strips the `/api` prefix before forwarding, so `GET /api/devices` reaches FastAPI as `GET /devices`.
-
----
-
-### Webapp Dockerfile
-
-**`frontend/Dockerfile`**
-
-```dockerfile
-FROM node:20-alpine AS build
-WORKDIR /frontend
-COPY . .
-RUN npm ci && npm run build
-
-FROM nginx:alpine
-COPY --from=build /frontend/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-```
-
-A two-stage build: Node compiles the Vite app to `dist/`, the final Nginx image copies only the static output — no Node runtime in production.
+The trailing slash on `proxy_pass` strips the `/api` prefix before forwarding, so `GET /api/devices` reaches FastAPI as `GET /devices`.
 
 ---
 
 ### Development workflow
 
-No Docker needed during development. Run FastAPI and the Vite dev server directly:
+Run FastAPI and the Vite dev server directly:
 
 ```bash
 # Terminal 1 — FastAPI with mock hardware and in-memory Redis

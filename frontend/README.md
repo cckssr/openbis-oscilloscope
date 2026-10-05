@@ -19,7 +19,7 @@ Login with your OpenBIS session token. In `DEBUG=True` mode use `debug-token`.
 npm run build   # outputs to dist/
 ```
 
-The `dist/` folder is served by Nginx in the Docker Compose setup. Nginx also proxies `/api/` to the FastAPI container (see `nginx.conf`).
+The `dist/` folder is served by nginx, which also proxies `/api/` to FastAPI (see `deploy/nginx.conf`).
 
 ## Project structure
 
