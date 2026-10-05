@@ -576,7 +576,7 @@ No Docker needed during development. Run FastAPI and the Vite dev server directl
 
 ```bash
 # Terminal 1 — FastAPI with mock hardware and in-memory Redis
-DEBUG=True uvicorn app.main:app --reload
+DEBUG=True uvicorn backend.main:app --reload
 
 # Terminal 2 — Vite dev server
 cd frontend && pnpm dev

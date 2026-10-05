@@ -15,7 +15,7 @@ cp .env.example .env  # then edit OPENBIS_URL
 **Run (no hardware needed):**
 
 ```bash
-DEBUG=True uvicorn app.main:app --reload
+DEBUG=True uvicorn backend.main:app --reload
 ```
 
 **Tests:**

@@ -90,7 +90,7 @@ echo "--> Installing systemd units"
 sed \
     -e "s|WorkingDirectory=.*|WorkingDirectory=$APP_DIR|" \
     -e "s|EnvironmentFile=.*|EnvironmentFile=$APP_DIR/.env|" \
-    -e "s|ExecStart=.*|ExecStart=$APP_DIR/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000|" \
+    -e "s|ExecStart=.*|ExecStart=$APP_DIR/.venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8000|" \
     -e "s|User=.*|User=$APP_USER|" \
     "$SCRIPT_DIR/openbis-oscilloscope.service" \
     > /etc/systemd/system/openbis-oscilloscope.service

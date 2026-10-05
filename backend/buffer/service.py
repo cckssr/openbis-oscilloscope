@@ -98,7 +98,7 @@ class BufferService:
 
         Args:
             buffer_dir: Path to the root storage directory. If ``None``,
-                :attr:`~app.config.Settings.BUFFER_DIR` is used.
+                :attr:`~backend.config.Settings.BUFFER_DIR` is used.
             _session_locks: Per-(device_id, session_id) threading locks that
                 serialize concurrent index mutations from the thread pool.
         """
@@ -237,9 +237,9 @@ class BufferService:
         Args:
             device_id: Identifier of the device that produced the waveform.
             session_id: Control session UUID under which to store the artifact.
-            waveform: The :class:`~app.instruments.base_driver.WaveformData` to store.
+            waveform: The :class:`~backend.instruments.base_driver.WaveformData` to store.
             meta: Full instrument settings dict from
-                :meth:`~app.instruments.base_driver.BaseOscilloscopeDriver.get_all_settings`.
+                :meth:`~backend.instruments.base_driver.BaseOscilloscopeDriver.get_all_settings`.
 
         Returns:
             The ``artifact_id`` string for the new artifact
@@ -317,7 +317,7 @@ class BufferService:
             device_id: Identifier of the device that produced the screenshot.
             session_id: Control session UUID under which to store the artifact.
             png_bytes: Raw PNG image data as returned by
-                :meth:`~app.instruments.base_driver.BaseOscilloscopeDriver.get_screenshot`.
+                :meth:`~backend.instruments.base_driver.BaseOscilloscopeDriver.get_screenshot`.
 
         Returns:
             The ``artifact_id`` string for the new artifact

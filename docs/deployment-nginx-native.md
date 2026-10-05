@@ -47,7 +47,7 @@ After=network.target redis.service
 User=www-data
 WorkingDirectory=/opt/openbis-oscilloscope
 EnvironmentFile=/opt/openbis-oscilloscope/.env
-ExecStart=/opt/openbis-oscilloscope/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+ExecStart=/opt/openbis-oscilloscope/.venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8000
 Restart=on-failure
 
 [Install]

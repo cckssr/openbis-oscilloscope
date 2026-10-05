@@ -58,7 +58,7 @@ Interactive API docs: `http://localhost:8000/docs` (also accessible via Nginx at
 # Terminal 1 — FastAPI backend (mock hardware, no Redis or OpenBIS needed)
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-DEBUG=True uvicorn app.main:app --reload
+DEBUG=True uvicorn backend.main:app --reload
 
 # Terminal 2 — Vite frontend (proxies /api/ to FastAPI automatically)
 cd frontend && pnpm install && pnpm dev
