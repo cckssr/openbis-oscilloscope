@@ -14,7 +14,7 @@ Systemd units and nginx config for running the service on a Linux host with jour
 
 ## Quick install
 
-Run on the target Linux host as root (requires `python3.11+`, `pnpm`, `nginx`, `redis-server`):
+Run on the target Linux host as root (requires `python3.11+`, `node 20+` (npm), `nginx`, `redis-server`):
 
 ```bash
 sudo ./deploy/install.sh
@@ -29,10 +29,10 @@ sudo ./deploy/install.sh --app-dir /opt/openbis-oscilloscope --user lab
 The script:
 
 1. Creates the system user if it doesn't exist.
-2. Rsyncs app files to `--app-dir` (skips `.env`, `buffer/`, `.venv`).
-3. Creates `.env` from `.env.example` if none exists — **edit it before starting**.
-4. Installs the Python package into a virtualenv.
-5. Builds the Vite frontend (`pnpm install && pnpm build`).
+2. Rsyncs app files to `--app-dir` (skips `backend/.env`, `backend/buffer/`, `.venv`, `frontend/node_modules`, `frontend/dist`).
+3. Creates `backend/.env` from `backend/.env.example` if none exists — **edit it before starting**.
+4. Installs the Python package from `backend/` into `backend/.venv`.
+5. Builds the Vite frontend (`npm ci && npm run build`).
 6. Installs and enables all systemd units.
 7. Writes the nginx site config, tests it, and reloads nginx.
 8. Starts Redis if not already running.
@@ -42,8 +42,9 @@ The script:
 ```bash
 sudo cp deploy/*.service deploy/*.timer /etc/systemd/system/
 
-# Edit WorkingDirectory, User, EnvironmentFile, and ExecStart in
-# openbis-oscilloscope.service to match your installation path.
+# Edit WorkingDirectory (`<app-dir>/backend`), User, EnvironmentFile
+# (`<app-dir>/backend/.env`), and ExecStart (`<app-dir>/backend/.venv/bin/uvicorn
+# app.main:app ...`) in openbis-oscilloscope.service to match your installation path.
 
 sudo systemctl daemon-reload
 sudo systemctl enable --now openbis-oscilloscope.service

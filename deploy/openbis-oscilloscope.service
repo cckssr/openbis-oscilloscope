@@ -5,9 +5,9 @@ After=network.target redis.service
 [Service]
 Type=simple
 User=lab
-WorkingDirectory=/opt/openbis-oscilloscope
-EnvironmentFile=/opt/openbis-oscilloscope/.env
-ExecStart=/opt/openbis-oscilloscope/.venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8000
+WorkingDirectory=/opt/openbis-oscilloscope/backend
+EnvironmentFile=/opt/openbis-oscilloscope/backend/.env
+ExecStart=/opt/openbis-oscilloscope/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=openbis-oscilloscope

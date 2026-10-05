@@ -3,7 +3,6 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
-  "packageManager": "pnpm@12.8.1",
   "scripts": {
     "build": "vite build",
     "dev": "vite"
@@ -88,5 +87,8 @@
     "react-dom": {
       "optional": true
     }
+  },
+  "overrides": {
+    "vite": "8.0.8"
   }
 }

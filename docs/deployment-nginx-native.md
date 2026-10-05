@@ -1,6 +1,6 @@
-# Deployment: nginx Reverse Proxy (no Docker)
+# Deployment: nginx Reverse Proxy
 
-This guide covers deploying the openbis-oscilloscope service behind nginx on a Linux server **without Docker**, using systemd and a native Redis installation.
+This guide covers deploying the openbis-oscilloscope service behind nginx on a Linux server, using systemd and a native Redis installation.
 
 ## Prerequisites
 
@@ -15,8 +15,8 @@ apt install nginx certbot python3-certbot-nginx redis-server python3-venv nodejs
 ```bash
 git clone <repo> /opt/openbis-oscilloscope
 cd /opt/openbis-oscilloscope
-cp .env.example .env
-# Edit .env — set OPENBIS_URL, BUFFER_DIR, DEBUG=False, etc.
+cp backend/.env.example backend/.env
+# Edit backend/.env — set OPENBIS_URL, BUFFER_DIR, DEBUG=False, etc.
 ```
 
 ### 2. Redis
@@ -30,7 +30,7 @@ Redis listens on `localhost:6379` by default — no further configuration needed
 ### 3. Backend (FastAPI via systemd)
 
 ```bash
-cd /opt/openbis-oscilloscope
+cd /opt/openbis-oscilloscope/backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
@@ -45,9 +45,9 @@ After=network.target redis.service
 
 [Service]
 User=www-data
-WorkingDirectory=/opt/openbis-oscilloscope
-EnvironmentFile=/opt/openbis-oscilloscope/.env
-ExecStart=/opt/openbis-oscilloscope/.venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8000
+WorkingDirectory=/opt/openbis-oscilloscope/backend
+EnvironmentFile=/opt/openbis-oscilloscope/backend/.env
+ExecStart=/opt/openbis-oscilloscope/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
 Restart=on-failure
 
 [Install]
@@ -170,6 +170,7 @@ ufw deny 8000/tcp   # backend reachable only from localhost via nginx
 ```bash
 cd /opt/openbis-oscilloscope
 git pull
+cd backend
 source .venv/bin/activate
 pip install -e .
 systemctl restart openbis-oscilloscope

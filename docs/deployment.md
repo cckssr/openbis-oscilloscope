@@ -4,14 +4,7 @@ This guide covers all supported deployment configurations for openbis-oscillosco
 
 ## Deployment variants
 
-Two dimensions to choose:
-
-**Backend runtime** — how the FastAPI process and Redis are managed:
-
-| Backend          | When to use                                    |
-| ---------------- | ---------------------------------------------- |
-| Native (systemd) | Recommended; no Docker required                |
-| Docker Compose   | If you prefer containerised process management |
+The backend runs natively under systemd with a native Redis install. Choose the hosting:
 
 **Hosting** — where the app lives relative to OpenBIS:
 
@@ -30,27 +23,20 @@ All variants proxy `/api/*` requests to the FastAPI backend on `localhost:8000`.
 
 ### System packages
 
-**nginx (native):**
+**nginx:**
 
 ```bash
 apt install nginx certbot python3-certbot-nginx redis-server python3-venv git
 ```
 
-**Apache2 (native):**
+**Apache2:**
 
 ```bash
 apt install apache2 libapache2-mod-proxy-httptunnel certbot python3-certbot-apache redis-server python3-venv git
 a2enmod proxy proxy_http ssl rewrite headers
 ```
 
-**Apache2 (Docker):**
-
-```bash
-apt install apache2 libapache2-mod-proxy-httptunnel certbot python3-certbot-apache docker.io docker-compose-plugin git
-a2enmod proxy proxy_http ssl rewrite headers
-```
-
-### Node.js 24 and pnpm
+### Node.js 24
 
 The frontend build requires Node.js ≥ 20. The system `nodejs` package on Ubuntu/Debian is typically v18 and too old — install via nvm instead:
 
@@ -58,14 +44,13 @@ The frontend build requires Node.js ≥ 20. The system `nodejs` package on Ubunt
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
 source ~/.bashrc
 nvm install 24
-npm install -g pnpm
 ```
 
 Verify:
 
 ```bash
 node -v   # v24.x.x
-pnpm -v
+npm -v
 ```
 
 ---
@@ -75,8 +60,8 @@ pnpm -v
 ```bash
 git clone <repo> /opt/openbis-oscilloscope
 cd /opt/openbis-oscilloscope
-cp .env.example .env
-# Edit .env — set OPENBIS_URL, BUFFER_DIR, DEBUG=False, etc.
+cp backend/.env.example backend/.env
+# Edit backend/.env — set OPENBIS_URL, BUFFER_DIR, DEBUG=False, etc.
 ```
 
 See [Environment file](#6-environment-file) for key settings.
@@ -85,10 +70,8 @@ See [Environment file](#6-environment-file) for key settings.
 
 ## 3. Backend
 
-### Option A — Native (systemd)
-
 ```bash
-cd /opt/openbis-oscilloscope
+cd /opt/openbis-oscilloscope/backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
@@ -107,9 +90,9 @@ After=network.target redis.service
 
 [Service]
 User=www-data
-WorkingDirectory=/opt/openbis-oscilloscope
-EnvironmentFile=/opt/openbis-oscilloscope/.env
-ExecStart=/opt/openbis-oscilloscope/.venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8000
+WorkingDirectory=/opt/openbis-oscilloscope/backend
+EnvironmentFile=/opt/openbis-oscilloscope/backend/.env
+ExecStart=/opt/openbis-oscilloscope/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
 Restart=on-failure
 
 [Install]
@@ -120,15 +103,6 @@ WantedBy=multi-user.target
 systemctl daemon-reload
 systemctl enable --now openbis-oscilloscope
 ```
-
-### Option B — Docker Compose
-
-```bash
-cd /opt/openbis-oscilloscope
-docker compose up -d
-```
-
-The backend and Redis are both started by Docker Compose. The backend is exposed on `localhost:8000`; Redis stays internal to the compose network.
 
 ---
 
@@ -142,8 +116,8 @@ Build from the root path (default):
 
 ```bash
 cd /opt/openbis-oscilloscope/frontend
-pnpm install --frozen-lockfile
-pnpm run build
+npm ci
+npm run build
 # Built files land in frontend/dist/
 ```
 
@@ -153,8 +127,8 @@ Pass `--base` with your chosen path so Vite rewrites all asset references and Re
 
 ```bash
 cd /opt/openbis-oscilloscope/frontend
-pnpm install --frozen-lockfile
-pnpm run build -- --base=/oscilloscope/
+npm ci
+npm run build -- --base=/oscilloscope/
 # Built files land in frontend/dist/
 ```
 
@@ -327,7 +301,7 @@ systemctl reload apache2
 
 ## 6. Environment file
 
-Key production settings in `/opt/openbis-oscilloscope/.env`:
+Key production settings in `/opt/openbis-oscilloscope/backend/.env`:
 
 ```bash
 DEBUG=False
@@ -373,27 +347,21 @@ git pull
 **Native backend:**
 
 ```bash
+cd backend
 source .venv/bin/activate
 pip install -e .
 systemctl restart openbis-oscilloscope
-```
-
-**Docker backend:**
-
-```bash
-docker compose pull
-docker compose up -d
 ```
 
 **Rebuild frontend** (if `frontend/` changed) — use the same `--base` flag as the initial build:
 
 ```bash
 cd /opt/openbis-oscilloscope/frontend
-pnpm install --frozen-lockfile
+npm ci
 
 # Dedicated subdomain:
-pnpm run build
+npm run build
 
 # Sub-path deployment:
-pnpm run build -- --base=/oscilloscope/
+npm run build -- --base=/oscilloscope/
 ```

@@ -7,8 +7,8 @@ React + Vite frontend for the OpenBIS Oscilloscope Control Service.
 Requires the FastAPI backend running on `http://localhost:8000`. The Vite dev server proxies all `/api/*` requests to it automatically — no CORS configuration needed.
 
 ```bash
-pnpm install
-pnpm dev        # starts on http://localhost:5173
+npm ci
+npm run dev   # starts on http://localhost:5173
 ```
 
 Login with your OpenBIS session token. In `DEBUG=True` mode use `debug-token`.
@@ -16,17 +16,17 @@ Login with your OpenBIS session token. In `DEBUG=True` mode use `debug-token`.
 ## Production build
 
 ```bash
-pnpm build      # outputs to dist/
+npm run build   # outputs to dist/
 ```
 
-The `dist/` folder is served by Nginx in the Docker Compose setup. Nginx also proxies `/api/` to the FastAPI container (see `nginx.conf`).
+The `dist/` folder is served by nginx, which also proxies `/api/` to FastAPI (see `deploy/nginx.conf`).
 
 ## Project structure
 
 ```
 src/
   api/          # Typed API client (client.ts, devices.ts, sessions.ts, auth.ts, types.ts)
-  backend/
+  app/
     context/    # AuthContext — token storage and user state
     pages/      # DeviceList, OscilloscopeControl, DataArchive, Login
     components/ # Reusable UI components

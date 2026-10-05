@@ -34,7 +34,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 }
 
 // BASE_URL is set by Vite from the --base flag at build time (default "/").
-// For sub-path deployments (e.g. /oscilloscope/) pass --base=/oscilloscope/ to pnpm run build.
+// For sub-path deployments (e.g. /oscilloscope/) pass --base=/oscilloscope/ to npm run build.
 const baseUrl =
   (import.meta as ImportMeta & { env?: { BASE_URL?: string } }).env?.BASE_URL ??
   "/";

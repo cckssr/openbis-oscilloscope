@@ -1,6 +1,0 @@
-packages:
-  - "."
-overrides:
-  vite: 8.0.8
-allowBuilds:
-  es5-ext: false # postinstall only prints a donation banner
