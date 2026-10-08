@@ -25,13 +25,49 @@ The `dist/` folder is served by nginx, which also proxies `/oscilloscope/api/` t
 
 ```
 src/
-  api/          # Typed API client (client.ts, devices.ts, sessions.ts, auth.ts, types.ts)
+  api/          # Typed, validated API client (see "API client & validation")
   app/
     context/    # AuthContext — token storage and user state
     pages/      # DeviceList, OscilloscopeControl (entry for control/), DataArchive (+ archive/), MySessions (+ sessions/), Login
     components/ # Reusable UI components (upload/ = upload wizard)
   styles/       # Tailwind + theme CSS variables
 ```
+
+## API client & validation
+
+`src/api/` is the only place that talks to the backend. Every JSON response is validated with
+[zod](https://zod.dev) at this edge (UX review §5.2), so components only ever see data that matches
+the interfaces in `types.ts`.
+
+| File | Role |
+| --- | --- |
+| `client.ts` | `apiFetch` (Bearer token, JSON or Blob) and `ApiError(status, code, message)`. |
+| `types.ts` | Hand-written response interfaces used by the whole app. |
+| `schemas.ts` | One zod schema per response; `parseDeviceEvent` for SSE; a compile-time `SchemaChecks` tuple that fails `tsc` when a schema output stops being assignable to its `types.ts` interface. |
+| `validate.ts` | `parseOrThrow`, `parseList`, `filterValid`, plus the schema helpers `lenientArray` and `sampleArray`. |
+| `devices.ts`, `sessions.ts`, `auth.ts`, `config.ts`, `events.ts`, `openbis_structure.ts` | Endpoint wrappers; each one pipes the body through its schema. Blob endpoints (screenshot PNG, ZIP, HDF5) and `void` endpoints are not validated. |
+
+Rules:
+
+- **Unknown fields are ignored** (objects are non-strict and strip extras), so a newer backend never breaks the UI.
+- **Unknown capabilities are dropped**: `DeviceDetail.capabilities` keeps only names listed in `KNOWN_CAPABILITIES`.
+  Add a name there (and to the `Capability` union) when the UI learns to render a new control.
+- **Malformed list elements are skipped** with `console.warn("[api] Skipped invalid …[i]: …")`; the rest is returned.
+  This applies to `listDevices`, `listArtifacts`, `listMySessions`, the openBIS structure lists and to nested lists
+  (`lab_courses`, `channels` and `waveforms` of preview/acquire). In `DeviceSettings.channels` a bad entry or non-numeric key is dropped the same way.
+- **Malformed top-level responses throw** `ApiError(502, "invalid_response", "Unerwartete Antwort vom Server")`
+  (details go to `console.warn`, never the offending payload). Callers show it with `notifyError` like any other `ApiError`.
+- **Legacy data gets defaults**: artifacts without `uploaded` / `uploaded_at` / `perm_id` / `annotation` / `run_id`,
+  `AppConfig` fields an older backend does not send, `capabilities` (`[]`) and `channel_count` (`4`).
+- **SSE events**: `subscribeDeviceEvents` hands only valid `device_state` / `lock` / `progress` events to the callback;
+  unknown event types are silently ignored, malformed known events are ignored with a warning.
+- **Performance**: waveform `time_s` / `voltage_V` arrays can hold millions of samples, so they are *not* validated per element:
+  `sampleArray` checks `Array.isArray`, the first and last element, and both arrays must have equal length. The array is
+  returned by reference (no copy).
+
+Adding an endpoint: add the interface to `types.ts`, the schema (and a `SchemaChecks` entry) to `schemas.ts`,
+and call `apiFetch<unknown>(…).then((raw) => parseOrThrow(Schema, raw, "GET /path"))` (or `parseList` for lists).
+Tests: `api/schemas.test.ts`. Other suites mock whole `src/api/*` modules, so they are unaffected.
 
 ## Components (shared)
 

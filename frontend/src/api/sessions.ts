@@ -1,4 +1,11 @@
 import { apiFetch } from "./client";
+import {
+  ArtifactSchema,
+  CommitResponseSchema,
+  SessionSummarySchema,
+  WaveformDataSchema,
+} from "./schemas";
+import { parseList, parseOrThrow } from "./validate";
 import type {
   Artifact,
   CommitResponse,
@@ -12,7 +19,9 @@ import type {
  * @returns A promise resolving to one summary per session still on disk
  */
 export function listMySessions(token: string): Promise<SessionSummary[]> {
-  return apiFetch<SessionSummary[]>("/sessions?mine=true", token);
+  return apiFetch<unknown>("/sessions?mine=true", token).then((raw) =>
+    parseList(SessionSummarySchema, raw, "GET /sessions"),
+  );
 }
 
 /**
@@ -25,7 +34,9 @@ export function listArtifacts(
   token: string,
   sessionId: string,
 ): Promise<Artifact[]> {
-  return apiFetch<Artifact[]>(`/sessions/${sessionId}/artifacts`, token);
+  return apiFetch<unknown>(`/sessions/${sessionId}/artifacts`, token).then((raw) =>
+    parseList(ArtifactSchema, raw, "GET /sessions/{id}/artifacts"),
+  );
 }
 
 /**
@@ -86,9 +97,11 @@ export function getArtifactWaveform(
   sessionId: string,
   artifactId: string,
 ): Promise<WaveformData> {
-  return apiFetch<WaveformData>(
+  return apiFetch<unknown>(
     `/sessions/${sessionId}/artifacts/${artifactId}/data`,
     token,
+  ).then((raw) =>
+    parseOrThrow(WaveformDataSchema, raw, "GET /sessions/{id}/artifacts/{id}/data"),
   );
 }
 
@@ -175,9 +188,9 @@ export function commitSession(
   sessionId: string,
   body: CommitRequest,
 ): Promise<CommitResponse> {
-  return apiFetch<CommitResponse>(`/sessions/${sessionId}/commit`, token, {
+  return apiFetch<unknown>(`/sessions/${sessionId}/commit`, token, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-  });
+  }).then((raw) => parseOrThrow(CommitResponseSchema, raw, "POST /sessions/{id}/commit"));
 }

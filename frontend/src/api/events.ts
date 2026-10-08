@@ -1,4 +1,5 @@
 import { apiBaseUrl } from "./client";
+import { parseDeviceEvent } from "./schemas";
 import type { DeviceEvent } from "./types";
 
 /**
@@ -9,7 +10,7 @@ import type { DeviceEvent } from "./types";
  * after network errors until the returned function is called.
  *
  * @param token - The authentication bearer token
- * @param onEvent - Called for every parsed event
+ * @param onEvent - Called for every valid event (unknown or malformed events are ignored)
  * @param onConnectionChange - Optional; called with true/false when the stream opens or drops
  * @returns A function that closes the stream
  */
@@ -47,11 +48,15 @@ export function subscribeDeviceEvents(
               .map((l) => l.slice(5).trim())
               .join("\n");
             if (!data) continue; // keepalive comment
+            let parsed: unknown;
             try {
-              onEvent(JSON.parse(data) as DeviceEvent);
+              parsed = JSON.parse(data);
             } catch {
-              // ignore malformed event
+              continue; // not JSON: ignore
             }
+            // Unknown event types and malformed payloads are dropped here.
+            const event = parseDeviceEvent(parsed);
+            if (event) onEvent(event);
           }
         }
       } catch {

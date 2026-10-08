@@ -1,4 +1,18 @@
 import { apiBaseUrl, apiFetch } from "./client";
+import {
+  AcquireResponseSchema,
+  CancelAcquireResponseSchema,
+  DeviceDetailSchema,
+  DeviceSchema,
+  DeviceSettingsSchema,
+  KeyboardLockResponseSchema,
+  LockResponseSchema,
+  MemoryDepthResponseSchema,
+  PreviewResponseSchema,
+  SaveScreenshotResponseSchema,
+  WaveformDataSchema,
+} from "./schemas";
+import { parseList, parseOrThrow } from "./validate";
 import type {
   Device,
   DeviceDetail,
@@ -16,10 +30,12 @@ import type {
 /**
  * Retrieves a list of all available devices.
  * @param token - The authentication bearer token
- * @returns A promise resolving to an array of devices
+ * @returns A promise resolving to the valid devices (malformed entries are logged and skipped)
  */
 export function listDevices(token: string): Promise<Device[]> {
-  return apiFetch<Device[]>("/devices", token);
+  return apiFetch<unknown>("/devices", token).then((raw) =>
+    parseList(DeviceSchema, raw, "GET /devices"),
+  );
 }
 
 /**
@@ -32,7 +48,9 @@ export function getDevice(
   token: string,
   deviceId: string,
 ): Promise<DeviceDetail> {
-  return apiFetch<DeviceDetail>(`/devices/${deviceId}`, token);
+  return apiFetch<unknown>(`/devices/${deviceId}`, token).then((raw) =>
+    parseOrThrow(DeviceDetailSchema, raw, "GET /devices/{id}"),
+  );
 }
 
 /**
@@ -45,9 +63,9 @@ export function acquireLock(
   token: string,
   deviceId: string,
 ): Promise<LockResponse> {
-  return apiFetch<LockResponse>(`/devices/${deviceId}/lock`, token, {
+  return apiFetch<unknown>(`/devices/${deviceId}/lock`, token, {
     method: "POST",
-  });
+  }).then((raw) => parseOrThrow(LockResponseSchema, raw, "POST /devices/{id}/lock"));
 }
 
 /**
@@ -182,11 +200,9 @@ export function acquireWaveforms(
   });
   options.channels?.forEach((ch) => params.append("channels", String(ch)));
   if (options.runId) params.set("run_id", options.runId);
-  return apiFetch<AcquireResponse>(
-    `/devices/${deviceId}/acquire?${params}`,
-    token,
-    { method: "POST" },
-  );
+  return apiFetch<unknown>(`/devices/${deviceId}/acquire?${params}`, token, {
+    method: "POST",
+  }).then((raw) => parseOrThrow(AcquireResponseSchema, raw, "POST /devices/{id}/acquire"));
 }
 
 /**
@@ -205,11 +221,9 @@ export function previewWaveforms(
 ): Promise<PreviewResponse> {
   const params = new URLSearchParams({ session_id: sessionId });
   channels?.forEach((ch) => params.append("channels", String(ch)));
-  return apiFetch<PreviewResponse>(
-    `/devices/${deviceId}/preview?${params}`,
-    token,
-    { method: "POST" },
-  );
+  return apiFetch<unknown>(`/devices/${deviceId}/preview?${params}`, token, {
+    method: "POST",
+  }).then((raw) => parseOrThrow(PreviewResponseSchema, raw, "POST /devices/{id}/preview"));
 }
 
 /**
@@ -225,10 +239,12 @@ export function cancelAcquire(
   deviceId: string,
   sessionId: string,
 ): Promise<{ cancelled: boolean }> {
-  return apiFetch<{ cancelled: boolean }>(
+  return apiFetch<unknown>(
     `/devices/${deviceId}/acquire/cancel?session_id=${encodeURIComponent(sessionId)}`,
     token,
     { method: "POST" },
+  ).then((raw) =>
+    parseOrThrow(CancelAcquireResponseSchema, raw, "POST /devices/{id}/acquire/cancel"),
   );
 }
 
@@ -271,9 +287,11 @@ export function getChannelData(
   channel: number,
   sessionId: string,
 ): Promise<WaveformData> {
-  return apiFetch<WaveformData>(
+  return apiFetch<unknown>(
     `/devices/${deviceId}/channels/${channel}/data?session_id=${encodeURIComponent(sessionId)}`,
     token,
+  ).then((raw) =>
+    parseOrThrow(WaveformDataSchema, raw, "GET /devices/{id}/channels/{n}/data"),
   );
 }
 
@@ -287,7 +305,9 @@ export function getSettings(
   token: string,
   deviceId: string,
 ): Promise<DeviceSettings> {
-  return apiFetch<DeviceSettings>(`/devices/${deviceId}/settings`, token);
+  return apiFetch<unknown>(`/devices/${deviceId}/settings`, token).then((raw) =>
+    parseOrThrow(DeviceSettingsSchema, raw, "GET /devices/{id}/settings"),
+  );
 }
 
 /**
@@ -397,10 +417,12 @@ export function saveScreenshot(
   deviceId: string,
   sessionId: string,
 ): Promise<{ artifact_id: string }> {
-  return apiFetch<{ artifact_id: string }>(
+  return apiFetch<unknown>(
     `/devices/${deviceId}/screenshot?session_id=${encodeURIComponent(sessionId)}`,
     token,
     { method: "POST" },
+  ).then((raw) =>
+    parseOrThrow(SaveScreenshotResponseSchema, raw, "POST /devices/{id}/screenshot"),
   );
 }
 
@@ -414,9 +436,8 @@ export function getMemoryDepth(
   token: string,
   deviceId: string,
 ): Promise<MemoryDepthResponse> {
-  return apiFetch<MemoryDepthResponse>(
-    `/devices/${deviceId}/memory-depth`,
-    token,
+  return apiFetch<unknown>(`/devices/${deviceId}/memory-depth`, token).then((raw) =>
+    parseOrThrow(MemoryDepthResponseSchema, raw, "GET /devices/{id}/memory-depth"),
   );
 }
 
@@ -432,9 +453,11 @@ export function setKeyboardLock(
   deviceId: string,
   locked: boolean,
 ): Promise<{ device_id: string; keyboard_locked: boolean }> {
-  return apiFetch<{ device_id: string; keyboard_locked: boolean }>(
+  return apiFetch<unknown>(
     `/admin/devices/${deviceId}/keyboard-lock?locked=${locked}`,
     token,
     { method: "POST" },
+  ).then((raw) =>
+    parseOrThrow(KeyboardLockResponseSchema, raw, "POST /admin/devices/{id}/keyboard-lock"),
   );
 }
