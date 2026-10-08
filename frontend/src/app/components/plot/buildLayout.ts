@@ -32,6 +32,10 @@ export interface LayoutOptions {
   viewKey: string;
   /** x axis prefix; x ranges and ticks are in scaled units. */
   xScale: AxisScale;
+  /** "Achsen anpassen" is on: axes follow the data of every frame. */
+  fit?: { x: Range; y?: Range } | null;
+  /** Counter of "Achsen anpassen" clicks; a new value drops earlier zoom/pan (`uirevision`). */
+  fitSeq?: number;
 }
 
 function yTitle(traces: Trace[], mode: YMode): { title: string; suffix: string } {
@@ -49,7 +53,7 @@ function yTitle(traces: Trace[], mode: YMode): { title: string; suffix: string }
  * @returns A fresh layout object (Plotly stores and mutates the one it is given)
  */
 export function buildLayout(o: LayoutOptions): Partial<Layout> {
-  const { mode, traces, frame, zoomed, dragMode, decor, plotWidth, viewKey, xScale } = o;
+  const { mode, traces, frame, zoomed, dragMode, decor, plotWidth, viewKey, xScale, fit, fitSeq = 0 } = o;
   const freq = traces.length > 0 && traces.every((tr) => tr.xUnit === "Hz");
   const { title: yAxisTitle, suffix: ySuffix } = yTitle(traces, mode);
 
@@ -72,12 +76,12 @@ export function buildLayout(o: LayoutOptions): Partial<Layout> {
     hoverlabel: { font: { family: "JetBrains Mono, monospace", size: 11 } },
     dragmode: dragMode,
     // A different prefix means different axis numbers, so a kept zoom would be wrong.
-    uirevision: `${viewKey}|${xScale.prefix}`,
+    uirevision: `${viewKey}|${xScale.prefix}|${fitSeq}`,
     shapes: decor.shapes,
     annotations: decor.annotations,
     xaxis: {
       // Copy: Plotly writes the user's zoom into the arrays it is given.
-      range: [frame[0] / f, frame[1] / f],
+      range: fit ? [fit.x[0] / f, fit.x[1] / f] : [frame[0] / f, frame[1] / f],
       title: { text: freq ? t.frequency : t.time, standoff: 6, font: { size: 12 } },
       ticksuffix: xScale.suffix,
       tickformat: SCALED_FORMAT,
@@ -96,7 +100,7 @@ export function buildLayout(o: LayoutOptions): Partial<Layout> {
     },
     yaxis: {
       ...(mode === "divisions"
-        ? { range: [-Y_DIVISIONS / 2, Y_DIVISIONS / 2], tickmode: "linear", tick0: -Y_DIVISIONS / 2, dtick: 1 }
+        ? { range: fit?.y ? [fit.y[0], fit.y[1]] : [-Y_DIVISIONS / 2, Y_DIVISIONS / 2], tickmode: "linear", tick0: -Y_DIVISIONS / 2, dtick: 1 }
         : { autorange: true, nticks: 9 }),
       title: { text: yAxisTitle, standoff: 4, font: { size: 12 } },
       ticksuffix: ySuffix,

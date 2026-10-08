@@ -17,18 +17,20 @@ const t = de.control.actions.capture;
 
 export interface CaptureButtonProps {
   deviceId: string;
-  /** column = desktop side column, rail = 72 px tablet icon rail, bar = portrait bottom bar. */
+  /** column = desktop side column, icon = collapsed desktop column, rail = 72 px tablet icon rail, bar = portrait bottom bar. */
   layout: ActionLayout;
 }
 
 const WRAPPER: Record<ActionLayout, string> = {
   column: "flex flex-col gap-1",
+  icon: "flex flex-col items-center gap-2",
   rail: "flex w-[72px] flex-col gap-2",
   bar: "flex flex-col gap-1",
 };
 
 const PRIMARY: Record<ActionLayout, string> = {
   column: "h-auto min-h-9 min-w-0 flex-1 justify-start rounded-r-none py-1.5 text-left leading-tight whitespace-normal coarse:min-h-11",
+  icon: "size-9 rounded-b-none px-0 coarse:size-11",
   rail: "h-auto min-h-12 w-full flex-col gap-0.5 rounded-b-none px-1 py-1.5 text-[11px] leading-tight whitespace-normal coarse:min-h-[3.25rem]",
   bar: "h-11 rounded-r-none px-6 coarse:h-12",
 };
@@ -73,14 +75,14 @@ export function CaptureButton({ deviceId, layout }: CaptureButtonProps) {
       type="button"
       variant="primary"
       disabled={!!reason}
-      aria-label={layout === "rail" ? t.save : undefined}
+      aria-label={layout === "rail" || layout === "icon" ? t.save : undefined}
       aria-busy={saving}
       data-testid="capture-save"
       onClick={() => void actions.saveCapture()}
       className={PRIMARY[layout]}
     >
       {saving ? <Loader2 className="animate-spin" aria-hidden /> : <Save aria-hidden />}
-      <span className={layout === "rail" ? "text-center" : undefined}>
+      <span className={layout === "rail" ? "text-center" : layout === "icon" ? "sr-only" : undefined}>
         {saving
           ? layout === "rail" ? t.savingRail : t.saving
           : layout === "rail" ? t.saveRail : t.save}
@@ -89,11 +91,11 @@ export function CaptureButton({ deviceId, layout }: CaptureButtonProps) {
   );
 
   const group = (
-    <div className={cn("flex", layout === "rail" ? "flex-col" : "w-full")}>
+    <div className={cn("flex", layout === "rail" || layout === "icon" ? "flex-col" : "w-full")}>
       {reason ? primary : (
         <Tooltip>
           <TooltipTrigger asChild>{primary}</TooltipTrigger>
-          <TooltipContent side={layout === "column" ? "left" : "bottom"}>
+          <TooltipContent side={layout === "column" ? "left" : layout === "icon" ? "right" : "bottom"}>
             {withShortcut(t.helper, "capture")}
           </TooltipContent>
         </Tooltip>

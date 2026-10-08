@@ -29,7 +29,8 @@ export function GroupTabs({ groups, initialGroupId, ...body }: GroupLayoutProps)
     <Tabs value={active} onValueChange={setValue} className="min-w-0 gap-3">
       <TabsList
         className={cn(
-          "h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b-2 border-(--lab-border) bg-transparent p-0",
+          // The baseline is an inset shadow instead of a border, so the triggers sit inside the list and it needs no vertical scrollbar.
+          "h-auto w-full justify-start gap-1 overflow-x-auto overflow-y-hidden rounded-none bg-transparent p-0 shadow-[inset_0_-2px_0_0_var(--lab-border)]",
         )}
       >
         {groups.map((g) => (
@@ -37,7 +38,7 @@ export function GroupTabs({ groups, initialGroupId, ...body }: GroupLayoutProps)
             key={g.id}
             value={g.id}
             className={cn(
-              "tap-target -mb-0.5 h-auto rounded-none rounded-t border-0 border-b-2 border-transparent px-3 py-1 text-sm shadow-none",
+              "tap-target h-auto rounded-none rounded-t border-0 border-b-2 border-transparent px-3 py-1 text-sm shadow-none",
               "data-[state=active]:border-(--lab-accent) data-[state=active]:bg-transparent data-[state=active]:text-(--lab-accent) data-[state=active]:shadow-none",
               scrolling ? "flex-none" : "flex-1",
             )}

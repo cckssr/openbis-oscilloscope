@@ -328,6 +328,19 @@ export const control = {
       dataTitle: "Gespeicherte Aufnahmen dieser Sitzung ansehen und hochladen",
       dataTitleNone: "Alle deine Sitzungen ansehen",
     },
+    /** Asked when taking a device while another one is still locked by the same user. */
+    otherLock: {
+      title: "Du steuerst bereits ein anderes Gerät",
+      description: (names: string[]) =>
+        names.length === 1
+          ? `Du hast „${names[0]}“ bereits übernommen.`
+          : `Du hast bereits ${names.length} andere Geräte übernommen: ${names.map((n) => `„${n}“`).join(", ")}.`,
+      hint: "Gib das andere Gerät frei, damit andere es nutzen können, oder behalte beide Geräte gleichzeitig.",
+      cancel: "Abbrechen",
+      both: "Beide behalten",
+      switch: (n: number) => (n === 1 ? "Anderes freigeben und übernehmen" : "Andere freigeben und übernehmen"),
+      checking: "Prüfe Sperren…",
+    },
     level: {
       ariaLabel: "Bedienung",
       basic: "Einfach",

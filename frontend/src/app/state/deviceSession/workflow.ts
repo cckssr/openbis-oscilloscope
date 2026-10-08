@@ -2,6 +2,8 @@
  * Workflow strip (review §4.1) as a pure selector over the store state:
  * ① Gerät übernehmen ② Signal einstellen (optional) ③ Aufnehmen
  * ④ Notieren & auswählen ⑤ Hochladen, plus the one-sentence "Als Nächstes" hint.
+ * Once every capture is uploaded the strip starts a new round: the data steps
+ * reset and "Signal einstellen" is active again.
  */
 import { de } from "../../../i18n/de";
 import type {
@@ -24,7 +26,9 @@ export function selectWorkflow(state: DeviceSessionState): Workflow {
   const { lock, settings, counts, frame, live, device } = state;
   const held = lock.status === "held";
   const joined = held || lock.status === "passive";
-  const hasData = counts.total > 0;
+  // Everything uploaded: the next measurement starts a new round of steps ②–⑤.
+  const roundDone = counts.total > 0 && counts.notUploaded === 0;
+  const hasData = counts.total > 0 && !roundDone;
   const unavailable =
     !joined &&
     (device?.state === "OFFLINE" ||
@@ -44,13 +48,12 @@ export function selectWorkflow(state: DeviceSessionState): Workflow {
   else capture = "blocked";
 
   let annotate: StepState;
-  if (counts.withNoteOrFlag > 0) annotate = "done";
+  if (hasData && counts.withNoteOrFlag > 0) annotate = "done";
   else if (hasData) annotate = "active";
   else annotate = held ? "todo" : "blocked";
 
   let upload: StepState;
   if (counts.flagged > 0) upload = "active";
-  else if (counts.uploaded > 0) upload = "done";
   else upload = hasData ? "todo" : "blocked";
 
   const step = (
@@ -68,13 +71,18 @@ export function selectWorkflow(state: DeviceSessionState): Workflow {
       step("annotate", t.steps.annotate, annotate),
       step("upload", t.steps.upload, upload),
     ],
-    next: nextHint(state, { held, hasData, hasFrame: frame !== null || live.status === "on" }),
+    next: nextHint(state, {
+      held,
+      hasData,
+      roundDone,
+      hasFrame: frame !== null || live.status === "on",
+    }),
   };
 }
 
 function nextHint(
   state: DeviceSessionState,
-  ctx: { held: boolean; hasData: boolean; hasFrame: boolean },
+  ctx: { held: boolean; hasData: boolean; roundDone: boolean; hasFrame: boolean },
 ): string {
   const { lock, counts } = state;
   if (lock.status === "passive") return t.next.passive;
@@ -84,7 +92,7 @@ function nextHint(
   if (counts.flagged > 0) return t.next.upload;
   if (ctx.hasData && counts.notUploaded > 0) return t.next.annotate;
 
-  if (!ctx.held) return ctx.hasData ? t.next.allUploaded : t.next.take;
-  if (ctx.hasData) return t.next.allUploaded;
+  if (!ctx.held) return ctx.roundDone ? t.next.takeAgain : t.next.take;
+  if (ctx.roundDone) return t.next.allUploaded;
   return ctx.hasFrame ? t.next.capture : t.next.live;
 }

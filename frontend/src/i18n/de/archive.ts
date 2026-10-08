@@ -30,6 +30,8 @@ const page = {
   },
   select: {
     all: "Alle auswählen",
+    withNote: "Alle mit Notiz auswählen",
+    withNoteTitle: "Alle noch nicht hochgeladenen Aufnahmen mit Notiz zum Hochladen auswählen",
     clear: "Auswahl aufheben",
     allAria: "Alle noch nicht hochgeladenen Aufnahmen zum Hochladen auswählen",
     flagError: "Auswahl fehlgeschlagen",

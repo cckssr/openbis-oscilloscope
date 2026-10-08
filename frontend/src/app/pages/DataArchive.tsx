@@ -12,6 +12,7 @@ import { notifyError } from "../../lib/notify";
 import { formatDate } from "../../lib/units";
 import { EmptyState, RegionBoundary } from "../components/common";
 import { Button } from "../components/ui/button";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../components/ui/resizable";
 import { UploadWizard } from "../components/upload/UploadWizard";
 import { useAuth } from "../context/AuthContext";
 import { ArchiveHeader } from "./archive/ArchiveHeader";
@@ -31,6 +32,11 @@ const t = de.archive;
 
 /** From this width the preview sits next to the list instead of in a dialog. */
 const SPLIT_QUERY = "(min-width: 1280px)";
+
+/** Preview panel width (px) in the split view; the divider moves it between min and max. */
+const PREVIEW_DEFAULT_WIDTH = 560;
+const PREVIEW_MIN_WIDTH = 360;
+const PREVIEW_MAX_WIDTH = 900;
 
 /**
  * The archive page.
@@ -94,6 +100,7 @@ export function DataArchive() {
     [timeline.captures],
   );
   const selectableAll = useMemo(() => selectableCaptures(timeline.captures), [timeline.captures]);
+  const withNote = useMemo(() => selectableAll.filter((c) => (c.annotation ?? "").trim() !== ""), [selectableAll]);
 
   const deviceLabel = info?.device_label ?? info?.device_id;
   const baseName = safeFilename(`messdaten_${info?.device_id ?? sessionId?.slice(0, 8) ?? "sitzung"}`);
@@ -136,6 +143,55 @@ export function DataArchive() {
         }
       : null;
 
+  const list = (
+    <main className="h-full min-w-0 flex-1 overflow-auto">
+      <RegionBoundary name="Messdaten" resetKeys={[sessionId]}>
+        {isLoading ? (
+          <ArchiveSkeleton />
+        ) : !hasData ? (
+          <EmptyState
+            icon={<Inbox />}
+            title={t.empty.title}
+            description={t.empty.text}
+            action={
+              backToDevice && info ? (
+                <Button asChild variant="secondary">
+                  <Link to={`/device/${info.device_id}`}>{t.back.toDevice}</Link>
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : (
+          <ArchiveTable
+            timeline={timeline}
+            activeId={previewCapture?.id ?? null}
+            expandedRuns={expandedRuns}
+            screenshotUrls={screenshotUrls}
+            onToggleRun={toggleRun}
+            onPreview={openPreview}
+            onToggleUpload={(captures, wanted) => void setUploadSelection(captures, wanted)}
+            onSaveNote={(capture, text) => void saveNote(capture, text)}
+          />
+        )}
+      </RegionBoundary>
+    </main>
+  );
+
+  const preview = (
+    <aside
+      aria-label={t.preview.title}
+      className="flex h-full flex-col overflow-auto border-l-2 border-(--lab-border) bg-white p-4"
+    >
+      <RegionBoundary name="Vorschau" resetKeys={[previewId]}>
+        {previewProps ? (
+          <CapturePreview {...previewProps} onClose={() => setPreviewId(null)} className="flex-1" />
+        ) : (
+          <PreviewPlaceholder />
+        )}
+      </RegionBoundary>
+    </aside>
+  );
+
   return (
     <div className="flex h-dvh flex-col bg-(--lab-bg)">
       <ArchiveHeader
@@ -177,6 +233,15 @@ export function DataArchive() {
           <Button
             variant="ghost"
             size="sm"
+            title={t.select.withNoteTitle}
+            disabled={withNote.length === 0 || withNote.every((c) => c.status === "selected")}
+            onClick={() => void setUploadSelection(withNote, true)}
+          >
+            {t.select.withNote}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             disabled={counts.selected === 0}
             onClick={() => void setUploadSelection(selectedCaptures, false)}
           >
@@ -186,51 +251,24 @@ export function DataArchive() {
       )}
 
       <div className="flex min-h-0 flex-1">
-        <main className="min-w-0 flex-1 overflow-auto">
-          <RegionBoundary name="Messdaten" resetKeys={[sessionId]}>
-            {isLoading ? (
-              <ArchiveSkeleton />
-            ) : !hasData ? (
-              <EmptyState
-                icon={<Inbox />}
-                title={t.empty.title}
-                description={t.empty.text}
-                action={
-                  backToDevice && info ? (
-                    <Button asChild variant="secondary">
-                      <Link to={`/device/${info.device_id}`}>{t.back.toDevice}</Link>
-                    </Button>
-                  ) : undefined
-                }
-              />
-            ) : (
-              <ArchiveTable
-                timeline={timeline}
-                activeId={previewCapture?.id ?? null}
-                expandedRuns={expandedRuns}
-                screenshotUrls={screenshotUrls}
-                onToggleRun={toggleRun}
-                onPreview={openPreview}
-                onToggleUpload={(captures, wanted) => void setUploadSelection(captures, wanted)}
-                onSaveNote={(capture, text) => void saveNote(capture, text)}
-              />
-            )}
-          </RegionBoundary>
-        </main>
-
-        {wide && hasData && (
-          <aside
-            aria-label={t.preview.title}
-            className="flex w-[560px] shrink-0 flex-col overflow-auto border-l-2 border-(--lab-border) bg-white p-4"
-          >
-            <RegionBoundary name="Vorschau" resetKeys={[previewId]}>
-              {previewProps ? (
-                <CapturePreview {...previewProps} onClose={() => setPreviewId(null)} className="flex-1" />
-              ) : (
-                <PreviewPlaceholder />
-              )}
-            </RegionBoundary>
-          </aside>
+        {wide && hasData ? (
+          <ResizablePanelGroup orientation="horizontal" className="h-full">
+            <ResizablePanel id="archive-list" minSize={400}>
+              {list}
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel
+              id="archive-preview"
+              defaultSize={PREVIEW_DEFAULT_WIDTH}
+              minSize={PREVIEW_MIN_WIDTH}
+              maxSize={PREVIEW_MAX_WIDTH}
+              groupResizeBehavior="preserve-pixel-size"
+            >
+              {preview}
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        ) : (
+          list
         )}
       </div>
 

@@ -27,6 +27,8 @@ export interface SegmentedControlProps {
   "aria-label"?: string;
   id?: string;
   className?: string;
+  /** `button` matches the height of a default `Button` (header toolbars); `default` is the compact form field size. */
+  size?: "default" | "button";
 }
 
 /** Above this many options the control becomes a dropdown. */
@@ -52,6 +54,7 @@ export function SegmentedControl({
   "aria-label": ariaLabel,
   id,
   className,
+  size = "default",
 }: SegmentedControlProps) {
   const items = options.map(normalise);
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -121,7 +124,8 @@ export function SegmentedControl({
                 }
               }}
               className={cn(
-                "min-h-8 flex-1 rounded border-2 px-3 py-1 text-xs font-medium transition-colors coarse:min-h-11 coarse:text-sm",
+                "flex-1 rounded border-2 font-medium transition-colors coarse:min-h-11 coarse:text-sm",
+                size === "button" ? "h-9 px-4 text-sm coarse:h-11" : "min-h-8 px-3 py-1 text-xs",
                 "outline-none focus-visible:ring-2 focus-visible:ring-(--lab-accent)/40",
                 "disabled:cursor-not-allowed disabled:border-(--lab-border) disabled:bg-(--lab-disabled-bg) disabled:text-(--lab-disabled-text)",
                 active

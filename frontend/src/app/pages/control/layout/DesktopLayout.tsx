@@ -16,7 +16,8 @@ function defaultWidths(): { actions: number; inspector: number } {
 }
 
 /**
- * >= 1280 px: collapsible actions column (260 px), plot centre and a
+ * >= 1280 px: collapsible actions column (260 px; collapsed it keeps the
+ * action buttons as icons), plot centre and a
  * resizable settings inspector (340 px, min 300 px). Below 1400 px both side
  * panels start narrower (230 / 300 px).
  *
@@ -35,6 +36,7 @@ export function DesktopLayout({ slots }: { slots: ControlSlots }) {
         maxSize={360}
         collapseLabel={t.collapseActions}
         expandLabel={t.expandActions}
+        collapsedContent={slots.actions("icon")}
       >
         <div className="flex flex-col gap-4 pt-6">{slots.actions("column")}</div>
         <div className="mt-4">{slots.lastCapture("card")}</div>

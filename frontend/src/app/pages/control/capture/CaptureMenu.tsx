@@ -25,6 +25,7 @@ export interface CaptureMenuProps {
 }
 
 const TRIGGER_CLASS: Record<ActionLayout, string> = {
+  icon: "h-5 w-full rounded-t-none border-t-0 px-0 coarse:h-7",
   column: "h-auto self-stretch rounded-l-none border-l border-l-white/50 px-2",
   rail: "h-7 w-full rounded-t-none border-t-0 px-0 text-[11px] coarse:h-10",
   bar: "h-11 rounded-l-none border-l border-l-white/50 px-2 coarse:h-12",
@@ -84,7 +85,7 @@ export function CaptureMenu({
       <DropdownMenuTrigger asChild>
         <Button
           type="button"
-          variant={layout === "rail" ? "secondary" : "primary"}
+          variant={layout === "rail" || layout === "icon" ? "secondary" : "primary"}
           disabled={disabled}
           aria-label={t.more}
           data-testid="capture-menu-trigger"
@@ -94,8 +95,8 @@ export function CaptureMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        side={layout === "rail" ? "right" : "bottom"}
-        align={layout === "rail" ? "start" : "end"}
+        side={layout === "rail" || layout === "icon" ? "right" : "bottom"}
+        align={layout === "rail" || layout === "icon" ? "start" : "end"}
         className="w-72"
       >
         {fullResolution.visible && (

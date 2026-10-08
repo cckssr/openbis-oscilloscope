@@ -21,6 +21,7 @@ export function LevelToggle({ level, onChange }: LevelToggleProps) {
     <div className="flex items-center gap-1">
       <SegmentedControl
         aria-label={t.ariaLabel}
+        size="button"
         value={level}
         onChange={(v) => onChange(v as ControlLevel)}
         options={[

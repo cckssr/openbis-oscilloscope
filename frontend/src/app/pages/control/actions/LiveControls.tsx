@@ -15,12 +15,13 @@ export interface LiveControlsProps {
   deviceId: string;
   /** "basic" shows Live, Scope stopp and Auto-Setup; "expert" adds trigger and series controls. */
   level: "basic" | "expert";
-  /** column = desktop side column, rail = 72 px tablet icon rail, bar = portrait bottom bar. */
+  /** column = desktop side column, icon = collapsed desktop column, rail = 72 px tablet icon rail, bar = portrait bottom bar. */
   layout: ActionLayout;
 }
 
 const CONTAINER: Record<ActionLayout, string> = {
   column: "flex flex-col gap-2",
+  icon: "flex flex-col items-center gap-2",
   rail: "flex w-[72px] flex-col gap-2",
   bar: "flex flex-row flex-wrap items-start gap-2",
 };
@@ -127,7 +128,7 @@ export function LiveControls({ deviceId, level, layout }: LiveControlsProps) {
               onClick={() => void actions.autoscale()}
             />
           </div>
-          {layout !== "rail" && (
+          {(layout === "column" || layout === "bar") && (
             <HelpPopover label={t.autoscale.helpLabel} title={t.autoscale.helpTitle}>
               {t.autoscale.help}
             </HelpPopover>
@@ -183,7 +184,11 @@ export function LiveControls({ deviceId, level, layout }: LiveControlsProps) {
       {overflow && <MoreMenu items={moreItems} />}
       {groupReason && (
         <p
-          className={cn("help-text", layout === "rail" && "text-center text-[11px] leading-tight")}
+          className={cn(
+            "help-text",
+            layout === "rail" && "text-center text-[11px] leading-tight",
+            layout === "icon" && "sr-only",
+          )}
           data-testid="live-controls-reason"
         >
           {groupReason}

@@ -165,7 +165,7 @@ describe("counts", () => {
     await store.actions.refreshCounts();
     expect(store.getState().counts).toEqual({
       total: 4,
-      withNoteOrFlag: 3,
+      withNoteOrFlag: 2,
       flagged: 1,
       uploaded: 1,
       notUploaded: 3,

@@ -23,6 +23,7 @@ interface Slice {
   channels: number[];
   note: string;
   flagged: boolean;
+  fresh: boolean;
   held: boolean;
 }
 
@@ -35,6 +36,7 @@ const sameSlice = (a: Slice | null, b: Slice | null) =>
     a.fullResolution === b.fullResolution &&
     a.note === b.note &&
     a.flagged === b.flagged &&
+    a.fresh === b.fresh &&
     a.held === b.held &&
     a.channels.join() === b.channels.join());
 
@@ -62,6 +64,7 @@ export function LastCaptureCard({ deviceId, layout = "card" }: LastCaptureCardPr
               .map((tr) => tr.channel as number),
             note: s.lastCapture.note,
             flagged: s.lastCapture.flagged,
+            fresh: s.lastCapture.fresh === true,
             held: s.lock.status === "held",
           }
         : null,
@@ -107,6 +110,8 @@ export function LastCaptureCard({ deviceId, layout = "card" }: LastCaptureCardPr
           <CaptureNote
             key={capture.acquisitionId}
             deviceId={deviceId}
+            acquisitionId={capture.acquisitionId}
+            focusOnMount={capture.fresh}
             note={capture.note}
             flagged={capture.flagged}
             canEdit={capture.held}

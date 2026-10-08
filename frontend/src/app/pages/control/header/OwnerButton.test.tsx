@@ -5,6 +5,15 @@ import type { HeaderModel } from "./model";
 
 const actions = { release: vi.fn(async () => {}), takeControl: vi.fn(async () => {}) };
 vi.mock("../actions/session", () => ({ useDeviceActions: () => actions }));
+// The "other device already locked" question has its own test (useTakeControl.test.tsx).
+const request = vi.fn(() => void actions.takeControl());
+vi.mock("./useTakeControl", () => ({
+  useTakeControl: () => ({
+    request,
+    checking: false,
+    dialog: { open: false, onOpenChange: vi.fn(), deviceNames: [], onSwitch: vi.fn(), onKeepBoth: vi.fn() },
+  }),
+}));
 
 import { OwnerButton } from "./OwnerButton";
 

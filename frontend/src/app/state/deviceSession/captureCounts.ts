@@ -30,7 +30,7 @@ export function countsFromArtifacts(artifacts: Artifact[]): CaptureCounts {
     const hasNote = members.some((a) => (a.annotation ?? "").trim() !== "");
     if (isUploaded) uploaded += 1;
     if (isFlagged) flagged += 1;
-    if (hasNote || isFlagged || isUploaded) withNoteOrFlag += 1;
+    if (!isUploaded && (hasNote || isFlagged)) withNoteOrFlag += 1;
   }
   const total = groups.size;
   return { total, withNoteOrFlag, flagged, uploaded, notUploaded: total - uploaded };

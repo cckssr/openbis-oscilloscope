@@ -138,11 +138,14 @@ export interface Capture {
   note: string;
   /** Selected for upload ("Zum Hochladen ausgewählt"). */
   flagged: boolean;
+  /** Just taken by the user in this tab (not a series step, not restored): the note field takes focus once. */
+  fresh?: boolean;
 }
 
 /** Counts over all captures of the session (from the archive + this tab). */
 export interface CaptureCounts {
   total: number;
+  /** Not yet uploaded captures that have a note or are selected for upload. */
   withNoteOrFlag: number;
   flagged: number;
   uploaded: number;

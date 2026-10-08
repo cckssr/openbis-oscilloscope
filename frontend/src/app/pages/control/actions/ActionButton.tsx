@@ -9,7 +9,7 @@ import type { ActionLayout } from "./layout";
 export interface ActionButtonProps {
   layout: ActionLayout;
   icon: ReactNode;
-  /** Full label (column, bar, accessible name). */
+  /** Full label (column, bar, accessible name, tooltip of the icon-only layout). */
   label: string;
   /** Short label for the 72 px icon rail; defaults to `label`. */
   railLabel?: string;
@@ -30,6 +30,7 @@ export interface ActionButtonProps {
 /** Layout-specific sizing: column = full width row, rail = stacked icon + label, bar = large horizontal. */
 const LAYOUT_CLASS: Record<ActionLayout, string> = {
   column: "w-full justify-start",
+  icon: "size-9 px-0 coarse:size-11",
   rail: "h-auto min-h-12 w-full flex-col gap-0.5 px-1 py-1.5 text-[11px] leading-tight whitespace-normal coarse:min-h-[3.25rem]",
   bar: "h-11 px-4 coarse:h-12",
 };
@@ -61,12 +62,12 @@ export function ActionButton({
       variant={variant}
       disabled={!!reason}
       onClick={onClick}
-      aria-label={layout === "rail" ? label : undefined}
+      aria-label={layout === "rail" || layout === "icon" ? label : undefined}
       data-testid={testId}
       className={cn(LAYOUT_CLASS[layout], className)}
     >
       {loading ? <Loader2 className="animate-spin" aria-hidden /> : icon}
-      <span className={layout === "rail" ? "text-center" : undefined}>
+      <span className={layout === "rail" ? "text-center" : layout === "icon" ? "sr-only" : undefined}>
         {layout === "rail" ? (railLabel ?? label) : label}
       </span>
     </Button>
@@ -80,6 +81,18 @@ export function ActionButton({
       >
         {button}
       </DisabledReason>
+    );
+  }
+  if (layout === "icon") {
+    // Without a visible label the tooltip names the action first.
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipContent side="right">
+          <span className="font-medium">{label}</span>
+          {hint && <span className="block">{hint}</span>}
+        </TooltipContent>
+      </Tooltip>
     );
   }
   if (!hint) return button;

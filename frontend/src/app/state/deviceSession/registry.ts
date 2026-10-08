@@ -28,6 +28,16 @@ export class DeviceSessionRegistry {
     return store;
   }
 
+  /**
+   * Returns the store of a device only if one was already created (this tab
+   * visited the device), without creating it.
+   * @param deviceId - The device
+   * @returns The store, or undefined
+   */
+  peek(deviceId: string): DeviceSessionStore | undefined {
+    return this.stores.get(deviceId);
+  }
+
   /** Disposes all stores (logout / token change). Locks are not released. */
   disposeAll(): void {
     this.stores.forEach((store) => store.dispose());

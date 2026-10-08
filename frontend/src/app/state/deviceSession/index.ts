@@ -4,6 +4,7 @@
 export type * from "./types";
 export {
   useDeviceSession,
+  useDeviceSessionRegistry,
   useDeviceSessionSelector,
   useSetting,
   type UseSetting,

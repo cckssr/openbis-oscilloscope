@@ -10,6 +10,8 @@ interface PlotToolbarProps {
   dragMode: "zoom" | "pan";
   onDragMode: (mode: "zoom" | "pan") => void;
   onAutoscale: () => void;
+  /** "Achsen anpassen" is active (the axes follow every new frame). */
+  autoscaleOn?: boolean;
   onReset: () => void;
   cursorsOn: boolean;
   onToggleCursors: () => void;
@@ -58,6 +60,7 @@ export function PlotToolbar({
   dragMode,
   onDragMode,
   onAutoscale,
+  autoscaleOn,
   onReset,
   cursorsOn,
   onToggleCursors,
@@ -70,7 +73,7 @@ export function PlotToolbar({
         <Tool icon={<ZoomIn />} label={t.zoom} hint={t.zoomHint} pressed={dragMode === "zoom"} disabled={disabled} onClick={() => onDragMode("zoom")} />
         <Tool icon={<Hand />} label={t.pan} hint={t.panHint} pressed={dragMode === "pan"} disabled={disabled} onClick={() => onDragMode("pan")} />
       </div>
-      <Tool icon={<Maximize2 />} label={t.autoscale} hint={t.autoscaleHint} disabled={disabled} onClick={onAutoscale} />
+      <Tool icon={<Maximize2 />} label={t.autoscale} hint={t.autoscaleHint} pressed={autoscaleOn} disabled={disabled} onClick={onAutoscale} />
       <Tool icon={<RotateCcw />} label={t.reset} hint={t.resetHint} disabled={disabled} onClick={onReset} />
       <Tool icon={<Ruler />} label={t.cursors} hint={t.cursorsHint} pressed={cursorsOn} disabled={disabled} onClick={onToggleCursors} />
       {extras && <div className="ml-auto flex items-center gap-1.5">{extras}</div>}

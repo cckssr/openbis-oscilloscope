@@ -182,6 +182,7 @@ export class CaptureController {
         frame,
         note: "",
         flagged: false,
+        ...(silent ? {} : { fresh: true }),
       };
       this.host.update((s) => ({
         ...s,
@@ -373,7 +374,13 @@ export class CaptureController {
         return null;
       }
       const counts = countsFromArtifacts(artifacts);
-      this.host.update((s) => ({ ...s, counts }));
+      this.host.update((s) => {
+        // The last open capture was uploaded: the workflow starts over at "Signal einstellen".
+        const roundDone = counts.total > 0 && counts.notUploaded === 0 && s.counts.notUploaded > 0;
+        return roundDone
+          ? { ...s, counts, settings: { ...s.settings, touched: false } }
+          : { ...s, counts };
+      });
       return artifacts;
     } catch (err) {
       if (notify && !this.host.isDisposed()) {

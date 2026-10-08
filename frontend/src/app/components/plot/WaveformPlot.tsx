@@ -82,8 +82,20 @@ function WaveformPlotView({
   );
   const decor = useMemo(() => buildOverlayDecor(overlays, traces, mode, xScale.factor), [overlays, traces, mode, xScale.factor]);
   const layout = useMemo(
-    () => buildLayout({ mode, traces, frame, zoomed, dragMode: view.dragMode, decor, plotWidth, viewKey, xScale }),
-    [mode, traces, frame, zoomed, view.dragMode, decor, plotWidth, viewKey, xScale],
+    () => buildLayout({
+        mode,
+        traces,
+        frame,
+        zoomed,
+        dragMode: view.dragMode,
+        decor,
+        plotWidth,
+        viewKey,
+        xScale,
+        fit: view.fit,
+        fitSeq: view.fitSeq,
+      }),
+    [mode, traces, frame, zoomed, view.dragMode, decor, plotWidth, viewKey, xScale, view.fit, view.fitSeq],
   );
   const config = useMemo(
     () => ({
@@ -104,6 +116,7 @@ function WaveformPlotView({
         dragMode={view.dragMode}
         onDragMode={view.setDragMode}
         onAutoscale={view.autoscale}
+        autoscaleOn={view.autoscaleOn}
         onReset={view.resetView}
         cursorsOn={cursors.enabled}
         onToggleCursors={() => cursors.toggle(visible)}

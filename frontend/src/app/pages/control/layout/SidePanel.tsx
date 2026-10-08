@@ -20,12 +20,15 @@ export interface SidePanelProps {
   collapseLabel: string;
   expandLabel: string;
   children: ReactNode;
+  /** Shown under the expand button while collapsed (e.g. icon-only actions); default: nothing. */
+  collapsedContent?: ReactNode;
   className?: string;
 }
 
 /**
  * Resizable, collapsible side region of the desktop layout. Collapsed, it
- * shrinks to a thin strip holding only the expand button. Scrolls itself.
+ * shrinks to a thin strip holding the expand button and optional
+ * `collapsedContent`. Scrolls itself.
  *
  * @param props - See {@link SidePanelProps}
  * @returns A `ResizablePanel` with its content
@@ -39,6 +42,7 @@ export function SidePanel({
   collapseLabel,
   expandLabel,
   children,
+  collapsedContent,
   className,
 }: SidePanelProps) {
   const ref = usePanelRef();
@@ -61,7 +65,7 @@ export function SidePanel({
       className={cn("bg-white", className)}
     >
       {collapsed ? (
-        <div className="flex h-full justify-center pt-2">
+        <div className="flex h-full flex-col items-center gap-3 overflow-y-auto overflow-x-hidden pt-2">
           <Button
             variant="ghost"
             size="icon"
@@ -71,6 +75,7 @@ export function SidePanel({
           >
             <Expand />
           </Button>
+          {collapsedContent}
         </div>
       ) : (
         <div className="relative flex h-full min-w-0 flex-col">
@@ -86,7 +91,7 @@ export function SidePanel({
               <Collapse />
             </Button>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3">{children}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3 [scrollbar-gutter:stable]">{children}</div>
         </div>
       )}
     </ResizablePanel>

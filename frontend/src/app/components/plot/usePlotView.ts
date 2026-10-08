@@ -23,10 +23,19 @@ function readXRange(e: RelayoutEvent): Range | "auto" | null {
   return null;
 }
 
+/** Axis ranges that "Achsen anpassen" keeps applied to every new frame. */
+export interface FitRanges {
+  x: Range;
+  /** Only in division mode; volt mode lets Plotly autorange. */
+  y?: Range;
+}
+
 /**
  * Owns the interactive view state of the plot: committed x range (drives
  * re-decimation), live range (drives the cursor overlay), drag mode and the
  * reset/autoscale actions. Zoom/pan itself lives in Plotly (`uirevision`).
+ * "Achsen anpassen" switches on a mode that re-fits the axes to every new
+ * frame (live preview) until the user zooms, pans or resets.
  * @param frame - Default x range (scope screen)
  * @param traces - Displayed traces (for autoscale)
  * @param mode - Current y mode
@@ -40,11 +49,23 @@ export function usePlotView(frame: Range, traces: Trace[], mode: YMode, xScale: 
   const [committed, setCommitted] = useState<Range | null>(null);
   const store = useMemo(() => new RangeStore(), []);
   const [graphDiv, setGraphDiv] = useState<HTMLElement | null>(null);
+  const [fitOn, setFitOn] = useState(false);
+  // Bumped per click; part of `uirevision`, so Plotly drops earlier zoom/pan once and then follows the layout.
+  const [fitSeq, setFitSeq] = useState(0);
 
   const frameLo = frame[0];
   const frameHi = frame[1];
 
+  const fit = useMemo<FitRanges | null>(() => {
+    if (!fitOn) return null;
+    const extent = dataExtent(traces);
+    if (!extent || !(extent[1] > extent[0])) return null;
+    const y = mode === "divisions" ? yExtent(traces.map((t) => toDisplayArray(t, mode, t.y))) : null;
+    return { x: extent, ...(y ? { y } : {}) };
+  }, [fitOn, traces, mode]);
+
   const resetView = useCallback(() => {
+    setFitOn(false);
     const gd = graphDiv;
     if (!gd) return;
     const update: Record<string, unknown> = { "xaxis.range": [frameLo / factor, frameHi / factor] };
@@ -54,22 +75,16 @@ export function usePlotView(frame: Range, traces: Trace[], mode: YMode, xScale: 
   }, [graphDiv, frameLo, frameHi, mode, factor]);
 
   const autoscale = useCallback(() => {
-    const gd = graphDiv;
-    if (!gd) return;
-    const extent = dataExtent(traces);
-    const update: Record<string, unknown> = {};
-    if (extent && extent[1] > extent[0]) update["xaxis.range"] = [extent[0] / factor, extent[1] / factor];
-    if (mode === "divisions") {
-      const y = yExtent(traces.map((t) => toDisplayArray(t, mode, t.y)));
-      if (y) update["yaxis.range"] = y;
-    } else {
-      update["yaxis.autorange"] = true;
-    }
-    void Plotly.relayout(gd as never, update as never);
-  }, [graphDiv, traces, mode, factor]);
+    store.set(null);
+    setCommitted(null);
+    setFitSeq((n) => n + 1);
+    setFitOn(true);
+  }, [store]);
 
   const onRelayout = useCallback(
     (e: RelayoutEvent) => {
+      // Any manual axis change ends the "Achsen anpassen" mode (react() itself emits no relayout event).
+      if (Object.keys(e).some((k) => /^[xy]axis\./.test(k))) setFitOn(false);
       const raw = readXRange(e);
       if (raw === "auto") {
         resetView();
@@ -92,16 +107,22 @@ export function usePlotView(frame: Range, traces: Trace[], mode: YMode, xScale: 
     [store, factor],
   );
 
+  // The fitted x range acts like a zoom: it decides which samples are decimated into view.
+  const fitZoom = fit && !sameRange(fit.x, [frameLo, frameHi]) ? fit.x : null;
+
   return {
     coarse,
     dragMode,
     setDragMode,
-    committed,
+    committed: committed ?? fitZoom,
+    fit,
+    fitSeq,
     store,
     setGraphDiv,
     onRelayout,
     onRelayouting,
     resetView,
     autoscale,
+    autoscaleOn: fitOn,
   };
 }

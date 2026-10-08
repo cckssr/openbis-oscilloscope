@@ -83,13 +83,41 @@ describe("selectWorkflow", () => {
     expect(w.next).toBe("Lade deine ausgewählten Aufnahmen im Archiv hoch.");
   });
 
-  it("everything uploaded finishes the strip", () => {
+  it("everything uploaded starts a new round at the signal step", () => {
+    const s = state({
+      lock: held,
+      counts: counts({ total: 2, withNoteOrFlag: 2, uploaded: 2 }),
+    });
+    expect(states(s)).toEqual(["done", "active", "todo", "todo", "blocked"]);
+    expect(selectWorkflow(s).next).toBe(
+      "Alle Aufnahmen sind hochgeladen. Du kannst weitere Aufnahmen speichern.",
+    );
+  });
+
+  it("in the new round a changed setting activates the capture again", () => {
     const s = state({
       lock: held,
       settings: { ...state().settings, touched: true },
       counts: counts({ total: 2, withNoteOrFlag: 2, uploaded: 2 }),
     });
-    expect(states(s)).toEqual(["done", "done", "done", "done", "done"]);
+    expect(states(s)).toEqual(["done", "done", "active", "todo", "blocked"]);
+  });
+
+  it("a capture in the new round counts as the round's data again", () => {
+    const s = state({
+      lock: held,
+      counts: counts({ total: 3, uploaded: 2, notUploaded: 1 }),
+    });
+    expect(states(s)).toEqual(["done", "todo", "done", "active", "todo"]);
+  });
+
+  it("uploaded and released: asks to take the device again", () => {
+    const s = state({
+      lock: { status: "none", previousSessionId: "s" },
+      counts: counts({ total: 1, withNoteOrFlag: 1, uploaded: 1 }),
+    });
+    expect(states(s)).toEqual(["active", "blocked", "blocked", "blocked", "blocked"]);
+    expect(selectWorkflow(s).next).toBe("Drücke „Gerät übernehmen“, um weiter zu messen.");
   });
 
   it("keeps showing data steps after the device was released", () => {

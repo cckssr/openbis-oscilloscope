@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Loader2, TriangleAlert } from "lucide-react";
 import { de } from "../../../../i18n/de";
 import { Button } from "../../../components/ui/button";
@@ -10,8 +10,15 @@ import { NOTE_INPUT_ID } from "../actions/useControlShortcuts";
 
 const t = de.control.actions.lastCapture;
 
+/** Acquisitions whose note field already took focus, so re-mounting (panel, sheet) never steals it again. */
+const focused = new Set<string>();
+
 export interface CaptureNoteProps {
   deviceId: string;
+  /** Capture the note belongs to. */
+  acquisitionId: string;
+  /** Focus the field once when it appears (a capture was just taken). */
+  focusOnMount?: boolean;
   /** Note as stored on the capture. */
   note: string;
   flagged: boolean;
@@ -29,17 +36,33 @@ interface Attempt {
  * Note field and "Zum Hochladen auswählen" checkbox of one capture. The
  * draft lives in local state, so live frames and other store updates never
  * touch what the student is typing. Mount it with `key={acquisitionId}` so a
- * new capture starts with its own note. Saves on Enter (Umschalt+Enter =
+ * new capture starts with its own note; a just-taken capture (`focusOnMount`)
+ * focuses the field once. Saves on Enter (Umschalt+Enter =
  * new line), on blur and via the button.
  *
  * @param props - See {@link CaptureNoteProps}
  * @returns The note editor and the upload checkbox
  */
-export function CaptureNote({ deviceId, note, flagged, canEdit, compact = false }: CaptureNoteProps) {
+export function CaptureNote({
+  deviceId,
+  acquisitionId,
+  focusOnMount = false,
+  note,
+  flagged,
+  canEdit,
+  compact = false,
+}: CaptureNoteProps) {
   const actions = useDeviceActions(deviceId);
+  const field = useRef<HTMLTextAreaElement>(null);
   const [draft, setDraft] = useState(note);
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [optimisticFlag, setOptimisticFlag] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!focusOnMount || !canEdit || focused.has(acquisitionId)) return;
+    focused.add(acquisitionId);
+    field.current?.focus({ preventScroll: true });
+  }, [focusOnMount, canEdit, acquisitionId]);
 
   const dirty = draft !== note;
   const saving = attempt?.state === "saving";
@@ -75,6 +98,7 @@ export function CaptureNote({ deviceId, note, flagged, canEdit, compact = false 
           {t.noteLabel}
         </label>
         <Textarea
+          ref={field}
           id={NOTE_INPUT_ID}
           value={draft}
           rows={compact ? 1 : 2}
@@ -83,6 +107,8 @@ export function CaptureNote({ deviceId, note, flagged, canEdit, compact = false 
           onChange={(e) => setDraft(e.target.value)}
           onBlur={() => void save()}
           onKeyDown={(e) => {
+            // Leaves the field (saving on blur), so the single-key shortcuts work again.
+            if (e.key === "Escape") e.currentTarget.blur();
             if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault();
               void save();

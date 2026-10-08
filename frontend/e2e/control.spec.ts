@@ -2,6 +2,7 @@ import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import {
   apiArtifacts,
   apiDeviceLock,
+  apiLock,
   apiSettings,
   captureCount,
   DEVICE,
@@ -16,6 +17,7 @@ import {
   control,
   expandChannel,
   gotoArchive,
+  gotoDevice,
   liveButtons,
   LIVE_START,
   LIVE_STOP,
@@ -27,6 +29,7 @@ import {
   startLive,
   stopLive,
   toRgb,
+  zoomPlot,
 } from "./ui";
 
 /** Control session id of the page's lock, read from the backend. */
@@ -306,4 +309,92 @@ test("full resolution: Abbrechen during the read stores nothing", async ({ page,
   await expect(dialog).toContainText(/Abgebrochen/);
   await expect(dialog).toContainText(/nichts gespeichert/);
   expect(await apiArtifacts(request, sid)).toEqual([]);
+});
+
+test("the note field takes focus after a capture (desktop)", async ({ page }, testInfo) => {
+  test.skip(layoutOf(testInfo) !== "desktop", "tablets open the note in a sheet");
+  await openAndTake(page);
+  await saveCapture(page);
+  await expect(page.locator("#capture-note-input")).toBeFocused();
+  // Escape leaves the field again, so the single-key shortcuts work.
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#capture-note-input")).not.toBeFocused();
+});
+
+test("taking a second device asks first; 'Abbrechen' and 'Beide behalten'", async ({ page, request }) => {
+  await apiLock(request, "scope-01");
+  await gotoDevice(page, "scope-02");
+  await page.getByRole("button", { name: /^Gerät übernehmen$/ }).first().click();
+
+  const dialog = page.getByRole("alertdialog");
+  await expect(dialog).toContainText(/Du steuerst bereits ein anderes Gerät/);
+  await dialog.getByRole("button", { name: "Abbrechen" }).click();
+  await expect(dialog).toBeHidden();
+  expect(await apiDeviceLock(request, "scope-02")).toBeNull();
+
+  await page.getByRole("button", { name: /^Gerät übernehmen$/ }).first().click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Beide behalten" }).click();
+  await expect(page.getByRole("button", { name: /^Gerät freigeben$/ })).toBeVisible();
+  expect((await apiDeviceLock(request, "scope-01"))?.is_mine).toBe(true);
+  expect((await apiDeviceLock(request, "scope-02"))?.is_mine).toBe(true);
+});
+
+test("taking a second device can release the first one", async ({ page, request }) => {
+  await apiLock(request, "scope-01");
+  await gotoDevice(page, "scope-02");
+  await page.getByRole("button", { name: /^Gerät übernehmen$/ }).first().click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Anderes freigeben und übernehmen" })
+    .click();
+  await expect(page.getByRole("button", { name: /^Gerät freigeben$/ })).toBeVisible();
+  expect((await apiDeviceLock(request, "scope-02"))?.is_mine).toBe(true);
+  expect(await apiDeviceLock(request, "scope-01")).toBeNull();
+});
+
+test("Achsen anpassen stays applied while live frames arrive until the user zooms", async ({ page }) => {
+  await openAndTake(page);
+  await startLive(page);
+  const xRange = () =>
+    page.evaluate(() => {
+      const el = document.querySelector(".js-plotly-plot") as (HTMLElement & { _fullLayout?: { xaxis: { range: number[] } } }) | null;
+      return el?._fullLayout?.xaxis.range ?? [];
+    });
+  await expect.poll(async () => (await plotTraces(page)).length).toBeGreaterThan(0);
+
+  await zoomPlot(page);
+  await expect.poll(async () => Math.abs((await xRange())[1] - (await xRange())[0])).toBeGreaterThan(0);
+  const zoomed = await xRange();
+
+  const fit = page.getByRole("button", { name: "Achsen anpassen" });
+  await fit.click();
+  await expect(fit).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(async () => Math.abs((await xRange())[1] - (await xRange())[0])).toBeGreaterThan(
+    Math.abs(zoomed[1] - zoomed[0]) * 1.5,
+  );
+  const fitted = await xRange();
+
+  await page.waitForTimeout(1500); // several live frames
+  await expect(fit).toHaveAttribute("aria-pressed", "true");
+  expect(await xRange()).toEqual(fitted);
+
+  await zoomPlot(page);
+  await expect(fit).toHaveAttribute("aria-pressed", "false");
+  await stopLive(page);
+});
+
+test("a collapsed actions column keeps the buttons as icons (desktop)", async ({ page }, testInfo) => {
+  test.skip(layoutOf(testInfo) !== "desktop", "only the desktop layout has a collapsible column");
+  await openAndTake(page);
+  await page.getByRole("button", { name: "Aktionen einklappen" }).click();
+  await expect(page.getByRole("button", { name: "Aktionen ausklappen" })).toBeVisible();
+
+  const save = page.getByTestId("capture-save");
+  await expect(save).toBeVisible();
+  expect((await save.boundingBox())!.width).toBeLessThan(48);
+  await expect(page.getByRole("button", { name: LIVE_START })).toBeVisible();
+
+  await saveCapture(page);
+  await startLive(page);
+  await stopLive(page);
 });

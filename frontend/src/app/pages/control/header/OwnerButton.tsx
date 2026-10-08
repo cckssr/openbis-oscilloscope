@@ -6,7 +6,9 @@ import { DisabledReason } from "../../../components/common";
 import { Button } from "../../../components/ui/button";
 import { useDeviceActions } from "../actions/session";
 import { archivePath, type HeaderModel } from "./model";
+import { OtherLockDialog } from "./OtherLockDialog";
 import { ReleaseGuardDialog } from "./ReleaseGuardDialog";
+import { useTakeControl } from "./useTakeControl";
 
 const t = de.control.page.header;
 
@@ -25,7 +27,8 @@ export function takeBlockedReason(m: HeaderModel): string | null {
 }
 
 /**
- * "Gerät übernehmen" (primary) while not in control, "Gerät freigeben"
+ * "Gerät übernehmen" (primary) while not in control (asks first when the user
+ * already holds another device, see `useTakeControl`), "Gerät freigeben"
  * (secondary) while in control. Releasing with un-uploaded captures asks first
  * (`ReleaseGuardDialog`); the plot stays afterwards.
  *
@@ -37,6 +40,7 @@ export function OwnerButton({ deviceId, model }: { deviceId: string; model: Head
   const actions = useDeviceActions(deviceId);
   const navigate = useNavigate();
   const [guardOpen, setGuardOpen] = useState(false);
+  const take = useTakeControl(deviceId);
   const { lockStatus } = model;
 
   if (lockStatus === "held" || lockStatus === "releasing") {
@@ -65,14 +69,22 @@ export function OwnerButton({ deviceId, model }: { deviceId: string; model: Head
     );
   }
 
-  const taking = lockStatus === "acquiring";
+  const taking = lockStatus === "acquiring" || take.checking;
   const reason = taking ? null : takeBlockedReason(model);
   return (
-    <DisabledReason reason={reason}>
-      <Button variant="primary" disabled={taking || !!reason} onClick={() => void actions.takeControl()}>
-        {taking ? <LoaderCircle className="animate-spin" aria-hidden /> : <LogIn aria-hidden />}
-        {taking ? t.taking : lockStatus === "lost" ? t.retake : t.take}
-      </Button>
-    </DisabledReason>
+    <>
+      <DisabledReason reason={reason}>
+        <Button
+          variant="primary"
+          disabled={taking || !!reason}
+          // Another tab of this device already holds the lock: nothing new gets locked, so no question.
+          onClick={() => (lockStatus === "passive" ? void actions.takeControl() : take.request())}
+        >
+          {taking ? <LoaderCircle className="animate-spin" aria-hidden /> : <LogIn aria-hidden />}
+          {taking ? t.taking : lockStatus === "lost" ? t.retake : t.take}
+        </Button>
+      </DisabledReason>
+      <OtherLockDialog {...take.dialog} />
+    </>
   );
 }

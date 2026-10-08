@@ -5,6 +5,7 @@ import {
   apiLock,
   API,
   DEBUG_TOKEN,
+  DEVICE,
   loginAsDebugUser,
   resetLocks,
   type ApiArtifact,
@@ -63,6 +64,38 @@ test("A13: Escape closes the preview dialog (arrow keys step in the split view)"
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
   }
+});
+
+test("Alle mit Notiz auswählen selects only the captures that have a note", async ({ page, request }) => {
+  const { sid } = await seedArchive(page, request, 2);
+  const noted = (await apiArtifacts(request, sid)).find((a) => a.acquisition_id)!.acquisition_id!;
+  const res = await request.post(`${API}/sessions/${sid}/acquisitions/${noted}/annotation`, {
+    headers: { Authorization: `Bearer ${DEBUG_TOKEN}` },
+    data: { annotation: "mit Notiz" },
+  });
+  expect(res.ok()).toBe(true);
+  await page.reload();
+  await expect(page.getByRole("table")).toBeVisible();
+
+  await page.getByRole("button", { name: "Alle mit Notiz auswählen" }).click();
+  await expect(page.getByText("1 Aufnahme ausgewählt")).toBeVisible();
+  await expect(page.getByRole("row", { name: /mit Notiz/ }).getByRole("checkbox")).toBeChecked();
+  await expect(page.getByRole("row", { name: /Notiz hinzufügen/ }).getByRole("checkbox")).not.toBeChecked();
+  await expect(page.getByRole("button", { name: "Alle mit Notiz auswählen" })).toBeDisabled();
+});
+
+test("the preview divider can be dragged in the split view", async ({ page, request }) => {
+  test.skip(!hasSplitView(page.viewportSize()!.width), "below 1280 px the preview is a dialog");
+  await seedArchive(page, request, 1);
+  const preview = page.getByRole("complementary", { name: "Vorschau" });
+  const divider = page.getByRole("separator");
+  const before = (await preview.boundingBox())!.width;
+  const handle = (await divider.boundingBox())!;
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(handle.x - 120, handle.y + handle.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await expect.poll(async () => (await preview.boundingBox())!.width).toBeGreaterThan(before + 60);
 });
 
 test("flagging a capture selects all its traces and enables Hochladen", async ({ page, request }) => {
@@ -162,4 +195,30 @@ test("GET /sessions?mine=true lists the session", async ({ request }) => {
   expect(res.ok()).toBe(true);
   const ids = ((await res.json()) as { session_id: string }[]).map((s) => s.session_id);
   expect(ids).toContain(sid);
+});
+
+test("after the upload the workflow strip starts over at 'Signal einstellen'", async ({ page, request }) => {
+  const { sid } = await seedArchive(page, request, 1);
+  await rowCheckboxes(page).first().check();
+  await page.getByRole("button", { name: /^Hochladen \(1\)$/ }).click();
+
+  const wizard = page.getByRole("dialog", { name: /Hochladen nach openBIS/ });
+  await wizard.getByRole("button", { name: "Weiter", exact: true }).click();
+  const manual = wizard.getByRole("textbox", { name: /Kennung des Versuchs/ });
+  if (!(await manual.isVisible())) {
+    await wizard.getByRole("button", { name: /Kennung manuell eingeben/ }).click();
+  }
+  await manual.fill("/E2E/TEST/EXPERIMENT-1");
+  await wizard.getByRole("button", { name: "Weiter", exact: true }).click();
+  await wizard.getByRole("combobox", { name: /Praktikum/ }).selectOption({ index: 1 });
+  await wizard.getByRole("textbox", { name: /Versuchstitel/ }).fill("E2E Test");
+  await wizard.getByRole("button", { name: "Weiter", exact: true }).click();
+  await wizard.getByRole("button", { name: "Jetzt hochladen" }).click();
+  await expect(wizard.getByText(/1 Aufnahme hochgeladen/)).toBeVisible({ timeout: 20_000 });
+  await wizard.getByRole("button", { name: /^(Fertig|Schließen)$/ }).first().click();
+  await expect.poll(async () => (await apiArtifacts(request, sid)).every((a) => a.uploaded)).toBe(true);
+
+  await page.goto(`device/${DEVICE}`);
+  await expect(page.locator('[data-step="setup"]')).toHaveAttribute("data-state", "active");
+  await expect(page.locator('[data-step="upload"]')).toHaveAttribute("data-state", "blocked");
 });

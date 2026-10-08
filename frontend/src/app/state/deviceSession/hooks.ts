@@ -26,6 +26,18 @@ export const DeviceSessionContext = createContext<DeviceSessionRegistry | null |
 );
 
 /**
+ * The registry of all device stores (for actions that touch another device).
+ * @returns The registry, or null when nobody is logged in
+ */
+export function useDeviceSessionRegistry(): DeviceSessionRegistry | null {
+  const registry = useContext(DeviceSessionContext);
+  if (registry === undefined) {
+    throw new Error("useDeviceSessionRegistry must be used within <DeviceSessionProvider>");
+  }
+  return registry;
+}
+
+/**
  * Returns the (started) store of a device. Starting reloads the device and
  * reclaims a lock that is already ours; it is idempotent.
  * @param deviceId - The device
