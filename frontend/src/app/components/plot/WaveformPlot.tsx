@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { de } from "../../../i18n/de";
 import { cn } from "../ui/utils";
+import { chooseAxisScale } from "./axisScale";
 import { buildLayout } from "./buildLayout";
 import { buildPlotData, GL_THRESHOLD } from "./buildPlotData";
 import { CursorOverlay } from "./CursorOverlay";
@@ -52,7 +53,12 @@ function WaveformPlotView({
     () => scopeFrame(traces, scaleSDiv ? { scaleSDiv, offsetS, sampleRate: 0 } : undefined),
     [traces, scaleSDiv, offsetS],
   );
-  const { setGraphDiv, ...view } = usePlotView(frame, traces, mode);
+  const freqAxis = traces.length > 0 && traces.every((t) => t.xUnit === "Hz");
+  const xScale = useMemo(
+    () => chooseAxisScale([frame[0], frame[1]], freqAxis ? "Hz" : "s"),
+    [frame, freqAxis],
+  );
+  const { setGraphDiv, ...view } = usePlotView(frame, traces, mode, xScale);
   const attachGraph = useCallback(
     (el: HTMLElement | null) => {
       setGraphDiv(el);
@@ -71,13 +77,13 @@ function WaveformPlotView({
   const visible: Range = liveRange ?? view.committed ?? frame;
 
   const data = useMemo(
-    () => buildPlotData(traces, { mode, window: view.committed ?? frame, plotWidth }),
-    [traces, mode, view.committed, frame, plotWidth],
+    () => buildPlotData(traces, { mode, window: view.committed ?? frame, plotWidth, xFactor: xScale.factor }),
+    [traces, mode, view.committed, frame, plotWidth, xScale.factor],
   );
-  const decor = useMemo(() => buildOverlayDecor(overlays, traces, mode), [overlays, traces, mode]);
+  const decor = useMemo(() => buildOverlayDecor(overlays, traces, mode, xScale.factor), [overlays, traces, mode, xScale.factor]);
   const layout = useMemo(
-    () => buildLayout({ mode, traces, frame, zoomed, dragMode: view.dragMode, decor, plotWidth, viewKey }),
-    [mode, traces, frame, zoomed, view.dragMode, decor, plotWidth, viewKey],
+    () => buildLayout({ mode, traces, frame, zoomed, dragMode: view.dragMode, decor, plotWidth, viewKey, xScale }),
+    [mode, traces, frame, zoomed, view.dragMode, decor, plotWidth, viewKey, xScale],
   );
   const config = useMemo(
     () => ({

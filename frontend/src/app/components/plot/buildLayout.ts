@@ -4,6 +4,7 @@ import { de } from "../../../i18n/de";
 import type { Trace } from "../../../lib/trace";
 import type { OverlayDecor } from "./overlayShapes";
 import type { YMode } from "./displayTransform";
+import type { AxisScale } from "./axisScale";
 import { MARGIN, X_DIVISIONS, Y_DIVISIONS, type Range } from "./plotGeometry";
 
 const t = de.plot.axis;
@@ -13,6 +14,8 @@ const MINOR_GRID = "#f3f4f6";
 const TEXT = "#4b5563";
 /** d3 format: SI prefix, up to 6 significant digits, trailing zeros trimmed ("1ms", "200mV"). */
 const SI_FORMAT = ".6~s";
+/** d3 format for already-scaled x values: plain number, zeros trimmed ("2,5"). */
+const SCALED_FORMAT = ".8~f";
 
 export interface LayoutOptions {
   mode: YMode;
@@ -27,6 +30,8 @@ export interface LayoutOptions {
   plotWidth: number;
   /** Zoom/pan state key (`uirevision`). */
   viewKey: string;
+  /** x axis prefix; x ranges and ticks are in scaled units. */
+  xScale: AxisScale;
 }
 
 function yTitle(traces: Trace[], mode: YMode): { title: string; suffix: string } {
@@ -44,12 +49,13 @@ function yTitle(traces: Trace[], mode: YMode): { title: string; suffix: string }
  * @returns A fresh layout object (Plotly stores and mutates the one it is given)
  */
 export function buildLayout(o: LayoutOptions): Partial<Layout> {
-  const { mode, traces, frame, zoomed, dragMode, decor, plotWidth, viewKey } = o;
+  const { mode, traces, frame, zoomed, dragMode, decor, plotWidth, viewKey, xScale } = o;
   const freq = traces.length > 0 && traces.every((tr) => tr.xUnit === "Hz");
   const { title: yAxisTitle, suffix: ySuffix } = yTitle(traces, mode);
 
   // Scope grid: one gridline per division, thinned on narrow plots.
-  const divWidth = (frame[1] - frame[0]) / X_DIVISIONS;
+  const f = xScale.factor;
+  const divWidth = (frame[1] - frame[0]) / f / X_DIVISIONS;
   const pxPerDiv = plotWidth / X_DIVISIONS;
   const step = pxPerDiv >= 56 ? 1 : pxPerDiv >= 28 ? 2 : 5;
   const scopeGrid = !zoomed && !freq;
@@ -65,17 +71,19 @@ export function buildLayout(o: LayoutOptions): Partial<Layout> {
     hovermode: "x unified",
     hoverlabel: { font: { family: "JetBrains Mono, monospace", size: 11 } },
     dragmode: dragMode,
-    uirevision: viewKey,
+    // A different prefix means different axis numbers, so a kept zoom would be wrong.
+    uirevision: `${viewKey}|${xScale.prefix}`,
     shapes: decor.shapes,
     annotations: decor.annotations,
     xaxis: {
       // Copy: Plotly writes the user's zoom into the arrays it is given.
-      range: [frame[0], frame[1]],
+      range: [frame[0] / f, frame[1] / f],
       title: { text: freq ? t.frequency : t.time, standoff: 6, font: { size: 12 } },
-      ticksuffix: freq ? "Hz" : "s",
-      tickformat: SI_FORMAT,
+      ticksuffix: xScale.suffix,
+      tickformat: SCALED_FORMAT,
+      hoverformat: ".5~f",
       tickmode: scopeGrid ? "linear" : "auto",
-      tick0: frame[0],
+      tick0: frame[0] / f,
       dtick: divWidth * step,
       nticks: Math.max(3, Math.round(plotWidth / 90)),
       minor: scopeGrid && step > 1 ? { dtick: divWidth, showgrid: true, gridcolor: MINOR_GRID } : undefined,

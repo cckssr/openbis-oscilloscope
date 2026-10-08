@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import type { AxisScale } from "./axisScale";
 import { Plotly } from "./plotlyBundle";
 import { toDisplayArray, type YMode } from "./displayTransform";
 import { RangeStore } from "./useRangeStore";
@@ -29,9 +30,11 @@ function readXRange(e: RelayoutEvent): Range | "auto" | null {
  * @param frame - Default x range (scope screen)
  * @param traces - Displayed traces (for autoscale)
  * @param mode - Current y mode
+ * @param xScale - x axis prefix: Plotly sees x divided by `xScale.factor`; state and callers use base units
  * @returns State, event handlers and actions
  */
-export function usePlotView(frame: Range, traces: Trace[], mode: YMode) {
+export function usePlotView(frame: Range, traces: Trace[], mode: YMode, xScale: AxisScale) {
+  const factor = xScale.factor;
   const coarse = useMediaQuery("(pointer: coarse)");
   const [dragMode, setDragMode] = useState<"zoom" | "pan">(coarse ? "pan" : "zoom");
   const [committed, setCommitted] = useState<Range | null>(null);
@@ -44,18 +47,18 @@ export function usePlotView(frame: Range, traces: Trace[], mode: YMode) {
   const resetView = useCallback(() => {
     const gd = graphDiv;
     if (!gd) return;
-    const update: Record<string, unknown> = { "xaxis.range": [frameLo, frameHi] };
+    const update: Record<string, unknown> = { "xaxis.range": [frameLo / factor, frameHi / factor] };
     if (mode === "divisions") update["yaxis.range"] = [-4, 4];
     else update["yaxis.autorange"] = true;
     void Plotly.relayout(gd as never, update as never);
-  }, [graphDiv, frameLo, frameHi, mode]);
+  }, [graphDiv, frameLo, frameHi, mode, factor]);
 
   const autoscale = useCallback(() => {
     const gd = graphDiv;
     if (!gd) return;
     const extent = dataExtent(traces);
     const update: Record<string, unknown> = {};
-    if (extent && extent[1] > extent[0]) update["xaxis.range"] = extent;
+    if (extent && extent[1] > extent[0]) update["xaxis.range"] = [extent[0] / factor, extent[1] / factor];
     if (mode === "divisions") {
       const y = yExtent(traces.map((t) => toDisplayArray(t, mode, t.y)));
       if (y) update["yaxis.range"] = y;
@@ -63,29 +66,30 @@ export function usePlotView(frame: Range, traces: Trace[], mode: YMode) {
       update["yaxis.autorange"] = true;
     }
     void Plotly.relayout(gd as never, update as never);
-  }, [graphDiv, traces, mode]);
+  }, [graphDiv, traces, mode, factor]);
 
   const onRelayout = useCallback(
     (e: RelayoutEvent) => {
-      const x = readXRange(e);
-      if (x === "auto") {
+      const raw = readXRange(e);
+      if (raw === "auto") {
         resetView();
         return;
       }
-      if (!x) return;
+      if (!raw) return;
+      const x: Range = [raw[0] * factor, raw[1] * factor];
       const atFrame = sameRange(x, [frameLo, frameHi]);
       store.set(atFrame ? null : x);
       setCommitted(atFrame ? null : x);
     },
-    [resetView, store, frameLo, frameHi],
+    [resetView, store, frameLo, frameHi, factor],
   );
 
   const onRelayouting = useCallback(
     (e: RelayoutEvent) => {
       const x = readXRange(e);
-      if (x && x !== "auto") store.set(x);
+      if (x && x !== "auto") store.set([x[0] * factor, x[1] * factor]);
     },
-    [store],
+    [store, factor],
   );
 
   return {

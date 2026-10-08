@@ -44,17 +44,25 @@ function hoverTemplate(trace: Trace, mode: YMode): string {
   return `${name} ${value}${unit}<extra></extra>`;
 }
 
+/** Divides x by the axis prefix factor (new array; the decimated view is cached). */
+function scaleX(x: Float64Array, factor: number): Float64Array {
+  if (factor === 1) return x;
+  const out = new Float64Array(x.length);
+  for (let i = 0; i < x.length; i++) out[i] = x[i] / factor;
+  return out;
+}
+
 /**
  * Creates the Plotly data for all traces.
  * @param traces - Traces to draw
- * @param opts - y mode, visible x window and plot width in px
+ * @param opts - y mode, visible x window (base units), plot width in px and the x axis prefix factor
  * @returns One `scatter`/`scattergl` object per trace
  */
 export function buildPlotData(
   traces: Trace[],
-  opts: { mode: YMode; window: Range; plotWidth: number },
+  opts: { mode: YMode; window: Range; plotWidth: number; xFactor?: number },
 ): Data[] {
-  const { mode, window, plotWidth } = opts;
+  const { mode, window, plotWidth, xFactor = 1 } = opts;
   const pad = (window[1] - window[0]) * 0.2;
   const padded: Range = [window[0] - pad, window[1] + pad];
   const budget = pointBudget(plotWidth);
@@ -65,7 +73,7 @@ export function buildPlotData(
       type: gl ? "scattergl" : "scatter",
       mode: "lines",
       name: trace.label,
-      x: dec.x,
+      x: scaleX(dec.x, xFactor),
       y: toDisplayArray(trace, mode, dec.y),
       customdata: mode === "divisions" ? dec.y : undefined,
       line: { color: trace.color, width: 1.6 },

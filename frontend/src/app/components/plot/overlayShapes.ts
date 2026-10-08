@@ -18,12 +18,14 @@ export interface OverlayDecor {
  * @param overlays - Overlays from the page
  * @param traces - Displayed traces (colour and scale lookup)
  * @param mode - Current y mode
+ * @param xFactor - x axis prefix factor (x values are divided by it)
  * @returns Shapes and annotations for the layout
  */
 export function buildOverlayDecor(
   overlays: Overlay[],
   traces: Trace[],
   mode: YMode,
+  xFactor = 1,
 ): OverlayDecor {
   const byId = new Map(traces.map((t) => [t.id, t]));
   const shapes: Partial<Shape>[] = [];
@@ -44,16 +46,16 @@ export function buildOverlayDecor(
       });
     } else if (o.kind === "trigger-time") {
       shapes.push({
-        type: "line", xref: "x", yref: "paper", x0: o.value, x1: o.value, y0: 0, y1: 1,
+        type: "line", xref: "x", yref: "paper", x0: o.value / xFactor, x1: o.value / xFactor, y0: 0, y1: 1,
         line: { color: TRIGGER_COLOR, width: 1.2, dash: "dash" },
       });
       annotations.push({
-        xref: "x", yref: "paper", x: o.value, y: 1, xanchor: "left", yanchor: "top",
+        xref: "x", yref: "paper", x: o.value / xFactor, y: 1, xanchor: "left", yanchor: "top",
         text: "T", showarrow: false, font: { size: 11, color: TRIGGER_COLOR },
       });
     } else if (o.kind === "cursor-x") {
       shapes.push({
-        type: "line", xref: "x", yref: "paper", x0: o.value, x1: o.value, y0: 0, y1: 1,
+        type: "line", xref: "x", yref: "paper", x0: o.value / xFactor, x1: o.value / xFactor, y0: 0, y1: 1,
         line: { color: o.color ?? NEUTRAL, width: 1, dash: "dot" },
       });
     } else if (o.kind === "cursor-y") {
@@ -66,7 +68,7 @@ export function buildOverlayDecor(
     } else if (o.kind === "marker") {
       const trace = o.traceId ? byId.get(o.traceId) : undefined;
       annotations.push({
-        xref: "x", yref: "y", x: o.x, y: trace ? toDisplay(trace, mode, o.y) : o.y,
+        xref: "x", yref: "y", x: o.x / xFactor, y: trace ? toDisplay(trace, mode, o.y) : o.y,
         text: o.label, showarrow: true, arrowhead: 2, ax: 0, ay: -26,
         font: { size: 11, color: trace?.color ?? NEUTRAL }, arrowcolor: trace?.color ?? NEUTRAL,
       });
