@@ -8,9 +8,11 @@ import type { ControlSlots } from "./slots";
 const t = de.control.page.layout;
 
 /**
- * 768-1023 px: plot full width on top (~55 % of the height), measurements
- * below, a bottom action bar (Live, Aufnahme speichern, Notiz, Einstellungen)
- * and bottom sheets for settings (accordion) and the last capture.
+ * 768-1023 px: plot full width on top taking all height the header, stepper
+ * and action bar leave (>= 50 % of a 1024 px viewport), the (collapsed by
+ * default) measurements below, a bottom action bar of at most two rows (Live,
+ * Aufnahme speichern, Notiz, Einstellungen, "Mehr ▾") and bottom sheets for
+ * settings (accordion) and the last capture.
  *
  * @param props.slots - Page slots
  * @returns The main region and the action bar
@@ -21,11 +23,13 @@ export function PortraitLayout({ slots }: { slots: ControlSlots }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* The plot takes ~55 % of the height but never less than its toolbar,
-          canvas and readout bar need; the rest scrolls. */}
+      {/* The plot takes every pixel the other rows leave, but never less than its
+          toolbar, canvas and readout bar need (then the region scrolls). */}
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="h-[55%] min-h-[27rem] p-2">{slots.plot}</div>
-        <div className="px-2 pb-2">{slots.readouts}</div>
+        <div className="flex h-full flex-col gap-2 p-2">
+          <div className="min-h-[26rem] flex-1">{slots.plot}</div>
+          <div className="shrink-0">{slots.readouts}</div>
+        </div>
       </div>
       <div
         role="toolbar"

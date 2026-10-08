@@ -181,12 +181,12 @@ describe("lock: page unload", () => {
     expect(devices.releaseLock).not.toHaveBeenCalled();
   });
 
-  it("also reacts to beforeunload as a fallback", async () => {
+  it("ignores beforeunload (the user may cancel the leave prompt and stay)", async () => {
     const store = makeStore();
     await store.start();
     await store.actions.takeControl();
     window.dispatchEvent(new Event("beforeunload"));
-    expect(devices.softReleaseLockOnUnload).toHaveBeenCalled();
+    expect(devices.softReleaseLockOnUnload).not.toHaveBeenCalled();
   });
 
   it("sends nothing when the tab does not control the device", async () => {

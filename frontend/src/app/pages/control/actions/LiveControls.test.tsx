@@ -51,7 +51,7 @@ describe("LiveControls", () => {
     h.fake = new FakeSession(heldState({ busy: "Einstellung wird übernommen…" }));
     renderControls();
     expect(screen.getByTestId("live-controls-reason").textContent).toBe("Einstellung wird übernommen…");
-    expect((screen.getByRole("button", { name: /Scope anhalten/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: /Scope stopp/ }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("blocks everything while the full resolution is read", () => {
@@ -64,7 +64,7 @@ describe("LiveControls", () => {
   it("keeps Auto-Setup in basic level and hides the expert controls", () => {
     renderControls("basic");
     expect(screen.getByRole("button", { name: /^Auto-Setup$/ })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Scope anhalten/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Scope stopp/ })).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Einzeltrigger/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /Trigger erzwingen/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /Serienaufnahme/ })).toBeNull();
@@ -90,7 +90,7 @@ describe("LiveControls", () => {
 
   it("calls the scope commands", () => {
     renderControls();
-    fireEvent.click(screen.getByRole("button", { name: /Scope anhalten/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Scope stopp/ }));
     fireEvent.click(screen.getByRole("button", { name: /^Auto-Setup$/ }));
     fireEvent.click(screen.getByRole("button", { name: /Einzeltrigger/ }));
     fireEvent.click(screen.getByRole("button", { name: /Trigger erzwingen/ }));
@@ -107,5 +107,55 @@ describe("LiveControls", () => {
     unmount();
     renderControls("expert", "bar");
     expect(screen.getByTestId("live-controls").getAttribute("data-layout")).toBe("bar");
+  });
+
+  it("labels live and hardware stop differently in the rail", () => {
+    h.fake = new FakeSession(heldState({ live: { status: "on" } }));
+    renderControls("basic", "rail");
+    expect(screen.getByTestId("live-toggle").textContent).toBe("Live aus");
+    expect(screen.getByTestId("stop-scope").textContent).toBe("Scope stopp");
+  });
+
+  describe("bar layout overflow menu", () => {
+    const openMore = () =>
+      fireEvent.keyDown(screen.getByRole("button", { name: "Weitere Messaktionen" }), { key: "Enter" });
+
+    it("moves single, force trigger and series into 'Mehr' in expert level", () => {
+      renderControls("expert", "bar");
+      expect(screen.queryByTestId("single")).toBeNull();
+      expect(screen.queryByTestId("force-trigger")).toBeNull();
+      expect(screen.queryByTestId("series")).toBeNull();
+      openMore();
+      expect(screen.getByRole("menuitem", { name: /Einzeltrigger/ })).toBeTruthy();
+      expect(screen.getByRole("menuitem", { name: /Trigger erzwingen/ })).toBeTruthy();
+      expect(screen.getByRole("menuitem", { name: /Serienaufnahme starten/ })).toBeTruthy();
+    });
+
+    it("runs the command of the chosen entry", () => {
+      renderControls("expert", "bar");
+      openMore();
+      fireEvent.click(screen.getByRole("menuitem", { name: /Einzeltrigger/ }));
+      expect(h.fake.actions.single).toHaveBeenCalledTimes(1);
+    });
+
+    it("has no menu in basic level", () => {
+      renderControls("basic", "bar");
+      expect(screen.queryByRole("button", { name: "Weitere Messaktionen" })).toBeNull();
+    });
+
+    it("keeps the stop button of a running series in the bar", () => {
+      h.fake = new FakeSession(heldState({ series: { status: "on", runId: "r", count: 2 } }));
+      renderControls("expert", "bar");
+      fireEvent.click(screen.getByRole("button", { name: /Serienaufnahme stoppen · 2 Aufnahmen/ }));
+      expect(h.fake.actions.stopSeries).toHaveBeenCalled();
+      openMore();
+      expect(screen.queryByRole("menuitem", { name: /Serienaufnahme/ })).toBeNull();
+    });
+
+    it("shows the reason of a disabled entry", () => {
+      h.fake = new FakeSession(heldState({ busy: "Einstellung wird übernommen…" }));
+      renderControls("expert", "bar");
+      expect((screen.getByRole("button", { name: "Weitere Messaktionen" }) as HTMLButtonElement).disabled).toBe(true);
+    });
   });
 });

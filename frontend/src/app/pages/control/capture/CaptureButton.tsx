@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Loader2, Save } from "lucide-react";
 import { de } from "../../../../i18n/de";
 import { DisabledReason } from "../../../components/common";
@@ -11,7 +10,7 @@ import type { ActionLayout } from "../actions/layout";
 import { useActionModel, useDeviceActions, useDeviceSessionSelector } from "../actions/session";
 import { withShortcut } from "../actions/shortcuts";
 import { CaptureMenu } from "./CaptureMenu";
-import { FullResolutionDialog } from "./FullResolutionDialog";
+import { useFullResolutionDialog } from "./FullResolutionProvider";
 import { showScreenshotToast } from "./screenshotToast";
 
 const t = de.control.actions.capture;
@@ -24,25 +23,26 @@ export interface CaptureButtonProps {
 
 const WRAPPER: Record<ActionLayout, string> = {
   column: "flex flex-col gap-1",
-  rail: "flex w-[72px] flex-col gap-1",
+  rail: "flex w-[72px] flex-col gap-2",
   bar: "flex flex-col gap-1",
 };
 
 const PRIMARY: Record<ActionLayout, string> = {
   column: "min-w-0 flex-1 justify-start rounded-r-none",
-  rail: "h-auto min-h-14 w-full flex-col gap-1 px-1 py-2 text-[11px] leading-tight whitespace-normal coarse:min-h-16",
+  rail: "h-auto min-h-12 w-full flex-col gap-0.5 rounded-b-none px-1 py-1.5 text-[11px] leading-tight whitespace-normal coarse:min-h-[3.25rem]",
   bar: "h-11 rounded-r-none px-6 coarse:h-12",
 };
 
 /**
  * The capture split button and the only primary button of the control page:
  * "Aufnahme speichern" (stops live first), plus a ▾ menu with "Volle
- * Auflösung (langsam)…" (opens {@link FullResolutionDialog}) and
+ * Auflösung (langsam)…" (opens the page's single full-resolution dialog from
+ * {@link FullResolutionProvider}) and
  * "Bildschirmfoto des Oszilloskops" (toast with thumbnail and download).
  * In the column layout a visible helper line explains the button.
  *
  * @param props - See {@link CaptureButtonProps}
- * @returns The split button, its helper text and the full-resolution dialog
+ * @returns The split button and its helper text
  */
 export function CaptureButton({ deviceId, layout }: CaptureButtonProps) {
   const model = useActionModel(deviceId);
@@ -52,7 +52,7 @@ export function CaptureButton({ deviceId, layout }: CaptureButtonProps) {
     deviceId,
     (s) => s.lock.sessionId ?? s.lock.previousSessionId,
   );
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const fullResolution = useFullResolutionDialog();
 
   const av = availability(model);
   if (!av.capture.visible) return null;
@@ -89,7 +89,7 @@ export function CaptureButton({ deviceId, layout }: CaptureButtonProps) {
   );
 
   const group = (
-    <div className={cn("flex", layout === "rail" ? "flex-col gap-1" : "w-full")}>
+    <div className={cn("flex", layout === "rail" ? "flex-col" : "w-full")}>
       {reason ? primary : (
         <Tooltip>
           <TooltipTrigger asChild>{primary}</TooltipTrigger>
@@ -103,7 +103,7 @@ export function CaptureButton({ deviceId, layout }: CaptureButtonProps) {
         fullResolution={av.fullResolution}
         screenshot={av.screenshot}
         disabled={menuDisabled}
-        onFullResolution={() => setDialogOpen(true)}
+        onFullResolution={fullResolution.open}
         onScreenshot={() => void takeScreenshot()}
       />
     </div>
@@ -122,7 +122,6 @@ export function CaptureButton({ deviceId, layout }: CaptureButtonProps) {
         group
       )}
       {layout === "column" && <p className="help-text">{t.helper}</p>}
-      <FullResolutionDialog deviceId={deviceId} open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>
   );
 }

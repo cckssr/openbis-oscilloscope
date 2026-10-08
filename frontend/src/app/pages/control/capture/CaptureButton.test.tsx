@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { CaptureButton } from "./CaptureButton";
+import { FullResolutionProvider, useFullResolutionDialog } from "./FullResolutionProvider";
 import { FakeSession, heldState, makeJob } from "../actions/testing";
 
 const h = vi.hoisted(() => ({ fake: null as unknown as FakeSession, toast: vi.fn() }));
@@ -21,6 +22,14 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
+/** Renders the button inside the provider that owns the page's one dialog. */
+const renderButton = (layout: "column" | "rail" | "bar" = "column") =>
+  render(
+    <FullResolutionProvider deviceId="scope-01">
+      <CaptureButton deviceId="scope-01" layout={layout} />
+    </FullResolutionProvider>,
+  );
+
 const openMenu = () => {
   const trigger = screen.getByRole("button", { name: "Weitere Aufnahmearten" });
   fireEvent.keyDown(trigger, { key: "Enter" });
@@ -28,16 +37,16 @@ const openMenu = () => {
 
 describe("CaptureButton", () => {
   it("saves a capture with the primary button", () => {
-    render(<CaptureButton deviceId="scope-01" layout="column" />);
+    renderButton();
     fireEvent.click(screen.getByRole("button", { name: "Aufnahme speichern" }));
     expect(h.fake.actions.saveCapture).toHaveBeenCalledTimes(1);
   });
 
   it("shows a visible helper line in the column layout only", () => {
-    const { unmount } = render(<CaptureButton deviceId="scope-01" layout="column" />);
+    const { unmount } = renderButton();
     expect(screen.getByText(/Speichert das aktuelle Bild als Aufnahme/)).toBeTruthy();
     unmount();
-    render(<CaptureButton deviceId="scope-01" layout="rail" />);
+    renderButton("rail");
     expect(screen.queryByText(/Speichert das aktuelle Bild als Aufnahme/)).toBeNull();
   });
 
@@ -48,7 +57,7 @@ describe("CaptureButton", () => {
         busy: "Aufnahme wird gespeichert…",
       }),
     );
-    render(<CaptureButton deviceId="scope-01" layout="column" />);
+    renderButton();
     const button = screen.getByTestId("capture-save") as HTMLButtonElement;
     expect(button.textContent).toBe("Wird gespeichert…");
     expect(button.disabled).toBe(true);
@@ -57,28 +66,55 @@ describe("CaptureButton", () => {
 
   it("is disabled with a reason until the device is taken", () => {
     h.fake = new FakeSession(heldState({ lock: { status: "none" } }));
-    render(<CaptureButton deviceId="scope-01" layout="column" />);
+    renderButton();
     expect((screen.getByTestId("capture-save") as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getAllByText("Zuerst Gerät übernehmen").length).toBeGreaterThan(0);
   });
 
   it("offers full resolution and screenshot in the split menu", () => {
-    render(<CaptureButton deviceId="scope-01" layout="column" />);
+    renderButton();
     openMenu();
     expect(screen.getByText("Volle Auflösung (langsam)…")).toBeTruthy();
     expect(screen.getByText("Bildschirmfoto des Oszilloskops")).toBeTruthy();
   });
 
   it("opens the full-resolution dialog from the menu", () => {
-    render(<CaptureButton deviceId="scope-01" layout="column" />);
+    renderButton();
     openMenu();
     fireEvent.click(screen.getByText("Volle Auflösung (langsam)…"));
     expect(screen.getByText("Volle Auflösung lesen")).toBeTruthy();
   });
 
+  it("opens exactly one dialog whether the menu or another opener asks for it", () => {
+    function ShortcutOpener() {
+      return <button onClick={useFullResolutionDialog().open}>F-Kürzel</button>;
+    }
+    render(
+      <FullResolutionProvider deviceId="scope-01">
+        <CaptureButton deviceId="scope-01" layout="column" />
+        <ShortcutOpener />
+      </FullResolutionProvider>,
+    );
+    expect(screen.queryAllByRole("dialog")).toHaveLength(0);
+    fireEvent.click(screen.getByText("F-Kürzel"));
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    cleanup();
+    renderButton();
+    openMenu();
+    fireEvent.click(screen.getByText("Volle Auflösung (langsam)…"));
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  });
+
+  it("attaches a secondary menu toggle under the save button in the rail", () => {
+    renderButton("rail");
+    const trigger = screen.getByRole("button", { name: "Weitere Aufnahmearten" });
+    expect(trigger.className).not.toContain("bg-(--lab-accent)");
+    expect(screen.getByTestId("capture-save").className).toContain("rounded-b-none");
+  });
+
   it("saves a screenshot once and shows the thumbnail toast", async () => {
     h.fake.actions.saveScreenshot.mockResolvedValue({ artifactId: "art-9" });
-    render(<CaptureButton deviceId="scope-01" layout="column" />);
+    renderButton();
     openMenu();
     await act(async () => {
       fireEvent.click(screen.getByText("Bildschirmfoto des Oszilloskops"));
@@ -94,7 +130,7 @@ describe("CaptureButton", () => {
 
   it("hides the screenshot entry when the device cannot take one", () => {
     h.fake = new FakeSession(heldState({ capabilities: ["run", "stop", "acquire", "preview"] }));
-    render(<CaptureButton deviceId="scope-01" layout="column" />);
+    renderButton();
     openMenu();
     expect(screen.queryByText("Bildschirmfoto des Oszilloskops")).toBeNull();
   });

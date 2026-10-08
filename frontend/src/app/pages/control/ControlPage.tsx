@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link } from "react-router";
 import { de } from "../../../i18n/de";
 import { EmptyState, PageHeader, RegionBoundary } from "../../components/common";
@@ -8,8 +8,9 @@ import { useDeviceSessionSelector } from "../../state/deviceSession";
 import { LiveControls, useControlShortcuts } from "./actions";
 import { useDeviceActions } from "./actions/session";
 import { ControlBanners } from "./banners";
-import { CaptureButton, FullResolutionDialog, LastCaptureCard } from "./capture";
-import { ControlHeader } from "./header";
+import { CaptureButton, FullResolutionProvider, LastCaptureCard, useFullResolutionDialog } from "./capture";
+import { LeaveGuardDialog } from "./guard";
+import { ControlHeader, LevelToggle } from "./header";
 import { ControlLayout, useBreakpoint, type ControlSlots } from "./layout";
 import { MeasurementsPanel, PlotRegion } from "./plot";
 import { StatusBar } from "./status";
@@ -32,12 +33,22 @@ function useInspectorAccess(deviceId: string) {
  * Control page of one device. Only composes the named slots (header, stepper,
  * banners, actions, plot, readouts, inspector, status bar); `ControlLayout`
  * decides where they go per breakpoint, and all state lives in the device
- * session store.
+ * session store. Owns the page's single full-resolution dialog and the
+ * leave-page guard.
  *
  * @param props.deviceId - The device (route parameter)
  * @returns The page
  */
 export function ControlPage({ deviceId }: { deviceId: string }) {
+  return (
+    <FullResolutionProvider deviceId={deviceId}>
+      <ControlPageBody deviceId={deviceId} />
+      <LeaveGuardDialog deviceId={deviceId} />
+    </FullResolutionProvider>
+  );
+}
+
+function ControlPageBody({ deviceId }: { deviceId: string }) {
   const [level, setLevel] = useControlLevel();
   const actions = useDeviceActions(deviceId);
   const breakpoint = useBreakpoint();
@@ -45,16 +56,24 @@ export function ControlPage({ deviceId }: { deviceId: string }) {
   const deviceError = useDeviceSessionSelector(deviceId, (s) => s.deviceError);
   const access = useInspectorAccess(deviceId);
   const groups = useInspectorGroups(deviceId, level);
-  const [fullResolutionOpen, setFullResolutionOpen] = useState(false);
+  const fullResolution = useFullResolutionDialog();
+  const tablet = breakpoint !== "desktop";
 
   useControlLifecycle(deviceId, device?.label);
-  useControlShortcuts(deviceId, { onOpenFullResolution: () => setFullResolutionOpen(true) });
+  useControlShortcuts(deviceId, { onOpenFullResolution: fullResolution.open });
 
   const slots = useMemo<ControlSlots>(
     () => ({
-      header: <ControlHeader deviceId={deviceId} level={level} onLevelChange={setLevel} />,
+      // On tablets the header is one compact row; the level toggle moves into the stepper row.
+      header: <ControlHeader deviceId={deviceId} level={level} onLevelChange={setLevel} compact={tablet} />,
       banners: <ControlBanners deviceId={deviceId} />,
-      stepper: <WorkflowStepper deviceId={deviceId} compact={breakpoint !== "desktop"} />,
+      stepper: (
+        <WorkflowStepper
+          deviceId={deviceId}
+          compact={tablet}
+          trailing={tablet ? <LevelToggle level={level} onChange={setLevel} /> : undefined}
+        />
+      ),
       plot: <PlotRegion deviceId={deviceId} />,
       readouts: <MeasurementsPanel deviceId={deviceId} level={level} />,
       statusbar: <StatusBar deviceId={deviceId} />,
@@ -82,7 +101,7 @@ export function ControlPage({ deviceId }: { deviceId: string }) {
       ),
       lastCapture: (layout) => <LastCaptureCard deviceId={deviceId} layout={layout} />,
     }),
-    [deviceId, level, setLevel, breakpoint, access.canEdit, access.readOnlyReason, actions],
+    [deviceId, level, setLevel, tablet, access.canEdit, access.readOnlyReason, actions],
   );
 
   if (deviceError && !device) {
@@ -113,10 +132,5 @@ export function ControlPage({ deviceId }: { deviceId: string }) {
     );
   }
 
-  return (
-    <>
-      <ControlLayout slots={slots} groups={groups} breakpoint={breakpoint} />
-      <FullResolutionDialog deviceId={deviceId} open={fullResolutionOpen} onOpenChange={setFullResolutionOpen} />
-    </>
-  );
+  return <ControlLayout slots={slots} groups={groups} breakpoint={breakpoint} />;
 }

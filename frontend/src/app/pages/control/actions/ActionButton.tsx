@@ -30,7 +30,7 @@ export interface ActionButtonProps {
 /** Layout-specific sizing: column = full width row, rail = stacked icon + label, bar = large horizontal. */
 const LAYOUT_CLASS: Record<ActionLayout, string> = {
   column: "w-full justify-start",
-  rail: "h-auto min-h-14 w-full flex-col gap-1 px-1 py-2 text-[11px] leading-tight whitespace-normal coarse:min-h-16",
+  rail: "h-auto min-h-12 w-full flex-col gap-0.5 px-1 py-1.5 text-[11px] leading-tight whitespace-normal coarse:min-h-[3.25rem]",
   bar: "h-11 px-4 coarse:h-12",
 };
 

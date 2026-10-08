@@ -29,7 +29,7 @@ export function ControlLayout({ slots, groups, breakpoint }: ControlLayoutProps)
   return (
     <div
       data-breakpoint={bp}
-      className={cn("grid h-dvh min-h-0 w-full min-w-0 overflow-hidden bg-(--lab-bg)", "grid-rows-[auto_auto_auto_minmax(0,1fr)_auto]")}
+      className={cn("grid h-dvh min-h-0 w-full min-w-0 overflow-hidden bg-(--lab-bg)", "grid-cols-[minmax(0,1fr)] grid-rows-[auto_auto_auto_minmax(0,1fr)_auto]")}
       style={{ gridTemplateAreas: '"header" "stepper" "banners" "main" "statusbar"' }}
     >
       <div style={{ gridArea: "header" }}>{slots.header}</div>

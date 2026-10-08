@@ -104,7 +104,6 @@ export class LockController {
     this.tabs.open();
     if (typeof window !== "undefined" && !this.listening) {
       window.addEventListener("pagehide", this.onUnload);
-      window.addEventListener("beforeunload", this.onUnload);
       window.addEventListener("pageshow", this.onShow);
       this.listening = true;
     }
@@ -116,7 +115,6 @@ export class LockController {
     this.tabs.close();
     if (typeof window !== "undefined" && this.listening) {
       window.removeEventListener("pagehide", this.onUnload);
-      window.removeEventListener("beforeunload", this.onUnload);
       window.removeEventListener("pageshow", this.onShow);
     }
     this.listening = false;
@@ -358,7 +356,11 @@ export class LockController {
   // Page unload
   // -------------------------------------------------------------------------
 
-  /** `pagehide` / `beforeunload`: only the controlling tab soft-releases (idempotent on the server). */
+  /**
+   * `pagehide`: only the controlling tab soft-releases (idempotent on the server).
+   * Deliberately not on `beforeunload`: that event also fires when the user
+   * cancels the leave-page prompt of the control page and stays.
+   */
   private onUnload = (): void => {
     const { lock } = this.host.getState();
     if (lock.status !== "held" || !lock.sessionId) return;

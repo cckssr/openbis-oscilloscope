@@ -64,4 +64,15 @@ describe("WorkflowStepper", () => {
     expect(visible).toContain("Signal einstellen");
     expect(visible).not.toContain("Aufnehmen");
   });
+
+  it("compact mode drops the '(optional)' suffix and renders the trailing control", () => {
+    render(
+      <MemoryRouter>
+        <WorkflowStepper deviceId="scope-01" compact trailing={<button>Ebene</button>} />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByText("(optional)")).toBeNull();
+    expect(screen.getByRole("button", { name: "Ebene" })).toBeTruthy();
+    expect(screen.getByRole("navigation").contains(screen.getByRole("button", { name: "Ebene" }))).toBe(false);
+  });
 });

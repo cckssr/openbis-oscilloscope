@@ -28,7 +28,7 @@ export function LandscapeLayout({ slots, groups }: { slots: ControlSlots; groups
           <button
             type="button"
             onClick={() => setNoteOpen(true)}
-            className="flex min-h-14 w-full flex-col items-center justify-center gap-0.5 rounded border-2 border-(--lab-border) bg-white text-[11px] font-medium text-(--lab-text-primary) hover:bg-(--lab-panel) coarse:min-h-16"
+            className="flex min-h-12 w-full flex-col items-center justify-center gap-0.5 rounded border-2 border-(--lab-border) bg-white py-1.5 text-[11px] font-medium text-(--lab-text-primary) hover:bg-(--lab-panel) coarse:min-h-[3.25rem]"
           >
             <NotebookPen className="size-5" aria-hidden />
             {t.note}

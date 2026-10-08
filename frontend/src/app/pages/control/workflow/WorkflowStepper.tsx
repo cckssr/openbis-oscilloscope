@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Check, Circle, Lock, type LucideIcon } from "lucide-react";
 import { Link } from "react-router";
 import { de } from "../../../../i18n/de";
@@ -62,7 +63,7 @@ export function StepChip({ step, index, compact, href, connector }: StepChipProp
       ) : (
         step.state !== "done" && step.state !== "blocked" && <span aria-hidden>{index + 1}</span>
       )}
-      {showLabel && step.optional && step.state !== "done" && (
+      {showLabel && !compact && step.optional && step.state !== "done" && (
         <span aria-hidden className="text-xs font-normal">
           ({t.optional})
         </span>
@@ -101,37 +102,49 @@ export interface WorkflowStepperProps {
   deviceId: string;
   /** Compact on tablets. */
   compact?: boolean;
+  /** Right-aligned extra control in the strip (the level toggle on tablets). */
+  trailing?: ReactNode;
   className?: string;
 }
 
 /**
  * Workflow strip ① Gerät übernehmen … ⑤ Hochladen with todo / active / done /
- * blocked states and the "Als Nächstes" hint underneath (review §4.1). Step ⑤
- * links to the archive.
+ * blocked states and the "Als Nächstes" hint (review §4.1). Step ⑤ links to the
+ * archive. An optional `trailing` control sits right of the chips and pushes the
+ * hint onto its own row.
  *
  * @param props - See {@link WorkflowStepperProps}
  * @returns The strip
  */
-export function WorkflowStepper({ deviceId, compact = false, className }: WorkflowStepperProps) {
+export function WorkflowStepper({ deviceId, compact = false, trailing, className }: WorkflowStepperProps) {
   const { steps, next } = useWorkflow(deviceId);
   const { archiveSessionId } = useHeaderModel(deviceId);
   return (
-    <nav aria-label={t.ariaLabel} className={cn("flex flex-wrap items-center gap-x-4 gap-y-1 border-b-2 border-(--lab-border) bg-(--lab-panel) px-4 py-2", className)}>
-      <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-        {steps.map((s, i) => (
-          <StepChip
-            key={s.id}
-            step={s}
-            index={i}
-            compact={compact}
-            connector={i < steps.length - 1}
-            href={s.id === "upload" && s.state !== "blocked" ? archivePath(archiveSessionId) : undefined}
-          />
-        ))}
-      </ol>
-      <p className="min-w-0 text-sm text-(--lab-text-primary)" data-testid="next-hint">
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-x-4 gap-y-1 border-b-2 border-(--lab-border) bg-(--lab-panel) px-4",
+        compact ? "py-1.5" : "py-2",
+        className,
+      )}
+    >
+      <nav aria-label={t.ariaLabel}>
+        <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+          {steps.map((s, i) => (
+            <StepChip
+              key={s.id}
+              step={s}
+              index={i}
+              compact={compact}
+              connector={i < steps.length - 1}
+              href={s.id === "upload" && s.state !== "blocked" ? archivePath(archiveSessionId) : undefined}
+            />
+          ))}
+        </ol>
+      </nav>
+      {trailing && <div className="ml-auto shrink-0">{trailing}</div>}
+      <p className={cn("min-w-0 text-sm text-(--lab-text-primary)", trailing && "w-full")} data-testid="next-hint">
         <span className="font-semibold">{t.next}:</span> {next}
       </p>
-    </nav>
+    </div>
   );
 }

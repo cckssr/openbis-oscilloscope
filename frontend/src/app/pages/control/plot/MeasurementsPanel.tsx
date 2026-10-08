@@ -16,21 +16,24 @@ export interface MeasurementsPanelProps {
 }
 
 /**
- * Readouts slot: measurement table under the plot. On low screens (< 820 px
- * high) it starts collapsed so the plot keeps its height; a toggle shows it.
+ * Readouts slot: measurement table under the plot. In portrait and on low
+ * screens (< 820 px high) it starts collapsed so the plot keeps its height; a
+ * toggle shows it.
  *
  * @param props - See {@link MeasurementsPanelProps}
  * @returns The panel
  */
 export function MeasurementsPanel({ deviceId, level }: MeasurementsPanelProps) {
-  const tall = useMediaQuery("(min-height: 820px)");
+  // Only large landscape screens show the table by default; portrait tablets and
+  // short landscape heights give the height to the plot.
+  const tall = useMediaQuery("(min-height: 820px) and (min-width: 1024px)");
   const [override, setOverride] = useState<boolean | null>(null);
   const open = override ?? tall;
   const traces = useDeviceSessionSelector(deviceId, (s) => s.frame?.traces);
 
   return (
     <RegionBoundary name={t.measurements} resetKeys={[deviceId]}>
-      <div className="rounded border-2 border-(--lab-border) bg-white p-2">
+      <div className={open ? "rounded border-2 border-(--lab-border) bg-white p-2" : undefined}>
         {!open && (
           <Button variant="ghost" size="sm" aria-expanded={false} onClick={() => setOverride(true)}>
             <ChevronRight aria-hidden />
