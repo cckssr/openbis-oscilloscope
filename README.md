@@ -74,7 +74,9 @@ All settings are read from environment variables (or `backend/.env`). Relative p
 | `OPENBIS_URL`                   | _(required)_                   | OpenBIS server URL                                                |
 | `BUFFER_DIR`                    | `./buffer`                     | Root directory for artifact storage                               |
 | `OSCILLOSCOPES_CONFIG`          | `./config/oscilloscopes.yaml`  | Device list                                                       |
-| `LOCK_TTL_SECONDS`              | `1800`                         | Lock expiry (seconds)                                             |
+| `LOCK_TTL_SECONDS`              | `300`                          | Lock expiry without heartbeat (seconds)                           |
+| `LOCK_SOFT_RELEASE_SECONDS`     | `60`                           | Reclaim window after a page unload/reload                         |
+| `LAB_COURSES`                   | GP1, GP2, GP3, Projektlabor    | JSON list of `{value, label}` offered in the upload form          |
 | `HEALTH_CHECK_INTERVAL_SECONDS` | `5`                            | TCP health check interval                                         |
 | `TOKEN_CACHE_SECONDS`           | `60`                           | Token validation cache TTL                                        |
 | `EOD_RESET_TIMEZONE`            | `Europe/Berlin`                | Timezone for end-of-day reset                                     |

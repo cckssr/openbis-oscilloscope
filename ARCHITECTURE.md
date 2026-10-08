@@ -25,8 +25,10 @@ openbis-oscilloscope/
 │   │   ├── config.py           # Environment-based settings (Pydantic)
 │   │   ├── api/                # HTTP route handlers
 │   │   │   ├── auth.py         # GET /auth/me
-│   │   │   ├── devices.py      # Device control endpoints
-│   │   │   ├── sessions.py     # Session/artifact management
+│   │   │   ├── app_config.py   # GET /config (public runtime config for the UI)
+│   │   │   ├── devices/        # Device listing, lock, commands, preview/acquire, settings
+│   │   │   ├── sessions/       # Session listing, artifacts, commit, ZIP/HDF5 download
+│   │   │   ├── events.py       # GET /devices/events (SSE: state, lock, progress)
 │   │   │   └── admin.py        # Admin-only operations
 │   │   ├── core/               # Shared utilities
 │   │   │   ├── exceptions.py   # Custom exception classes + FastAPI handler
@@ -93,7 +95,8 @@ Uses `pydantic-settings` to load configuration from environment variables (or `b
 | `OPENBIS_URL`                   | _(required)_                  | OpenBIS server base URL                             |
 | `BUFFER_DIR`                    | `./buffer`                    | Root directory for stored artifacts                 |
 | `OSCILLOSCOPES_CONFIG`          | `./config/oscilloscopes.yaml` | Device inventory file                               |
-| `LOCK_TTL_SECONDS`              | `1800`                        | Lock expires after 30 min without heartbeat         |
+| `LOCK_TTL_SECONDS`              | `300`                         | Lock expires after 5 min without heartbeat          |
+| `LOCK_SOFT_RELEASE_SECONDS`     | `60`                          | Reclaim window after a page unload (soft release)   |
 | `HEALTH_CHECK_INTERVAL_SECONDS` | `5`                           | How often to TCP-check each device                  |
 | `TOKEN_CACHE_SECONDS`           | `60`                          | How long to cache a validated OpenBIS token         |
 | `EOD_RESET_TIMEZONE`            | `Europe/Berlin`               | Timezone for the 23:59 daily lock reset             |
@@ -170,7 +173,7 @@ Each lock is stored as a JSON string at key `lock:{device_id}` with the followin
 | `force_release_lock(device_id)`                | Admin: delete lock regardless of ownership                     |
 | `reset_all_locks()`                            | Admin/scheduler: delete all `lock:*` keys, returns count       |
 
-If a client crashes without calling unlock, the lock expires after `LOCK_TTL_SECONDS` (default 30 min) and the device becomes available again.
+If a client crashes without calling unlock, the lock expires after `LOCK_TTL_SECONDS` (default 5 min; the UI heartbeats every 60 s) and the device becomes available again.
 
 ---
 
@@ -410,15 +413,19 @@ The `/commit` endpoint takes query parameters: `experiment_id` (required, an Ope
 ```text
 1. POST /devices/{id}/lock
    → OpenBIS token validated
-   → Redis SET lock:{id} NX EX 1800
+   → Redis SET lock:{id} NX EX 300
+   → Session owner recorded in index.json
    → Returns session_id (UUID)
 
-2. [Every ~5 min] POST /devices/{id}/heartbeat  { session_id }
-   → Redis TTL reset to 1800 s
+2. [Every 60 s] POST /devices/{id}/heartbeat  { session_id }
+   → Redis TTL reset to 300 s
+   (on page unload the UI sends POST /unlock?soft=true → TTL shortened to 60 s,
+    so a reload can reclaim the lock)
 
 3. POST /devices/{id}/run  { session_id }
    → Lock ownership verified
    → driver.run() queued on device worker
+   [Live view] POST /devices/{id}/preview repeatedly → frames, nothing stored
 
 4. POST /devices/{id}/acquire  { session_id }
    → For each enabled channel: driver.acquire_waveform(ch)
