@@ -228,8 +228,8 @@ export class CaptureController {
       const res = await this.queue.run(t.busy.screenshot, () =>
         apiSaveScreenshot(this.host.token, this.host.deviceId, sessionId),
       );
+      // The UI shows its own toast with a thumbnail and download action.
       this.jobs.finish(jobId, "done");
-      notifySuccess(t.toast.screenshotSaved);
       void this.loadCounts(false);
       return { artifactId: res.artifact_id };
     } catch (err) {
