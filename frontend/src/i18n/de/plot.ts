@@ -1,2 +1,63 @@
-/** German UI strings: plot. */
-export const plot = {} as const;
+/** German UI strings: plot, measurements, export. */
+export const plot = {
+  toolbar: {
+    group: "Plot-Werkzeuge",
+    zoom: "Zoom",
+    zoomHint: "Ziehen, um einen Bereich zu vergrößern",
+    pan: "Verschieben",
+    panHint: "Ziehen, um den Ausschnitt zu verschieben (Pinch zum Zoomen)",
+    autoscale: "Achsen anpassen",
+    autoscaleHint: "Achsen an die Daten anpassen",
+    reset: "Ansicht zurücksetzen",
+    resetHint: "Zurück zur Oszilloskop-Ansicht (Doppelklick im Plot)",
+    cursors: "Cursor",
+    disabledHint: "Noch keine Daten im Plot",
+    cursorsHint: "Zwei Cursor einblenden und Zeitdifferenz messen",
+  },
+  axis: {
+    time: "Zeit",
+    frequency: "Frequenz",
+    divisions: "Divisionen",
+    voltage: "Spannung (V)",
+    current: "Strom (A)",
+    level: "Pegel (dBV)",
+  },
+  readout: {
+    label: "Aufnahme-Einstellungen",
+    timebase: "Zeitbasis",
+    sampleRate: "Abtastrate",
+    memoryDepth: "Speichertiefe",
+    perDiv: (scale: string, coupling?: string, probe?: string) =>
+      [scale, coupling, probe].filter(Boolean).join(" · "),
+  },
+  cursor: {
+    label: "Cursor-Messwerte",
+    t1: "t1",
+    t2: "t2",
+    dt: "Δt",
+    freq: "1/Δt",
+    dv: "ΔU",
+    handle: (n: number) => `Cursor ${n}, mit Ziehen verschieben`,
+  },
+  empty: "Keine Daten",
+  measurements: {
+    title: "Messwerte",
+    choose: "Messwerte wählen",
+    chooseHint: "Welche Messwerte sollen in der Tabelle stehen?",
+    reference: "Referenzkanal für die Phase",
+    phaseHint: "Phase: positiv, wenn der Kanal dem Referenzkanal nachläuft.",
+    channel: "Kanal",
+    computing: "Berechne …",
+    notComputable: "Nicht berechenbar",
+    noTraces: "Keine Kanäle zum Messen.",
+    phaseOf: (ref: string) => `Phase zu ${ref}`,
+  },
+  export: {
+    button: "Exportieren",
+    none: "Keine Exportformate verfügbar",
+    noneHint: "Es sind noch keine Daten zum Exportieren vorhanden.",
+    running: "Export läuft …",
+    failed: "Export fehlgeschlagen",
+    failedFallback: "Die Datei konnte nicht erstellt werden.",
+  },
+} as const;

@@ -13,7 +13,13 @@ import {
   saveScreenshot as apiSaveScreenshot,
 } from "../../../api/devices";
 import { subscribeDeviceEvents } from "../../../api/events";
-import { flagArtifact, listArtifacts, setAnnotation } from "../../../api/sessions";
+import {
+  flagArtifact,
+  getArtifactWaveform,
+  listArtifacts,
+  setAnnotation,
+} from "../../../api/sessions";
+import type { Artifact } from "../../../api/types";
 import { de } from "../../../i18n/de";
 import { errorMessage, notifyError, notifySuccess } from "../../../lib/notify";
 import { formatPoints } from "../../../lib/units";
@@ -28,7 +34,7 @@ import {
   type CancellableSleep,
   type StoreHost,
 } from "./context";
-import { enabledChannels, frameFromAcquire } from "./frames";
+import { enabledChannels, frameFromAcquire, frameFromArchive } from "./frames";
 import type { JobTracker } from "./jobs";
 import type { Capture } from "./types";
 
@@ -349,27 +355,79 @@ export class CaptureController {
    * Re-counts the captures from the archive (after uploads elsewhere).
    * @returns A promise that resolves when the counts are updated
    */
-  refreshCounts(): Promise<void> {
-    return this.loadCounts(true);
+  async refreshCounts(): Promise<void> {
+    await this.loadCounts(true);
   }
 
   /**
    * Reads the archive and updates `counts`.
    * @param notify - Toast on failure (explicit refresh) or stay silent (background)
+   * @returns The artifacts, or null when the archive could not be read
    */
-  async loadCounts(notify: boolean): Promise<void> {
+  async loadCounts(notify: boolean): Promise<Artifact[] | null> {
     const sessionId = archiveSessionId(this.host.getState());
-    if (!sessionId) return;
+    if (!sessionId) return null;
     try {
       const artifacts = await listArtifacts(this.host.token, sessionId);
-      if (this.host.isDisposed() || archiveSessionId(this.host.getState()) !== sessionId) return;
+      if (this.host.isDisposed() || archiveSessionId(this.host.getState()) !== sessionId) {
+        return null;
+      }
       const counts = countsFromArtifacts(artifacts);
       this.host.update((s) => ({ ...s, counts }));
+      return artifacts;
     } catch (err) {
       if (notify && !this.host.isDisposed()) {
         notifyError(err, t.toast.countsFailed, t.toast.countsFailedTitle);
       }
+      return null;
     }
+  }
+
+  /**
+   * After a reload (reclaimed lock) shows the newest capture of the session
+   * again: `lastCapture` from the archive plus its waveforms as `frame`. If the
+   * waveforms cannot be loaded `lastCapture` is kept with an empty frame and
+   * `frame` stays null. Does
+   * nothing when there already is a last capture.
+   * @param artifacts - Archive listing of the session
+   * @returns A promise that resolves when restored (never rejects)
+   */
+  async restoreLastCapture(artifacts: Artifact[]): Promise<void> {
+    const state = this.host.getState();
+    const sessionId = archiveSessionId(state);
+    if (state.lastCapture || !sessionId) return;
+    const traces = artifacts.filter((a) => a.artifact_type === "trace" && a.acquisition_id);
+    if (traces.length === 0) return;
+    const newest = traces.reduce((a, b) => (b.created_at >= a.created_at ? b : a));
+    const members = traces.filter((a) => a.acquisition_id === newest.acquisition_id);
+    const uploaded = members.some((a) => a.uploaded === true);
+    const capture: Omit<Capture, "frame"> = {
+      acquisitionId: newest.acquisition_id as string,
+      artifactIds: members.map((a) => a.artifact_id),
+      createdAt: newest.created_at,
+      number: countsFromArtifacts(artifacts).total,
+      fullResolution: false,
+      note: members.find((a) => (a.annotation ?? "").trim() !== "")?.annotation ?? "",
+      flagged: !uploaded && members.some((a) => a.persist),
+    };
+
+    let frame: Capture["frame"] | null = null;
+    try {
+      const waveforms = await Promise.all(
+        members.map((a) => getArtifactWaveform(this.host.token, sessionId, a.artifact_id)),
+      );
+      frame = frameFromArchive(waveforms, this.host.getState().settings.applied, this.host.now());
+    } catch {
+      frame = null; // keep the capture (note, flag) even without a plot
+    }
+    if (this.host.isDisposed() || this.host.getState().lastCapture) return;
+    const applied = this.host.getState().settings.applied;
+    this.host.update((s) => ({
+      ...s,
+      // Without waveforms the capture keeps an empty frame and the plot stays as it is.
+      lastCapture: { ...capture, frame: frame ?? frameFromArchive([], applied, this.host.now()) },
+      frame: s.frame ?? frame,
+    }));
   }
 
   private flagAll(sessionId: string, capture: Capture, flagged: boolean): Promise<unknown> {

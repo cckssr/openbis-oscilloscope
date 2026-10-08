@@ -98,6 +98,29 @@ export class SettingsApplier {
   }
 
   /**
+   * Reads the settings once without a lock (GET /settings), so they can be
+   * shown read-only before the device is taken. Silent on failure (the device
+   * may be offline) and never overwrites settings that are already loaded.
+   * @returns A promise that resolves when done (never rejects)
+   */
+  async preload(): Promise<void> {
+    try {
+      const fresh = await getSettings(this.host.token, this.host.deviceId);
+      if (this.host.isDisposed()) return;
+      this.patchSettings((s) =>
+        s.applied
+          ? s
+          : {
+              ...s,
+              applied: { channels: fresh.channels, timebase: fresh.timebase, trigger: fresh.trigger },
+            },
+      );
+    } catch {
+      // read-only preview only
+    }
+  }
+
+  /**
    * Cancels debounce timers and drops all pending edits (release, lost lock).
    */
   reset(): void {

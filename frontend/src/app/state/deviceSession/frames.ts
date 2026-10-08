@@ -78,3 +78,43 @@ export function frameFromAcquire(resp: AcquireResponse, receivedAt: number): Fra
     receivedAt,
   );
 }
+
+/**
+ * Builds a capture frame from stored waveforms (restore after a reload). The
+ * archive keeps no per-capture settings, so channel configs, timebase and
+ * trigger come from the caller (the scope's current settings) and the sample
+ * rate is derived from the time axis.
+ * @param waveforms - Waveforms loaded from the archive
+ * @param applied - Current applied settings, or null when unknown
+ * @param receivedAt - Time of the restore (ms since epoch)
+ * @returns A frame with source "capture"
+ */
+export function frameFromArchive(
+  waveforms: WaveformData[],
+  applied: SettingsSnapshot | null,
+  receivedAt: number,
+): Frame {
+  const channels: AcquiredChannel[] = waveforms.map((w) => ({
+    channel: w.channel,
+    enabled: true,
+    scale_v_div: applied?.channels[w.channel]?.scale_v_div ?? 1,
+    offset_v: applied?.channels[w.channel]?.offset_v ?? 0,
+    coupling: applied?.channels[w.channel]?.coupling ?? "DC",
+    probe_attenuation: applied?.channels[w.channel]?.probe_attenuation ?? 1,
+  }));
+  const first = waveforms.find((w) => w.time_s.length > 1);
+  const span = first ? first.time_s[first.time_s.length - 1] - first.time_s[0] : 0;
+  const dt = first ? first.time_s[1] - first.time_s[0] : 0;
+  const timebase: TimebaseConfig = {
+    scale_s_div: applied?.timebase.scale_s_div ?? span / 10,
+    offset_s: applied?.timebase.offset_s ?? 0,
+    sample_rate: dt > 0 ? 1 / dt : (applied?.timebase.sample_rate ?? 0),
+  };
+  const trigger: TriggerConfig = applied?.trigger ?? {
+    source: "CH1",
+    level_v: 0,
+    slope: "RISE",
+    mode: "AUTO",
+  };
+  return buildFrame("capture", waveforms, channels, timebase, trigger, receivedAt);
+}

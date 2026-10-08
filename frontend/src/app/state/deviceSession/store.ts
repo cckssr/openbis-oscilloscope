@@ -126,7 +126,9 @@ export class DeviceSessionStore {
   start(): Promise<void> {
     if (!this.started) {
       this.lock.start();
-      this.started = this.lock.refreshDevice();
+      this.started = Promise.all([this.lock.refreshDevice(), this.settings.preload()]).then(
+        () => undefined,
+      );
     }
     return this.started;
   }
@@ -155,13 +157,15 @@ export class DeviceSessionStore {
     for (const listener of [...this.listeners]) listener();
   }
 
-  /** Settings, memory depth and archive counts of the (re)claimed session. */
+  /** Settings, memory depth and archive counts of the (re)claimed session; restores the last capture. */
   private async loadSessionData(): Promise<void> {
-    await Promise.allSettled([
+    const [, , artifacts] = await Promise.all([
       this.settings.reload(),
       this.settings.refreshMemoryDepth(),
       this.captures.loadCounts(false),
     ]);
+    // After a reload (reclaimed lock) the newest capture comes back from the archive.
+    if (artifacts) await this.captures.restoreLastCapture(artifacts);
   }
 
   private createActions(): DeviceSessionActions {

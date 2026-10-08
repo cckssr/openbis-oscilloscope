@@ -154,6 +154,10 @@ export function installFakeApi(scope: FakeScope = new FakeScope()): FakeScope {
   });
   vi.mocked(devices.softReleaseLockOnUnload).mockReturnValue(undefined);
   vi.mocked(sessions.listArtifacts).mockImplementation(async () => structuredClone(scope.artifacts));
+  vi.mocked(sessions.getArtifactWaveform).mockImplementation(async (_t, _s, artifactId) => {
+    const a = scope.artifacts.find((x) => x.artifact_id === artifactId);
+    return waveform(a?.channel ?? 1, 16, artifactId);
+  });
   vi.mocked(sessions.setAnnotation).mockResolvedValue(undefined);
   vi.mocked(sessions.flagArtifact).mockResolvedValue(undefined);
   vi.mocked(events.subscribeDeviceEvents).mockReturnValue(() => undefined);

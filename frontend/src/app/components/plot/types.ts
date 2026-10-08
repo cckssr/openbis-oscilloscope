@@ -33,5 +33,11 @@ export interface WaveformPlotProps {
   toolbarExtras?: ReactNode;
   /** Message shown instead of the plot when there are no traces. */
   emptyMessage?: ReactNode;
+  /**
+   * Receives the Plotly graph div once mounted (null on unmount); pass it to
+   * `<ExportMenu input={{ plotElement }}>` for the PNG export. Additive to the
+   * original contract.
+   */
+  onPlotElement?: (element: HTMLElement | null) => void;
   className?: string;
 }
