@@ -124,3 +124,4 @@ dist/
 # Frontend test artifacts
 frontend/playwright-report/
 frontend/test-results/
+/backend/buffer-e2e/
