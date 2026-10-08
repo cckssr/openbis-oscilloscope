@@ -32,14 +32,16 @@ export default defineConfig({
   },
 
   server: {
-    // Proxy /api/* to the FastAPI backend during development.
-    // The /api prefix is stripped before forwarding, so /api/devices → /devices.
-    // In production, Nginx handles this proxy (see frontend/nginx.conf).
+    // Proxy <base>api/* to the FastAPI backend during development.
+    // The frontend requests `${BASE_URL}api/...` (see src/api/client.ts), so the
+    // proxy must match under the /oscilloscope/ base. The prefix is stripped
+    // before forwarding, so /oscilloscope/api/devices → /devices.
+    // In production, Nginx handles this proxy (see deploy/nginx.conf).
     proxy: {
-      "/api": {
+      "/oscilloscope/api": {
         target: "http://localhost:8000",
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ""),
+        rewrite: (path) => path.replace(/^\/oscilloscope\/api/, ""),
       },
     },
   },
