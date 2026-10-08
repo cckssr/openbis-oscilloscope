@@ -3,8 +3,11 @@ import { DEBUG_TOKEN, resetLocks } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
   await resetLocks();
+  // Wait for /config: until it arrives the token field is shown, afterwards it
+  // moves behind "Erweitert" when openBIS SSO is configured.
+  const configLoaded = page.waitForResponse((r) => r.url().includes("/api/config"));
   await page.goto("login");
-  // With openBIS SSO configured the token field sits behind "Erweitert".
+  await configLoaded;
   const field = page.getByLabel("Sitzungstoken");
   if (!(await field.isVisible())) {
     await page.getByRole("button", { name: /Erweitert: Sitzungstoken/ }).click();
