@@ -27,6 +27,8 @@ export function ControlHeader({ deviceId, level, onLevelChange }: ControlHeaderP
   const { device, lockStatus } = model;
   const mine = lockStatus === "held" || lockStatus === "passive" || lockStatus === "releasing" || !!device?.lock?.is_mine;
   const line = statusLine(model);
+  // device.state is fetched before the lock is taken, so derive LOCKED from our own lock.
+  const badgeState = mine && device?.state === "ONLINE" ? "LOCKED" : device?.state;
 
   return (
     <PageHeader
@@ -39,7 +41,7 @@ export function ControlHeader({ deviceId, level, onLevelChange }: ControlHeaderP
           {line && <> · <span aria-live="polite">{line}</span></>}
         </>
       }
-      status={device && <StatusBadge status={device.state} isMine={mine} />}
+      status={device && badgeState && <StatusBadge status={badgeState} isMine={mine} />}
       actions={
         <>
           <LevelToggle level={level} onChange={onLevelChange} />
