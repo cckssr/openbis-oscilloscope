@@ -143,12 +143,6 @@ test("plot gets its share of the screen", async ({ page }, testInfo) => {
   const widthShare = region.width / vp.width;
   const heightShare = region.height / vp.height;
 
-  // Known issue: at 1280 px both side panels are open by default, leaving the plot ~52 %.
-  test.fail(
-    testInfo.project.name === "desktop-1280",
-    "plot gets only ~52 % of a 1280 px screen (actions column 260 px + inspector 340 px)",
-  );
-
   switch (layoutOf(testInfo)) {
     case "desktop":
       expect(widthShare, "plot width share on desktop").toBeGreaterThanOrEqual(0.55);

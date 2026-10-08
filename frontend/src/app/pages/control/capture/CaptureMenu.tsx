@@ -25,7 +25,7 @@ export interface CaptureMenuProps {
 }
 
 const TRIGGER_CLASS: Record<ActionLayout, string> = {
-  column: "rounded-l-none border-l border-l-white/50 px-2",
+  column: "h-auto self-stretch rounded-l-none border-l border-l-white/50 px-2",
   rail: "h-7 w-full rounded-t-none border-t-0 px-0 text-[11px] coarse:h-10",
   bar: "h-11 rounded-l-none border-l border-l-white/50 px-2 coarse:h-12",
 };

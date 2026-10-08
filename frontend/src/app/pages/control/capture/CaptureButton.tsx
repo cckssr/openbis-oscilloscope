@@ -28,7 +28,7 @@ const WRAPPER: Record<ActionLayout, string> = {
 };
 
 const PRIMARY: Record<ActionLayout, string> = {
-  column: "min-w-0 flex-1 justify-start rounded-r-none",
+  column: "h-auto min-h-9 min-w-0 flex-1 justify-start rounded-r-none py-1.5 text-left leading-tight whitespace-normal coarse:min-h-11",
   rail: "h-auto min-h-12 w-full flex-col gap-0.5 rounded-b-none px-1 py-1.5 text-[11px] leading-tight whitespace-normal coarse:min-h-[3.25rem]",
   bar: "h-11 rounded-r-none px-6 coarse:h-12",
 };

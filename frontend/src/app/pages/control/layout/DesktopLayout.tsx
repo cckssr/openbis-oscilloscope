@@ -6,21 +6,32 @@ import type { ControlSlots } from "./slots";
 
 const t = de.control.page.layout;
 
+/** Below this width the side panels start narrower so the plot keeps >= 55 %. */
+const COMPACT_QUERY = "(max-width: 1399px)";
+
+/** Default side-panel widths (px); only read when the panels mount. */
+function defaultWidths(): { actions: number; inspector: number } {
+  const compact = typeof window !== "undefined" && window.matchMedia?.(COMPACT_QUERY).matches;
+  return compact ? { actions: 230, inspector: 300 } : { actions: 260, inspector: 340 };
+}
+
 /**
  * >= 1280 px: collapsible actions column (260 px), plot centre and a
- * resizable settings inspector (340 px, min 300 px).
+ * resizable settings inspector (340 px, min 300 px). Below 1400 px both side
+ * panels start narrower (230 / 300 px).
  *
  * @param props.slots - Page slots
  * @returns The main region
  */
 export function DesktopLayout({ slots }: { slots: ControlSlots }) {
+  const widths = defaultWidths();
   return (
     <ResizablePanelGroup orientation="horizontal" className="h-full">
       <SidePanel
         id="actions"
         side="left"
-        defaultSize={260}
-        minSize={220}
+        defaultSize={widths.actions}
+        minSize={210}
         maxSize={360}
         collapseLabel={t.collapseActions}
         expandLabel={t.expandActions}
@@ -36,7 +47,7 @@ export function DesktopLayout({ slots }: { slots: ControlSlots }) {
       <SidePanel
         id="inspector"
         side="right"
-        defaultSize={340}
+        defaultSize={widths.inspector}
         minSize={300}
         maxSize={560}
         collapseLabel={t.collapseInspector}

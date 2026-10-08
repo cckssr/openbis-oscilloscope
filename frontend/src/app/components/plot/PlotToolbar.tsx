@@ -41,7 +41,8 @@ function Tool({ icon, label, hint, onClick, pressed, disabled }: ToolProps) {
       className={cn(pressed && "border-(--lab-accent) bg-(--lab-accent)/10 text-(--lab-accent) hover:bg-(--lab-accent)/15")}
     >
       {icon}
-      <span className="hidden @xl:inline">{label}</span>
+      {/* Labels only when tools and extras fit on one row (~900 px). */}
+      <span className="hidden @4xl:inline">{label}</span>
     </Button>
   );
 }
