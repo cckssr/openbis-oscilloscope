@@ -23,6 +23,8 @@ export interface SettingsInspectorProps {
   onTakeControl?: () => void;
   /** `tabs` (default, side panel) or `accordion` (narrow sheet). */
   layout?: "tabs" | "accordion";
+  /** Group whose tab is selected first (`tabs` layout), e.g. the rail icon that opened the sheet. */
+  initialGroupId?: string;
   className?: string;
 }
 
@@ -42,6 +44,7 @@ export function SettingsInspector({
   readOnlyReason,
   onTakeControl,
   layout = "tabs",
+  initialGroupId,
   className,
 }: SettingsInspectorProps) {
   const { capabilities, channelCount, settings, loading } = useInspectorModel(deviceId);
@@ -72,7 +75,7 @@ export function SettingsInspector({
     const body = { deviceId, ctx, disabled: !canEdit, disabledReason: reason };
     if (layout === "accordion") content = <GroupAccordion groups={groups} {...body} />;
     else if (groups.length === 1) content = <GroupBody group={groups[0]} {...body} />;
-    else content = <GroupTabs groups={groups} {...body} />;
+    else content = <GroupTabs groups={groups} initialGroupId={initialGroupId} {...body} />;
   }
 
   return (

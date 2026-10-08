@@ -9,6 +9,8 @@ const MAX_EQUAL_TABS = 4;
 
 export interface GroupLayoutProps extends Omit<GroupBodyProps, "group"> {
   groups: ControlGroupDef[];
+  /** Tab selected on mount (default: the first group). */
+  initialGroupId?: string;
 }
 
 /**
@@ -18,8 +20,8 @@ export interface GroupLayoutProps extends Omit<GroupBodyProps, "group"> {
  * @param props - See {@link GroupLayoutProps}
  * @returns The tabs
  */
-export function GroupTabs({ groups, ...body }: GroupLayoutProps) {
-  const [value, setValue] = useState(groups[0]?.id);
+export function GroupTabs({ groups, initialGroupId, ...body }: GroupLayoutProps) {
+  const [value, setValue] = useState(initialGroupId ?? groups[0]?.id);
   const active = groups.some((g) => g.id === value) ? value : groups[0]?.id;
   const scrolling = groups.length > MAX_EQUAL_TABS;
 
