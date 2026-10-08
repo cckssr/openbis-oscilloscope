@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { EMPTY_SELECTION, resolveSelection } from "./OpenBISObjectSelector";
 
-const projects = [{ code: "P1", display_name: "Mittwoch", group_name: "G4", semester: "WS26" }];
+const projects = [
+  { code: "P1", display_name: "Mittwoch", group_name: "G4", semester: "WS26" },
+];
 const collections = {
   key: "P1",
   items: [{ code: "E1", display_name: "RC-Glied", identifier: "/LAB/P1/E1" }],
@@ -45,14 +47,34 @@ describe("resolveSelection", () => {
 
   it("drops remembered entries that no longer exist", () => {
     expect(resolveSelection(remembered, [], null, null)).toBe(EMPTY_SELECTION);
-    const noCollection = resolveSelection(remembered, projects, { key: "P1", items: [] }, null);
-    expect(noCollection).toMatchObject({ projectCode: "P1", collectionCode: "", objectIdentifier: "" });
-    const noObject = resolveSelection(remembered, projects, collections, { key: "E1", items: [] });
-    expect(noObject).toMatchObject({ collectionIdentifier: "/LAB/P1/E1", objectIdentifier: "" });
+    const noCollection = resolveSelection(
+      remembered,
+      projects,
+      { key: "P1", items: [] },
+      null,
+    );
+    expect(noCollection).toMatchObject({
+      projectCode: "P1",
+      collectionCode: "",
+      objectIdentifier: "",
+    });
+    const noObject = resolveSelection(remembered, projects, collections, {
+      key: "E1",
+      items: [],
+    });
+    expect(noObject).toMatchObject({
+      collectionIdentifier: "/LAB/P1/E1",
+      objectIdentifier: "",
+    });
   });
 
   it("ignores lists that belong to another parent", () => {
-    const r = resolveSelection(remembered, projects, { ...collections, key: "OTHER" }, null);
+    const r = resolveSelection(
+      remembered,
+      projects,
+      { ...collections, key: "OTHER" },
+      null,
+    );
     expect(r.collectionIdentifier).toBe("");
   });
 });

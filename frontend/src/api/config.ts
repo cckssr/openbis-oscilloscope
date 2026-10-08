@@ -13,7 +13,11 @@ let cached: Promise<AppConfig> | null = null;
 export function getConfig(): Promise<AppConfig> {
   cached ??= fetch(`${apiBaseUrl}api/config`).then((res) => {
     if (!res.ok) throw new Error(`GET /config failed: ${res.status}`);
-    return res.json().then((raw: unknown) => parseOrThrow(AppConfigSchema, raw, "GET /config"));
+    return res
+      .json()
+      .then((raw: unknown) =>
+        parseOrThrow(AppConfigSchema, raw, "GET /config"),
+      );
   });
   cached.catch(() => {
     cached = null;

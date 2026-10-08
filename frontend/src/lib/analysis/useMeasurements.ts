@@ -22,13 +22,18 @@ export interface UseMeasurementsResult {
 
 /** Same traces == same ids and same sample arrays (frames create new arrays). */
 function sameTraces(a: Trace[], b: Trace[]): boolean {
-  return a.length === b.length && a.every((t, i) => t.id === b[i].id && t.y === b[i].y && t.x === b[i].x);
+  return (
+    a.length === b.length &&
+    a.every((t, i) => t.id === b[i].id && t.y === b[i].y && t.x === b[i].x)
+  );
 }
 
 function createWorker(): Worker | null {
   if (typeof Worker === "undefined") return null;
   try {
-    return new Worker(new URL("./analysis.worker.ts", import.meta.url), { type: "module" });
+    return new Worker(new URL("./analysis.worker.ts", import.meta.url), {
+      type: "module",
+    });
   } catch {
     return null;
   }
@@ -77,7 +82,11 @@ export function useMeasurements(
       const worker = workerRef.current;
       if (!worker) {
         // No worker support: compute here, still ignoring stale results.
-        const result = computeMeasurements(stableTraces, analysisIds, referenceTraceId);
+        const result = computeMeasurements(
+          stableTraces,
+          analysisIds,
+          referenceTraceId,
+        );
         if (latestRequest.current === requestId) {
           setMeasurements(result);
           setComputing(false);
@@ -113,8 +122,14 @@ export function useMeasurements(
     [],
   );
 
-  const index = useMemo(() => new Map(measurements.map((m) => [`${m.traceId}|${m.id}`, m])), [measurements]);
-  const get = useCallback((traceId: string, id: string) => index.get(`${traceId}|${id}`), [index]);
+  const index = useMemo(
+    () => new Map(measurements.map((m) => [`${m.traceId}|${m.id}`, m])),
+    [measurements],
+  );
+  const get = useCallback(
+    (traceId: string, id: string) => index.get(`${traceId}|${id}`),
+    [index],
+  );
   return { measurements, computing, get };
 }
 

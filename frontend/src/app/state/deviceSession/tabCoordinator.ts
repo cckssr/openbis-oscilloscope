@@ -153,7 +153,12 @@ export class TabCoordinator {
       case "query": {
         const sessionId = this.handlers.controllingSessionId();
         if (sessionId) {
-          this.post({ type: "controlling", from: this.tabId, to: msg.from, sessionId });
+          this.post({
+            type: "controlling",
+            from: this.tabId,
+            to: msg.from,
+            sessionId,
+          });
         }
         break;
       }

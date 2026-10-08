@@ -21,6 +21,9 @@ ctx.onmessage = (e) => {
     );
     ctx.postMessage({ requestId, measurements });
   } catch (err) {
-    ctx.postMessage({ requestId, error: err instanceof Error ? err.message : String(err) });
+    ctx.postMessage({
+      requestId,
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 };

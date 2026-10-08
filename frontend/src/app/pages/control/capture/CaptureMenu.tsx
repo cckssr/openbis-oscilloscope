@@ -56,7 +56,9 @@ function MenuEntry({
       <span className="mt-0.5">{icon}</span>
       <span className="flex flex-col">
         <span className="font-medium">{label}</span>
-        <span className="text-xs text-(--lab-text-secondary)">{availability.reason ?? hint}</span>
+        <span className="text-xs text-(--lab-text-secondary)">
+          {availability.reason ?? hint}
+        </span>
       </span>
     </DropdownMenuItem>
   );
@@ -85,7 +87,9 @@ export function CaptureMenu({
       <DropdownMenuTrigger asChild>
         <Button
           type="button"
-          variant={layout === "rail" || layout === "icon" ? "secondary" : "primary"}
+          variant={
+            layout === "rail" || layout === "icon" ? "secondary" : "primary"
+          }
           disabled={disabled}
           aria-label={t.more}
           data-testid="capture-menu-trigger"

@@ -29,8 +29,13 @@ export function useCaptureRunning(deviceId: string): boolean {
  */
 export function useLeaveGuard(active: boolean): Blocker {
   const shouldBlock = useCallback(
-    ({ currentLocation, nextLocation }: { currentLocation: { pathname: string }; nextLocation: { pathname: string } }) =>
-      active && currentLocation.pathname !== nextLocation.pathname,
+    ({
+      currentLocation,
+      nextLocation,
+    }: {
+      currentLocation: { pathname: string };
+      nextLocation: { pathname: string };
+    }) => active && currentLocation.pathname !== nextLocation.pathname,
     [active],
   );
   const blocker = useBlocker(shouldBlock);

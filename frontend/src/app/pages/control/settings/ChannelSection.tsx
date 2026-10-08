@@ -1,13 +1,22 @@
 import { useMemo } from "react";
 import { ChevronRight } from "lucide-react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../../components/ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "../../../components/ui/collapsible";
 import { cn } from "../../../components/ui/utils";
 import { channelColor } from "../../../../lib/channels";
 import { de } from "../../../../i18n/de";
 import { ControlRenderer } from "../../../controls/renderers";
 import { ToggleControl } from "../../../controls/renderers/ToggleControl";
 import { controlPath } from "../../../controls/paths";
-import type { ControlContext, ControlDef, ControlGroupDef, ToggleControlDef } from "../../../controls";
+import type {
+  ControlContext,
+  ControlDef,
+  ControlGroupDef,
+  ToggleControlDef,
+} from "../../../controls";
 
 const t = de.settings.channel;
 
@@ -58,14 +67,19 @@ export function ChannelSection({
     <span
       aria-hidden
       className="size-3.5 shrink-0 rounded-full border-2"
-      style={{ borderColor: color, backgroundColor: enabled ? color : "transparent" }}
+      style={{
+        borderColor: color,
+        backgroundColor: enabled ? color : "transparent",
+      }}
     />
   );
   const summaryText = (
     <span
       className={cn(
         "min-w-0 flex-1 break-words text-sm coarse:text-base",
-        enabled ? "font-medium text-(--lab-text-primary)" : "text-(--lab-text-secondary)",
+        enabled
+          ? "font-medium text-(--lab-text-primary)"
+          : "text-(--lab-text-secondary)",
       )}
     >
       {summary}

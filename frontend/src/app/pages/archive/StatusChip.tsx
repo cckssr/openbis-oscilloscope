@@ -30,7 +30,9 @@ export function StatusChip({ status }: { status: CaptureStatus }) {
       className={`inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-xs font-medium ${cls}`}
     >
       <Icon className="size-3.5 shrink-0" aria-hidden />
-      <span className="text-left leading-tight">{de.archive.status[status]}</span>
+      <span className="text-left leading-tight">
+        {de.archive.status[status]}
+      </span>
     </span>
   );
 }

@@ -31,23 +31,36 @@ export interface OtherLockDialogProps {
  * @param props - See {@link OtherLockDialogProps}
  * @returns The alert dialog
  */
-export function OtherLockDialog({ open, onOpenChange, deviceNames, onSwitch, onKeepBoth }: OtherLockDialogProps) {
+export function OtherLockDialog({
+  open,
+  onOpenChange,
+  deviceNames,
+  onSwitch,
+  onKeepBoth,
+}: OtherLockDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{t.title}</AlertDialogTitle>
           <AlertDialogDescription>
-            <span className="block font-medium text-(--lab-text-primary)">{t.description(deviceNames)}</span>
+            <span className="block font-medium text-(--lab-text-primary)">
+              {t.description(deviceNames)}
+            </span>
             <span className="mt-1 block">{t.hint}</span>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
-          <AlertDialogAction className={buttonVariants({ variant: "secondary" })} onClick={onKeepBoth}>
+          <AlertDialogAction
+            className={buttonVariants({ variant: "secondary" })}
+            onClick={onKeepBoth}
+          >
             {t.both}
           </AlertDialogAction>
-          <AlertDialogAction onClick={onSwitch}>{t.switch(deviceNames.length)}</AlertDialogAction>
+          <AlertDialogAction onClick={onSwitch}>
+            {t.switch(deviceNames.length)}
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

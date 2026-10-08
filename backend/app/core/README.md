@@ -18,20 +18,20 @@ FastAPI `Depends`-compatible callables injected into route handlers.
 
 Defines the `AppError` hierarchy and the global exception handler.
 
-| Exception               | HTTP | Meaning                                           |
-| ----------------------- | ---- | ------------------------------------------------- |
-| `AuthError`             | 401  | Missing or invalid Bearer token                   |
-| `ForbiddenError`        | 403  | Valid user, but not allowed to perform the action |
-| `AdminRequiredError`    | 403  | Endpoint requires admin role                      |
-| `DeviceNotFoundError`   | 404  | `device_id` not in oscilloscopes.yaml             |
-| `DeviceOfflineError`    | 503  | Device exists but is not reachable                |
-| `ValidationError`       | 400  | Request is valid but semantically incorrect       |
-| `LockRequiredError`     | 409  | Command needs a lock but none was acquired        |
-| `LockConflictError`     | 409  | Lock is held by a different user/session          |
-| `ArtifactNotFoundError` | 404  | Artifact ID not in a session's index              |
-| `SessionNotFoundError`  | 404  | Session directory does not exist                  |
-| `NotSupportedError`     | 400  | Driver lacks the requested optional capability (`not_supported`) |
-| `AcquisitionCancelledError` | 409 | Running acquisition was cancelled by the user (`acquisition_cancelled`) |
-| `OpenBISError`          | 502  | pybis call to OpenBIS failed                      |
+| Exception                   | HTTP | Meaning                                                                 |
+| --------------------------- | ---- | ----------------------------------------------------------------------- |
+| `AuthError`                 | 401  | Missing or invalid Bearer token                                         |
+| `ForbiddenError`            | 403  | Valid user, but not allowed to perform the action                       |
+| `AdminRequiredError`        | 403  | Endpoint requires admin role                                            |
+| `DeviceNotFoundError`       | 404  | `device_id` not in oscilloscopes.yaml                                   |
+| `DeviceOfflineError`        | 503  | Device exists but is not reachable                                      |
+| `ValidationError`           | 400  | Request is valid but semantically incorrect                             |
+| `LockRequiredError`         | 409  | Command needs a lock but none was acquired                              |
+| `LockConflictError`         | 409  | Lock is held by a different user/session                                |
+| `ArtifactNotFoundError`     | 404  | Artifact ID not in a session's index                                    |
+| `SessionNotFoundError`      | 404  | Session directory does not exist                                        |
+| `NotSupportedError`         | 400  | Driver lacks the requested optional capability (`not_supported`)        |
+| `AcquisitionCancelledError` | 409  | Running acquisition was cancelled by the user (`acquisition_cancelled`) |
+| `OpenBISError`              | 502  | pybis call to OpenBIS failed                                            |
 
 `register_exception_handlers(app)` installs a single FastAPI exception handler that converts any `AppError` subclass into a JSON `{"detail": "..."}` response with the matching status code.

@@ -44,13 +44,18 @@ export function ReleaseGuardDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>{t.title}</AlertDialogTitle>
           <AlertDialogDescription>
-            <span className="block font-medium text-(--lab-text-primary)">{t.description(notUploaded)}</span>
+            <span className="block font-medium text-(--lab-text-primary)">
+              {t.description(notUploaded)}
+            </span>
             <span className="mt-1 block">{t.hint}</span>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
-          <AlertDialogAction className={buttonVariants({ variant: "secondary" })} onClick={onReleaseAnyway}>
+          <AlertDialogAction
+            className={buttonVariants({ variant: "secondary" })}
+            onClick={onReleaseAnyway}
+          >
             {t.anyway}
           </AlertDialogAction>
           <AlertDialogAction onClick={onUpload}>{t.upload}</AlertDialogAction>

@@ -65,7 +65,9 @@ export function acquireLock(
 ): Promise<LockResponse> {
   return apiFetch<unknown>(`/devices/${deviceId}/lock`, token, {
     method: "POST",
-  }).then((raw) => parseOrThrow(LockResponseSchema, raw, "POST /devices/{id}/lock"));
+  }).then((raw) =>
+    parseOrThrow(LockResponseSchema, raw, "POST /devices/{id}/lock"),
+  );
 }
 
 /**
@@ -202,7 +204,9 @@ export function acquireWaveforms(
   if (options.runId) params.set("run_id", options.runId);
   return apiFetch<unknown>(`/devices/${deviceId}/acquire?${params}`, token, {
     method: "POST",
-  }).then((raw) => parseOrThrow(AcquireResponseSchema, raw, "POST /devices/{id}/acquire"));
+  }).then((raw) =>
+    parseOrThrow(AcquireResponseSchema, raw, "POST /devices/{id}/acquire"),
+  );
 }
 
 /**
@@ -223,7 +227,9 @@ export function previewWaveforms(
   channels?.forEach((ch) => params.append("channels", String(ch)));
   return apiFetch<unknown>(`/devices/${deviceId}/preview?${params}`, token, {
     method: "POST",
-  }).then((raw) => parseOrThrow(PreviewResponseSchema, raw, "POST /devices/{id}/preview"));
+  }).then((raw) =>
+    parseOrThrow(PreviewResponseSchema, raw, "POST /devices/{id}/preview"),
+  );
 }
 
 /**
@@ -244,7 +250,11 @@ export function cancelAcquire(
     token,
     { method: "POST" },
   ).then((raw) =>
-    parseOrThrow(CancelAcquireResponseSchema, raw, "POST /devices/{id}/acquire/cancel"),
+    parseOrThrow(
+      CancelAcquireResponseSchema,
+      raw,
+      "POST /devices/{id}/acquire/cancel",
+    ),
   );
 }
 
@@ -291,7 +301,11 @@ export function getChannelData(
     `/devices/${deviceId}/channels/${channel}/data?session_id=${encodeURIComponent(sessionId)}`,
     token,
   ).then((raw) =>
-    parseOrThrow(WaveformDataSchema, raw, "GET /devices/{id}/channels/{n}/data"),
+    parseOrThrow(
+      WaveformDataSchema,
+      raw,
+      "GET /devices/{id}/channels/{n}/data",
+    ),
   );
 }
 
@@ -422,7 +436,11 @@ export function saveScreenshot(
     token,
     { method: "POST" },
   ).then((raw) =>
-    parseOrThrow(SaveScreenshotResponseSchema, raw, "POST /devices/{id}/screenshot"),
+    parseOrThrow(
+      SaveScreenshotResponseSchema,
+      raw,
+      "POST /devices/{id}/screenshot",
+    ),
   );
 }
 
@@ -436,8 +454,13 @@ export function getMemoryDepth(
   token: string,
   deviceId: string,
 ): Promise<MemoryDepthResponse> {
-  return apiFetch<unknown>(`/devices/${deviceId}/memory-depth`, token).then((raw) =>
-    parseOrThrow(MemoryDepthResponseSchema, raw, "GET /devices/{id}/memory-depth"),
+  return apiFetch<unknown>(`/devices/${deviceId}/memory-depth`, token).then(
+    (raw) =>
+      parseOrThrow(
+        MemoryDepthResponseSchema,
+        raw,
+        "GET /devices/{id}/memory-depth",
+      ),
   );
 }
 
@@ -458,6 +481,10 @@ export function setKeyboardLock(
     token,
     { method: "POST" },
   ).then((raw) =>
-    parseOrThrow(KeyboardLockResponseSchema, raw, "POST /admin/devices/{id}/keyboard-lock"),
+    parseOrThrow(
+      KeyboardLockResponseSchema,
+      raw,
+      "POST /admin/devices/{id}/keyboard-lock",
+    ),
   );
 }

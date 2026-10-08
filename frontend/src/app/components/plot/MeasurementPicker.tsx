@@ -5,7 +5,13 @@ import type { Trace } from "../../../lib/trace";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 const t = de.plot.measurements;
 
@@ -26,7 +32,14 @@ interface MeasurementPickerProps {
  * @param props - See {@link MeasurementPickerProps}
  * @returns The popover trigger button with its content
  */
-export function MeasurementPicker({ analyses, selected, onChange, traces, referenceId, onReferenceChange }: MeasurementPickerProps) {
+export function MeasurementPicker({
+  analyses,
+  selected,
+  onChange,
+  traces,
+  referenceId,
+  onReferenceChange,
+}: MeasurementPickerProps) {
   const toggle = (id: string, on: boolean) =>
     onChange(on ? [...selected, id] : selected.filter((s) => s !== id));
   const hasPhase = analyses.some((a) => a.inputs.traces === 2);
@@ -38,12 +51,17 @@ export function MeasurementPicker({ analyses, selected, onChange, traces, refere
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-64">
-        <p className="mb-2 text-xs text-(--lab-text-secondary)">{t.chooseHint}</p>
+        <p className="mb-2 text-xs text-(--lab-text-secondary)">
+          {t.chooseHint}
+        </p>
         <ul className="flex flex-col">
           {analyses.map((a) => (
             <li key={a.id}>
               <label className="flex min-h-8 cursor-pointer items-center gap-2 text-sm coarse:min-h-11">
-                <Checkbox checked={selected.includes(a.id)} onCheckedChange={(c) => toggle(a.id, c === true)} />
+                <Checkbox
+                  checked={selected.includes(a.id)}
+                  onCheckedChange={(c) => toggle(a.id, c === true)}
+                />
                 {a.label}
               </label>
             </li>
@@ -51,7 +69,9 @@ export function MeasurementPicker({ analyses, selected, onChange, traces, refere
         </ul>
         {hasPhase && traces.length >= 2 && (
           <div className="mt-3 border-t border-(--lab-border) pt-3">
-            <span className="mb-1 block text-xs font-medium">{t.reference}</span>
+            <span className="mb-1 block text-xs font-medium">
+              {t.reference}
+            </span>
             <Select value={referenceId} onValueChange={onReferenceChange}>
               <SelectTrigger aria-label={t.reference}>
                 <SelectValue />
@@ -64,7 +84,9 @@ export function MeasurementPicker({ analyses, selected, onChange, traces, refere
                 ))}
               </SelectContent>
             </Select>
-            <p className="mt-2 text-xs text-(--lab-text-secondary)">{t.phaseHint}</p>
+            <p className="mt-2 text-xs text-(--lab-text-secondary)">
+              {t.phaseHint}
+            </p>
           </div>
         )}
       </PopoverContent>

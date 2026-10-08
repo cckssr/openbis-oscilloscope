@@ -19,7 +19,12 @@ export function CenterColumn({
   className?: string;
 }) {
   return (
-    <div className={cn("flex h-full min-h-0 min-w-0 flex-col gap-2 p-2", className)}>
+    <div
+      className={cn(
+        "flex h-full min-h-0 min-w-0 flex-col gap-2 p-2",
+        className,
+      )}
+    >
       <div className="min-h-0 flex-1">{plot}</div>
       <div className="max-h-[40%] shrink-0 overflow-y-auto">{readouts}</div>
     </div>

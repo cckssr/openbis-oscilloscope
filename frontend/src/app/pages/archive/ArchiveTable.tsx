@@ -1,7 +1,18 @@
 import { Fragment } from "react";
-import { Table, TableBody, TableHead, TableHeader, TableRow } from "../../components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/table";
 import { de } from "../../../i18n/de";
-import { selectableCaptures, selectionState, type Capture, type Timeline } from "./groupArtifacts";
+import {
+  selectableCaptures,
+  selectionState,
+  type Capture,
+  type Timeline,
+} from "./groupArtifacts";
 import { CaptureRow, DayRow, SeriesRow } from "./ArchiveRows";
 import { UploadCheckbox } from "./UploadCheckbox";
 
@@ -62,12 +73,16 @@ export function ArchiveTable({
         <TableRow className="hover:bg-transparent">
           <TableHead className="px-1 text-center">
             <div className="flex flex-col items-center">
-              <span className="text-xs font-medium text-(--lab-text-secondary)">{t.upload}</span>
+              <span className="text-xs font-medium text-(--lab-text-secondary)">
+                {t.upload}
+              </span>
               <UploadCheckbox
                 state={selectionState(timeline.captures)}
                 ariaLabel={de.archive.select.allAria}
                 disabledReason={t.uploadedReason}
-                onChange={(wanted) => onToggleUpload(selectableCaptures(timeline.captures), wanted)}
+                onChange={(wanted) =>
+                  onToggleUpload(selectableCaptures(timeline.captures), wanted)
+                }
               />
             </div>
           </TableHead>
@@ -93,7 +108,8 @@ export function ArchiveTable({
                     onToggleExpanded={() => onToggleRun(entry.runId)}
                     onToggleUpload={onToggleUpload}
                   />
-                  {expandedRuns.has(entry.runId) && entry.captures.map((c) => rowFor(c, true))}
+                  {expandedRuns.has(entry.runId) &&
+                    entry.captures.map((c) => rowFor(c, true))}
                 </Fragment>
               ),
             )}

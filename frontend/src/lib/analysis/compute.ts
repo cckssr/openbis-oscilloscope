@@ -32,9 +32,11 @@ export function computeMeasurements(
     const analysis = getAnalysis(id);
     if (!analysis) continue;
     if (analysis.inputs.traces === 1) {
-      for (const t of measurable) out.push(...safeCompute(analysis.compute, [t], id, t.id));
+      for (const t of measurable)
+        out.push(...safeCompute(analysis.compute, [t], id, t.id));
     } else {
-      const ref = measurable.find((t) => t.id === referenceTraceId) ?? measurable[0];
+      const ref =
+        measurable.find((t) => t.id === referenceTraceId) ?? measurable[0];
       if (!ref) continue;
       for (const t of measurable) {
         if (t === ref) continue;
@@ -56,7 +58,13 @@ function safeCompute(
   } catch {
     const analysis = getAnalysis(id);
     return [
-      { id, label: analysis?.label ?? id, value: NaN, unit: analysis?.unit ?? "", traceId },
+      {
+        id,
+        label: analysis?.label ?? id,
+        value: NaN,
+        unit: analysis?.unit ?? "",
+        traceId,
+      },
     ];
   }
 }

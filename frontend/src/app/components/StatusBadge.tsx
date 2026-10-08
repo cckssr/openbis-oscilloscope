@@ -14,12 +14,30 @@ import { de } from "../../i18n/de";
 type StatusKey = DeviceState | "LOCKED_MINE";
 
 const STATUS: Record<StatusKey, { icon: LucideIcon; classes: string }> = {
-  ONLINE: { icon: CircleCheck, classes: "border-(--lab-success) text-(--lab-success)" },
-  LOCKED: { icon: Lock, classes: "border-(--lab-warning) text-(--lab-warning)" },
-  LOCKED_MINE: { icon: UserCheck, classes: "border-(--lab-accent) text-(--lab-accent)" },
-  BUSY: { icon: Loader, classes: "border-(--lab-warning) text-(--lab-warning)" },
-  OFFLINE: { icon: WifiOff, classes: "border-(--lab-border) text-(--lab-text-secondary)" },
-  ERROR: { icon: OctagonAlert, classes: "border-(--lab-danger) text-(--lab-danger)" },
+  ONLINE: {
+    icon: CircleCheck,
+    classes: "border-(--lab-success) text-(--lab-success)",
+  },
+  LOCKED: {
+    icon: Lock,
+    classes: "border-(--lab-warning) text-(--lab-warning)",
+  },
+  LOCKED_MINE: {
+    icon: UserCheck,
+    classes: "border-(--lab-accent) text-(--lab-accent)",
+  },
+  BUSY: {
+    icon: Loader,
+    classes: "border-(--lab-warning) text-(--lab-warning)",
+  },
+  OFFLINE: {
+    icon: WifiOff,
+    classes: "border-(--lab-border) text-(--lab-text-secondary)",
+  },
+  ERROR: {
+    icon: OctagonAlert,
+    classes: "border-(--lab-danger) text-(--lab-danger)",
+  },
 };
 
 export interface StatusBadgeProps {
@@ -36,7 +54,11 @@ export interface StatusBadgeProps {
  * @param props - See {@link StatusBadgeProps}
  * @returns The chip (`data-status` carries the raw device state)
  */
-export function StatusBadge({ status, isMine = false, className }: StatusBadgeProps) {
+export function StatusBadge({
+  status,
+  isMine = false,
+  className,
+}: StatusBadgeProps) {
   const key: StatusKey = status === "LOCKED" && isMine ? "LOCKED_MINE" : status;
   const { icon: Icon, classes } = STATUS[key];
   return (

@@ -37,40 +37,90 @@ export function buildOverlayDecor(
       if (!trace) continue;
       const y = toDisplay(trace, mode, o.value);
       shapes.push({
-        type: "line", xref: "paper", yref: "y", x0: 0, x1: 1, y0: y, y1: y,
+        type: "line",
+        xref: "paper",
+        yref: "y",
+        x0: 0,
+        x1: 1,
+        y0: y,
+        y1: y,
         line: { color: trace.color, width: 1.2, dash: "dash" },
       });
       annotations.push({
-        xref: "paper", yref: "y", x: 1, y, xanchor: "right", yanchor: "bottom",
-        text: "T", showarrow: false, font: { size: 11, color: trace.color },
+        xref: "paper",
+        yref: "y",
+        x: 1,
+        y,
+        xanchor: "right",
+        yanchor: "bottom",
+        text: "T",
+        showarrow: false,
+        font: { size: 11, color: trace.color },
       });
     } else if (o.kind === "trigger-time") {
       shapes.push({
-        type: "line", xref: "x", yref: "paper", x0: o.value / xFactor, x1: o.value / xFactor, y0: 0, y1: 1,
+        type: "line",
+        xref: "x",
+        yref: "paper",
+        x0: o.value / xFactor,
+        x1: o.value / xFactor,
+        y0: 0,
+        y1: 1,
         line: { color: TRIGGER_COLOR, width: 1.2, dash: "dash" },
       });
       annotations.push({
-        xref: "x", yref: "paper", x: o.value / xFactor, y: 1, xanchor: "left", yanchor: "top",
-        text: "T", showarrow: false, font: { size: 11, color: TRIGGER_COLOR },
+        xref: "x",
+        yref: "paper",
+        x: o.value / xFactor,
+        y: 1,
+        xanchor: "left",
+        yanchor: "top",
+        text: "T",
+        showarrow: false,
+        font: { size: 11, color: TRIGGER_COLOR },
       });
     } else if (o.kind === "cursor-x") {
       shapes.push({
-        type: "line", xref: "x", yref: "paper", x0: o.value / xFactor, x1: o.value / xFactor, y0: 0, y1: 1,
+        type: "line",
+        xref: "x",
+        yref: "paper",
+        x0: o.value / xFactor,
+        x1: o.value / xFactor,
+        y0: 0,
+        y1: 1,
         line: { color: o.color ?? NEUTRAL, width: 1, dash: "dot" },
       });
     } else if (o.kind === "cursor-y") {
       const trace = byId.get(o.traceId);
       const y = trace ? toDisplay(trace, mode, o.value) : o.value;
       shapes.push({
-        type: "line", xref: "paper", yref: "y", x0: 0, x1: 1, y0: y, y1: y,
-        line: { color: o.color ?? trace?.color ?? NEUTRAL, width: 1, dash: "dot" },
+        type: "line",
+        xref: "paper",
+        yref: "y",
+        x0: 0,
+        x1: 1,
+        y0: y,
+        y1: y,
+        line: {
+          color: o.color ?? trace?.color ?? NEUTRAL,
+          width: 1,
+          dash: "dot",
+        },
       });
     } else if (o.kind === "marker") {
       const trace = o.traceId ? byId.get(o.traceId) : undefined;
       annotations.push({
-        xref: "x", yref: "y", x: o.x / xFactor, y: trace ? toDisplay(trace, mode, o.y) : o.y,
-        text: o.label, showarrow: true, arrowhead: 2, ax: 0, ay: -26,
-        font: { size: 11, color: trace?.color ?? NEUTRAL }, arrowcolor: trace?.color ?? NEUTRAL,
+        xref: "x",
+        yref: "y",
+        x: o.x / xFactor,
+        y: trace ? toDisplay(trace, mode, o.y) : o.y,
+        text: o.label,
+        showarrow: true,
+        arrowhead: 2,
+        ax: 0,
+        ay: -26,
+        font: { size: 11, color: trace?.color ?? NEUTRAL },
+        arrowcolor: trace?.color ?? NEUTRAL,
       });
     }
   }
@@ -79,9 +129,15 @@ export function buildOverlayDecor(
     for (const t of traces) {
       if (!t.scale) continue;
       annotations.push({
-        xref: "paper", yref: "y", x: 0, y: t.scale.offset / t.scale.perDiv,
-        xanchor: "left", yanchor: "middle", showarrow: false,
-        text: `${t.channel ?? t.label}▶`, font: { size: 10, color: t.color },
+        xref: "paper",
+        yref: "y",
+        x: 0,
+        y: t.scale.offset / t.scale.perDiv,
+        xanchor: "left",
+        yanchor: "middle",
+        showarrow: false,
+        text: `${t.channel ?? t.label}▶`,
+        font: { size: 10, color: t.color },
       });
     }
   }

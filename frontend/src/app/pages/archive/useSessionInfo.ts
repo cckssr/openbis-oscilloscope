@@ -20,7 +20,11 @@ export function useSessionInfo(
     if (!token || !sessionId) return;
     let alive = true;
     listMySessions(token)
-      .then((list) => alive && setInfo(list.find((s) => s.session_id === sessionId) ?? null))
+      .then(
+        (list) =>
+          alive &&
+          setInfo(list.find((s) => s.session_id === sessionId) ?? null),
+      )
       .catch(() => {});
     return () => {
       alive = false;

@@ -12,14 +12,22 @@ import { notifyError } from "../../lib/notify";
 import { formatDate } from "../../lib/units";
 import { EmptyState, RegionBoundary } from "../components/common";
 import { Button } from "../components/ui/button";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../components/ui/resizable";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "../components/ui/resizable";
 import { UploadWizard } from "../components/upload/UploadWizard";
 import { useAuth } from "../context/AuthContext";
 import { ArchiveHeader } from "./archive/ArchiveHeader";
 import { ArchiveSkeleton } from "./archive/ArchiveSkeleton";
 import { ArchiveTable } from "./archive/ArchiveTable";
 import { CapturePreview } from "./archive/CapturePreview";
-import { buildTimeline, countByStatus, selectableCaptures } from "./archive/groupArtifacts";
+import {
+  buildTimeline,
+  countByStatus,
+  selectableCaptures,
+} from "./archive/groupArtifacts";
 import { PreviewDialog } from "./archive/PreviewDialog";
 import { PreviewPlaceholder } from "./archive/PreviewPlaceholder";
 import { useArchive } from "./archive/useArchive";
@@ -47,15 +55,22 @@ export function DataArchive() {
   const { token } = useAuth();
   const wide = useMediaQuery(SPLIT_QUERY);
 
-  const { artifacts, isLoading, isRefreshing, refresh, setUploadSelection, saveNote } = useArchive(
-    token,
-    sessionId,
-  );
+  const {
+    artifacts,
+    isLoading,
+    isRefreshing,
+    refresh,
+    setUploadSelection,
+    saveNote,
+  } = useArchive(token, sessionId);
   const info = useSessionInfo(token, sessionId);
   const screenshotUrls = useScreenshotUrls(token, sessionId, artifacts);
 
   const timeline = useMemo(() => buildTimeline(artifacts), [artifacts]);
-  const counts = useMemo(() => countByStatus(timeline.captures), [timeline.captures]);
+  const counts = useMemo(
+    () => countByStatus(timeline.captures),
+    [timeline.captures],
+  );
 
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [expandedRuns, setExpandedRuns] = useState<Set<string>>(new Set());
@@ -63,14 +78,18 @@ export function DataArchive() {
   const [zipBusy, setZipBusy] = useState(false);
 
   const previewIndex = timeline.captures.findIndex((c) => c.id === previewId);
-  const previewCapture = previewIndex >= 0 ? timeline.captures[previewIndex] : null;
+  const previewCapture =
+    previewIndex >= 0 ? timeline.captures[previewIndex] : null;
 
   // Opening a capture also expands its series, so the highlighted row stays visible.
   const openPreview = useCallback(
     (id: string | null) => {
       setPreviewId(id);
       const runId = timeline.captures.find((c) => c.id === id)?.runId;
-      if (runId) setExpandedRuns((prev) => (prev.has(runId) ? prev : new Set(prev).add(runId)));
+      if (runId)
+        setExpandedRuns((prev) =>
+          prev.has(runId) ? prev : new Set(prev).add(runId),
+        );
     },
     [timeline.captures],
   );
@@ -99,11 +118,19 @@ export function DataArchive() {
     () => timeline.captures.filter((c) => c.status === "selected"),
     [timeline.captures],
   );
-  const selectableAll = useMemo(() => selectableCaptures(timeline.captures), [timeline.captures]);
-  const withNote = useMemo(() => selectableAll.filter((c) => (c.annotation ?? "").trim() !== ""), [selectableAll]);
+  const selectableAll = useMemo(
+    () => selectableCaptures(timeline.captures),
+    [timeline.captures],
+  );
+  const withNote = useMemo(
+    () => selectableAll.filter((c) => (c.annotation ?? "").trim() !== ""),
+    [selectableAll],
+  );
 
   const deviceLabel = info?.device_label ?? info?.device_id;
-  const baseName = safeFilename(`messdaten_${info?.device_id ?? sessionId?.slice(0, 8) ?? "sitzung"}`);
+  const baseName = safeFilename(
+    `messdaten_${info?.device_id ?? sessionId?.slice(0, 8) ?? "sitzung"}`,
+  );
   const subtitle = [
     deviceLabel ?? `${t.sessionFallback} ${sessionId?.slice(0, 8) ?? ""}`,
     info ? formatDate(info.created_at) : null,
@@ -156,7 +183,9 @@ export function DataArchive() {
             action={
               backToDevice && info ? (
                 <Button asChild variant="secondary">
-                  <Link to={`/device/${info.device_id}`}>{t.back.toDevice}</Link>
+                  <Link to={`/device/${info.device_id}`}>
+                    {t.back.toDevice}
+                  </Link>
                 </Button>
               ) : undefined
             }
@@ -169,7 +198,9 @@ export function DataArchive() {
             screenshotUrls={screenshotUrls}
             onToggleRun={toggleRun}
             onPreview={openPreview}
-            onToggleUpload={(captures, wanted) => void setUploadSelection(captures, wanted)}
+            onToggleUpload={(captures, wanted) =>
+              void setUploadSelection(captures, wanted)
+            }
             onSaveNote={(capture, text) => void saveNote(capture, text)}
           />
         )}
@@ -184,7 +215,11 @@ export function DataArchive() {
     >
       <RegionBoundary name="Vorschau" resetKeys={[previewId]}>
         {previewProps ? (
-          <CapturePreview {...previewProps} onClose={() => setPreviewId(null)} className="flex-1" />
+          <CapturePreview
+            {...previewProps}
+            onClose={() => setPreviewId(null)}
+            className="flex-1"
+          />
         ) : (
           <PreviewPlaceholder />
         )}
@@ -197,7 +232,9 @@ export function DataArchive() {
       <ArchiveHeader
         title={t.title}
         subtitle={subtitle}
-        backTo={backToDevice && info ? `/device/${info.device_id}` : "/sessions"}
+        backTo={
+          backToDevice && info ? `/device/${info.device_id}` : "/sessions"
+        }
         backLabel={backToDevice ? t.back.toDevice : t.back.toSessions}
         isRefreshing={isRefreshing}
         onRefresh={() => void refresh()}
@@ -215,17 +252,27 @@ export function DataArchive() {
 
       {hasData && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-(--lab-border) bg-(--lab-panel) px-4 py-2 text-sm sm:px-6">
-          <span className="font-medium text-(--lab-text-primary)" aria-live="polite">
-            {counts.selected > 0 ? t.summary.selected(counts.selected) : t.summary.none}
+          <span
+            className="font-medium text-(--lab-text-primary)"
+            aria-live="polite"
+          >
+            {counts.selected > 0
+              ? t.summary.selected(counts.selected)
+              : t.summary.none}
           </span>
           {counts.uploaded > 0 && (
-            <span className="text-(--lab-text-secondary)">{t.summary.uploaded(counts.uploaded)}</span>
+            <span className="text-(--lab-text-secondary)">
+              {t.summary.uploaded(counts.uploaded)}
+            </span>
           )}
           <span className="flex-1" />
           <Button
             variant="ghost"
             size="sm"
-            disabled={selectableAll.length === 0 || counts.selected === selectableAll.length}
+            disabled={
+              selectableAll.length === 0 ||
+              counts.selected === selectableAll.length
+            }
             onClick={() => void setUploadSelection(selectableAll, true)}
           >
             {t.select.all}
@@ -234,7 +281,10 @@ export function DataArchive() {
             variant="ghost"
             size="sm"
             title={t.select.withNoteTitle}
-            disabled={withNote.length === 0 || withNote.every((c) => c.status === "selected")}
+            disabled={
+              withNote.length === 0 ||
+              withNote.every((c) => c.status === "selected")
+            }
             onClick={() => void setUploadSelection(withNote, true)}
           >
             {t.select.withNote}

@@ -20,7 +20,8 @@ const counts = (c: Partial<DeviceSessionState["counts"]>) => ({
 });
 
 const held = { status: "held", sessionId: "s" } as const;
-const states = (s: DeviceSessionState) => s && selectWorkflow(s).steps.map((x) => x.state);
+const states = (s: DeviceSessionState) =>
+  s && selectWorkflow(s).steps.map((x) => x.state);
 
 describe("selectWorkflow", () => {
   it("has the five German steps with the optional setup step", () => {
@@ -32,24 +33,44 @@ describe("selectWorkflow", () => {
       "Notieren & auswählen",
       "Hochladen",
     ]);
-    expect(steps.map((s) => s.id)).toEqual(["take", "setup", "capture", "annotate", "upload"]);
+    expect(steps.map((s) => s.id)).toEqual([
+      "take",
+      "setup",
+      "capture",
+      "annotate",
+      "upload",
+    ]);
     expect(steps.filter((s) => s.optional).map((s) => s.id)).toEqual(["setup"]);
   });
 
   it("before taking the device: take is active, the rest blocked", () => {
     const w = selectWorkflow(state());
-    expect(w.steps.map((s) => s.state)).toEqual(["active", "blocked", "blocked", "blocked", "blocked"]);
+    expect(w.steps.map((s) => s.state)).toEqual([
+      "active",
+      "blocked",
+      "blocked",
+      "blocked",
+      "blocked",
+    ]);
     expect(w.next).toBe("Drücke „Gerät übernehmen“, um zu beginnen.");
   });
 
   it("an offline device blocks step 1", () => {
-    const w = selectWorkflow(state({ device: makeDevice({ state: "OFFLINE" }) }));
+    const w = selectWorkflow(
+      state({ device: makeDevice({ state: "OFFLINE" }) }),
+    );
     expect(w.steps[0].state).toBe("blocked");
   });
 
   it("after taking control: setup is active and the hint points at Live", () => {
     const w = selectWorkflow(state({ lock: held }));
-    expect(states(state({ lock: held }))).toEqual(["done", "active", "todo", "todo", "blocked"]);
+    expect(states(state({ lock: held }))).toEqual([
+      "done",
+      "active",
+      "todo",
+      "todo",
+      "blocked",
+    ]);
     expect(w.next).toBe("Drücke „Live starten“, um das Signal zu sehen.");
   });
 
@@ -60,12 +81,18 @@ describe("selectWorkflow", () => {
   });
 
   it("an applied setting finishes step 2 and activates the capture", () => {
-    const s = state({ lock: held, settings: { ...state().settings, touched: true } });
+    const s = state({
+      lock: held,
+      settings: { ...state().settings, touched: true },
+    });
     expect(states(s).slice(0, 3)).toEqual(["done", "done", "active"]);
   });
 
   it("a capture without note asks for a note", () => {
-    const s = state({ lock: held, counts: counts({ total: 1, notUploaded: 1 }) });
+    const s = state({
+      lock: held,
+      counts: counts({ total: 1, notUploaded: 1 }),
+    });
     expect(states(s)).toEqual(["done", "todo", "done", "active", "todo"]);
     expect(selectWorkflow(s).next).toBe(
       "Schreibe eine Notiz zur Aufnahme und wähle sie zum Hochladen aus.",
@@ -75,7 +102,12 @@ describe("selectWorkflow", () => {
   it("flagged captures activate the upload step", () => {
     const s = state({
       lock: held,
-      counts: counts({ total: 2, withNoteOrFlag: 1, flagged: 1, notUploaded: 2 }),
+      counts: counts({
+        total: 2,
+        withNoteOrFlag: 1,
+        flagged: 1,
+        notUploaded: 2,
+      }),
     });
     const w = selectWorkflow(s);
     expect(w.steps[3].state).toBe("done");
@@ -116,14 +148,27 @@ describe("selectWorkflow", () => {
       lock: { status: "none", previousSessionId: "s" },
       counts: counts({ total: 1, withNoteOrFlag: 1, uploaded: 1 }),
     });
-    expect(states(s)).toEqual(["active", "blocked", "blocked", "blocked", "blocked"]);
-    expect(selectWorkflow(s).next).toBe("Drücke „Gerät übernehmen“, um weiter zu messen.");
+    expect(states(s)).toEqual([
+      "active",
+      "blocked",
+      "blocked",
+      "blocked",
+      "blocked",
+    ]);
+    expect(selectWorkflow(s).next).toBe(
+      "Drücke „Gerät übernehmen“, um weiter zu messen.",
+    );
   });
 
   it("keeps showing data steps after the device was released", () => {
     const s = state({
       lock: { status: "none", previousSessionId: "s" },
-      counts: counts({ total: 1, withNoteOrFlag: 1, flagged: 1, notUploaded: 1 }),
+      counts: counts({
+        total: 1,
+        withNoteOrFlag: 1,
+        flagged: 1,
+        notUploaded: 1,
+      }),
     });
     const w = selectWorkflow(s);
     expect(w.steps[0].state).toBe("active");
@@ -132,7 +177,12 @@ describe("selectWorkflow", () => {
   });
 
   it("passive and lost tabs explain what to do", () => {
-    expect(selectWorkflow(state({ lock: { status: "passive", sessionId: "s" } })).next).toMatch(/anderen Tab/);
-    expect(selectWorkflow(state({ lock: { status: "lost", sessionId: "s" } })).next).toMatch(/erneut/);
+    expect(
+      selectWorkflow(state({ lock: { status: "passive", sessionId: "s" } }))
+        .next,
+    ).toMatch(/anderen Tab/);
+    expect(
+      selectWorkflow(state({ lock: { status: "lost", sessionId: "s" } })).next,
+    ).toMatch(/erneut/);
   });
 });

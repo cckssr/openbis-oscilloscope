@@ -19,7 +19,9 @@ describe("chooseAxisScale", () => {
 describe("formatAxisValue", () => {
   it("formats every tick of an axis with the same prefix", () => {
     const scale = chooseAxisScale([0, 0.01], "s");
-    const labels = [0, 0.001, 0.0025, 0.01].map((v) => formatAxisValue(v, scale));
+    const labels = [0, 0.001, 0.0025, 0.01].map((v) =>
+      formatAxisValue(v, scale),
+    );
     expect(labels).toEqual(["0 ms", "1 ms", "2,5 ms", "10 ms"]);
   });
 

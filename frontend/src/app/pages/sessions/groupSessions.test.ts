@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
 import type { SessionSummary } from "../../../api/types";
-import { groupSessionsByDay, relativeDay, sessionStatus, totalCaptures } from "./groupSessions";
+import {
+  groupSessionsByDay,
+  relativeDay,
+  sessionStatus,
+  totalCaptures,
+} from "./groupSessions";
 
-function session(over: Partial<Omit<SessionSummary, "counts">> & { counts?: Partial<SessionSummary["counts"]> }): SessionSummary {
+function session(
+  over: Partial<Omit<SessionSummary, "counts">> & {
+    counts?: Partial<SessionSummary["counts"]>;
+  },
+): SessionSummary {
   const { counts, ...rest } = over;
   return {
     session_id: "s",
@@ -12,25 +21,41 @@ function session(over: Partial<Omit<SessionSummary, "counts">> & { counts?: Part
     created_at: "2026-10-08T10:00:00",
     last_activity: "2026-10-08T10:00:00",
     is_active: false,
-    counts: { acquisitions: 0, screenshots: 0, flagged: 0, uploaded: 0, ...counts },
+    counts: {
+      acquisitions: 0,
+      screenshots: 0,
+      flagged: 0,
+      uploaded: 0,
+      ...counts,
+    },
     ...rest,
   };
 }
 
 describe("sessionStatus", () => {
   it("is active while the lock is held, regardless of counts", () => {
-    expect(sessionStatus(session({ is_active: true, counts: { acquisitions: 3 } }))).toEqual({ kind: "active" });
+    expect(
+      sessionStatus(session({ is_active: true, counts: { acquisitions: 3 } })),
+    ).toEqual({ kind: "active" });
   });
   it("detects empty, fully uploaded and pending sessions", () => {
     expect(sessionStatus(session({}))).toEqual({ kind: "empty" });
-    expect(sessionStatus(session({ counts: { acquisitions: 4, uploaded: 4 } }))).toEqual({ kind: "allUploaded" });
-    expect(sessionStatus(session({ counts: { acquisitions: 4, screenshots: 1, uploaded: 3 } }))).toEqual({
+    expect(
+      sessionStatus(session({ counts: { acquisitions: 4, uploaded: 4 } })),
+    ).toEqual({ kind: "allUploaded" });
+    expect(
+      sessionStatus(
+        session({ counts: { acquisitions: 4, screenshots: 1, uploaded: 3 } }),
+      ),
+    ).toEqual({
       kind: "pending",
       count: 2,
     });
   });
   it("counts screenshots as captures", () => {
-    expect(totalCaptures(session({ counts: { acquisitions: 2, screenshots: 3 } }))).toBe(5);
+    expect(
+      totalCaptures(session({ counts: { acquisitions: 2, screenshots: 3 } })),
+    ).toBe(5);
   });
 });
 

@@ -58,22 +58,43 @@ describe("navigation and validation", () => {
   it("requires group and experiment in list mode", () => {
     let s = run(initialWizardState(["a"], PREFS), { type: "next" });
     expect(stepIssue(s, "target")).toMatch(/Gruppe/);
-    s = run(s, { type: "setSelection", selection: { ...SELECTION, collectionCode: "", collectionIdentifier: "" } });
+    s = run(s, {
+      type: "setSelection",
+      selection: { ...SELECTION, collectionCode: "", collectionIdentifier: "" },
+    });
     expect(stepIssue(s, "target")).toMatch(/Versuch/);
     s = run(s, { type: "setSelection", selection: SELECTION });
     expect(stepIssue(s, "target")).toBeNull();
   });
 
   it("validates manually entered identifiers", () => {
-    let s = run(initialWizardState(["a"], PREFS), { type: "setTargetMode", mode: "manual" });
+    let s = run(initialWizardState(["a"], PREFS), {
+      type: "setTargetMode",
+      mode: "manual",
+    });
     expect(stepIssue(s, "target")).not.toBeNull();
-    s = run(s, { type: "setManual", field: "manualExperimentId", value: "/LAB/P1/E1" });
+    s = run(s, {
+      type: "setManual",
+      field: "manualExperimentId",
+      value: "/LAB/P1/E1",
+    });
     expect(stepIssue(s, "target")).toBeNull();
-    s = run(s, { type: "setManual", field: "manualObjectId", value: "kein-pfad" });
+    s = run(s, {
+      type: "setManual",
+      field: "manualObjectId",
+      value: "kein-pfad",
+    });
     expect(stepIssue(s, "target")).not.toBeNull();
-    s = run(s, { type: "setManual", field: "manualObjectId", value: "/LAB/OBJ1" });
+    s = run(s, {
+      type: "setManual",
+      field: "manualObjectId",
+      value: "/LAB/OBJ1",
+    });
     expect(stepIssue(s, "target")).toBeNull();
-    expect(targetIdentifiers(s)).toEqual({ experimentId: "/LAB/P1/E1", objectId: "/LAB/OBJ1" });
+    expect(targetIdentifiers(s)).toEqual({
+      experimentId: "/LAB/P1/E1",
+      objectId: "/LAB/OBJ1",
+    });
   });
 
   it("requires Praktikum and Versuchstitel on step 3", () => {
@@ -91,19 +112,32 @@ describe("navigation and validation", () => {
     expect(run(s, { type: "goto", step: "confirm" }).step).toBe("review");
     expect(run(s, { type: "goto", step: "target" }).step).toBe("target");
     const ok = filled();
-    expect(run(ok, { type: "next" }, { type: "next" }, { type: "next" }).step).toBe("confirm");
+    expect(
+      run(ok, { type: "next" }, { type: "next" }, { type: "next" }).step,
+    ).toBe("confirm");
     expect(run(ok, { type: "goto", step: "confirm" }).step).toBe("confirm");
-    expect(run(ok, { type: "goto", step: "details" }, { type: "back" }).step).toBe("target");
+    expect(
+      run(ok, { type: "goto", step: "details" }, { type: "back" }).step,
+    ).toBe("target");
   });
 
   it("does not enter the result step by next", () => {
-    const s = run(filled(), { type: "goto", step: "confirm" }, { type: "next" });
+    const s = run(
+      filled(),
+      { type: "goto", step: "confirm" },
+      { type: "next" },
+    );
     expect(s.step).toBe("confirm");
   });
 });
 
 describe("submit lifecycle", () => {
-  const result: CommitResponse = { permId: "2026-1", artifact_count: 4, artifact_ids: ["x"], openbis_url: "https://x" };
+  const result: CommitResponse = {
+    permId: "2026-1",
+    artifact_count: 4,
+    artifact_ids: ["x"],
+    openbis_url: "https://x",
+  };
 
   it("moves to result/submitting, then success; re-submit after success is impossible (A14)", () => {
     let s = run(filled(), { type: "submitStart" });
@@ -116,7 +150,11 @@ describe("submit lifecycle", () => {
   });
 
   it("allows a retry after an error and can go back to the summary", () => {
-    let s = run(filled(), { type: "submitStart" }, { type: "submitError", message: "boom" });
+    let s = run(
+      filled(),
+      { type: "submitStart" },
+      { type: "submitError", message: "boom" },
+    );
     expect(s.submit).toEqual({ status: "error", message: "boom" });
     expect(run(s, { type: "goto", step: "confirm" }).step).toBe("confirm");
     s = run(s, { type: "submitStart" });
@@ -141,7 +179,10 @@ describe("buildCommitRequest", () => {
       filled(),
       { type: "setMeta", field: "expTitle", value: "  RC-Glied  " },
       { type: "setMeta", field: "notes", value: "" },
-      { type: "setSelection", selection: { ...SELECTION, objectIdentifier: "/LAB/OBJ1" } },
+      {
+        type: "setSelection",
+        selection: { ...SELECTION, objectIdentifier: "/LAB/OBJ1" },
+      },
     );
     expect(buildCommitRequest(s, ["a1", "a2"])).toEqual({
       experiment_id: "/LAB/P1/E1",
@@ -180,6 +221,8 @@ describe("pins", () => {
     expect(s.meta.labCourse).toBe("GP2");
     expect(s.meta.notes).toBe("alt");
     expect(s.target.selection.projectCode).toBe("P1");
-    expect(run(s, { type: "togglePin", key: "notes" }).pinned.notes).toBe(false);
+    expect(run(s, { type: "togglePin", key: "notes" }).pinned.notes).toBe(
+      false,
+    );
   });
 });

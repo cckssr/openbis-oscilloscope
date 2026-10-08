@@ -46,11 +46,23 @@ describe("buildTimeline", () => {
   it("orders everything newest first with screenshots inline", () => {
     const t = buildTimeline([
       art({ acquisition_id: "q1", created_at: "2026-10-08T10:00:00Z" }),
-      art({ artifact_type: "screenshot", channel: null, created_at: "2026-10-08T10:05:00Z" }),
+      art({
+        artifact_type: "screenshot",
+        channel: null,
+        created_at: "2026-10-08T10:05:00Z",
+      }),
       art({ acquisition_id: "q2", created_at: "2026-10-08T10:10:00Z" }),
     ]);
-    expect(t.captures.map((c) => c.kind)).toEqual(["trace", "screenshot", "trace"]);
-    expect(t.captures.map((c) => c.id)).toEqual(["q2", expect.any(String), "q1"]);
+    expect(t.captures.map((c) => c.kind)).toEqual([
+      "trace",
+      "screenshot",
+      "trace",
+    ]);
+    expect(t.captures.map((c) => c.id)).toEqual([
+      "q2",
+      expect.any(String),
+      "q1",
+    ]);
   });
 
   it("falls back to seq for captures with identical timestamps", () => {
@@ -62,18 +74,41 @@ describe("buildTimeline", () => {
   });
 
   it("keeps legacy traces without acquisition id as single captures without note target", () => {
-    const t = buildTimeline([art({ artifact_id: "legacy" }), art({ artifact_id: "legacy2" })]);
+    const t = buildTimeline([
+      art({ artifact_id: "legacy" }),
+      art({ artifact_id: "legacy2" }),
+    ]);
     expect(t.captures).toHaveLength(2);
     expect(t.captures.every((c) => c.acquisitionId === null)).toBe(true);
   });
 
   it("groups runs with two or more captures into numbered series, oldest = Serie 1", () => {
     const t = buildTimeline([
-      art({ acquisition_id: "a", run_id: "r1", created_at: "2026-10-08T09:00:00Z" }),
-      art({ acquisition_id: "b", run_id: "r1", created_at: "2026-10-08T09:01:00Z" }),
-      art({ acquisition_id: "c", run_id: "r2", created_at: "2026-10-08T10:00:00Z" }),
-      art({ acquisition_id: "d", run_id: "r2", created_at: "2026-10-08T10:01:00Z" }),
-      art({ acquisition_id: "e", run_id: "r3", created_at: "2026-10-08T11:00:00Z" }),
+      art({
+        acquisition_id: "a",
+        run_id: "r1",
+        created_at: "2026-10-08T09:00:00Z",
+      }),
+      art({
+        acquisition_id: "b",
+        run_id: "r1",
+        created_at: "2026-10-08T09:01:00Z",
+      }),
+      art({
+        acquisition_id: "c",
+        run_id: "r2",
+        created_at: "2026-10-08T10:00:00Z",
+      }),
+      art({
+        acquisition_id: "d",
+        run_id: "r2",
+        created_at: "2026-10-08T10:01:00Z",
+      }),
+      art({
+        acquisition_id: "e",
+        run_id: "r3",
+        created_at: "2026-10-08T11:00:00Z",
+      }),
     ]);
     const entries = t.days.flatMap((d) => d.entries);
     expect(entries.map((e) => e.type)).toEqual(["capture", "series", "series"]);
@@ -105,7 +140,9 @@ describe("buildTimeline", () => {
 describe("status helpers", () => {
   it("derives status: selected wins, then uploaded, else local", () => {
     expect(statusOf([art({ persist: true, uploaded: true })])).toBe("selected");
-    expect(statusOf([art({ uploaded: true }), art({ uploaded: true })])).toBe("uploaded");
+    expect(statusOf([art({ uploaded: true }), art({ uploaded: true })])).toBe(
+      "uploaded",
+    );
     expect(statusOf([art({ uploaded: true }), art({})])).toBe("local");
     expect(statusOf([art({})])).toBe("local");
   });
@@ -116,11 +153,21 @@ describe("status helpers", () => {
       art({ acquisition_id: "b" }),
       art({ acquisition_id: "c", uploaded: true }),
     ]);
-    expect(countByStatus(t.captures)).toEqual({ local: 1, selected: 1, uploaded: 1 });
+    expect(countByStatus(t.captures)).toEqual({
+      local: 1,
+      selected: 1,
+      uploaded: 1,
+    });
     expect(selectionState(t.captures)).toBe("some");
-    expect(selectionState(t.captures.filter((c) => c.status === "uploaded"))).toBe("disabled");
-    expect(selectionState(t.captures.filter((c) => c.status === "selected"))).toBe("all");
-    expect(selectionState(t.captures.filter((c) => c.status === "local"))).toBe("none");
+    expect(
+      selectionState(t.captures.filter((c) => c.status === "uploaded")),
+    ).toBe("disabled");
+    expect(
+      selectionState(t.captures.filter((c) => c.status === "selected")),
+    ).toBe("all");
+    expect(selectionState(t.captures.filter((c) => c.status === "local"))).toBe(
+      "none",
+    );
   });
 });
 
@@ -135,8 +182,18 @@ describe("immutable updates", () => {
   });
 
   it("sets the note on all traces of an acquisition", () => {
-    const list = [art({ acquisition_id: "q" }), art({ acquisition_id: "q" }), art({ acquisition_id: "z" })];
-    expect(withAnnotation(list, "q", "Hallo").map((a) => a.annotation)).toEqual(["Hallo", "Hallo", null]);
-    expect(withAnnotation(list, "q", "").map((a) => a.annotation)).toEqual([null, null, null]);
+    const list = [
+      art({ acquisition_id: "q" }),
+      art({ acquisition_id: "q" }),
+      art({ acquisition_id: "z" }),
+    ];
+    expect(withAnnotation(list, "q", "Hallo").map((a) => a.annotation)).toEqual(
+      ["Hallo", "Hallo", null],
+    );
+    expect(withAnnotation(list, "q", "").map((a) => a.annotation)).toEqual([
+      null,
+      null,
+      null,
+    ]);
   });
 });

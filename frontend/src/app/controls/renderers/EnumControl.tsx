@@ -27,7 +27,12 @@ export function EnumControl({
   const { value, status, set } = useSetting(deviceId, path);
   const options = useMemo(() => resolve(def.options, ctx), [def.options, ctx]);
   const segments = useMemo(
-    () => options.map((o) => ({ value: String(o.value), label: o.label, help: o.help })),
+    () =>
+      options.map((o) => ({
+        value: String(o.value),
+        label: o.label,
+        help: o.help,
+      })),
     [options],
   );
 

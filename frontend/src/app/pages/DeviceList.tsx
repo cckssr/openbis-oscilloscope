@@ -19,7 +19,8 @@ const t = de.devices;
 export function DeviceList() {
   const { token, user, logout } = useAuth();
   const navigate = useNavigate();
-  const { devices, isLoading, isRefreshing, error, live, refresh } = useDevices(token);
+  const { devices, isLoading, isRefreshing, error, live, refresh } =
+    useDevices(token);
 
   const handleRefresh = () =>
     refresh().catch((err) => notifyError(err, t.loadError, t.refreshError));
@@ -40,7 +41,9 @@ export function DeviceList() {
               <span className="text-sm text-(--lab-text-secondary)">
                 {user.display_name}
                 {user.is_admin && (
-                  <span className="ml-1 font-mono text-xs text-(--lab-accent)">[{t.admin}]</span>
+                  <span className="ml-1 font-mono text-xs text-(--lab-accent)">
+                    [{t.admin}]
+                  </span>
                 )}
               </span>
             )}
@@ -58,7 +61,9 @@ export function DeviceList() {
               aria-label={de.common.actions.refresh}
               title={de.common.actions.refresh}
             >
-              <RefreshCw className={isRefreshing ? "animate-spin" : undefined} />
+              <RefreshCw
+                className={isRefreshing ? "animate-spin" : undefined}
+              />
             </Button>
             <Button variant="secondary" onClick={handleLogout}>
               <LogOut />
@@ -82,15 +87,25 @@ export function DeviceList() {
         )}
 
         {isLoading && devices.length === 0 && (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-4" aria-busy="true">
+          <div
+            className="grid grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-4"
+            aria-busy="true"
+          >
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-40 rounded border-2 border-(--lab-border)" />
+              <Skeleton
+                key={i}
+                className="h-40 rounded border-2 border-(--lab-border)"
+              />
             ))}
           </div>
         )}
 
         {!isLoading && devices.length === 0 && !error && (
-          <EmptyState icon={<MonitorOff />} title={t.empty.title} description={t.empty.description} />
+          <EmptyState
+            icon={<MonitorOff />}
+            title={t.empty.title}
+            description={t.empty.description}
+          />
         )}
 
         <div className="grid grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-4">

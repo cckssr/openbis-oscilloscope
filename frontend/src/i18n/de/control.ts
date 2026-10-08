@@ -87,14 +87,16 @@ export const control = {
       settingFailedTitle: "Einstellung nicht übernommen",
       settingFailed: "Das Gerät hat die Einstellung nicht übernommen.",
       settingsLoadFailedTitle: "Einstellungen konnten nicht geladen werden",
-      settingsLoadFailed: "Die Einstellungen des Geräts konnten nicht gelesen werden.",
+      settingsLoadFailed:
+        "Die Einstellungen des Geräts konnten nicht gelesen werden.",
       noteFailedTitle: "Notiz nicht gespeichert",
       noteFailed: "Die Notiz konnte nicht gespeichert werden.",
       flagFailedTitle: "Auswahl nicht gespeichert",
       flagFailed: "Die Auswahl zum Hochladen konnte nicht gespeichert werden.",
       countsFailedTitle: "Aufnahmen konnten nicht gezählt werden",
       countsFailed: "Der Stand des Archivs konnte nicht geladen werden.",
-      noCapture: "Es gibt noch keine Aufnahme, zu der du etwas notieren kannst.",
+      noCapture:
+        "Es gibt noch keine Aufnahme, zu der du etwas notieren kannst.",
     },
   },
   /**
@@ -121,8 +123,10 @@ export const control = {
       railStart: "Live an",
       railStop: "Live aus",
       railStarting: "Startet…",
-      startHint: "Zeigt das Signal laufend an. Dabei wird nichts gespeichert. Das Gerät selbst wird nicht angehalten.",
-      stopHint: "Beendet nur die Live-Anzeige in diesem Fenster. Das Gerät misst weiter – zum Anhalten „Scope stopp“ drücken.",
+      startHint:
+        "Zeigt das Signal laufend an. Dabei wird nichts gespeichert. Das Gerät selbst wird nicht angehalten.",
+      stopHint:
+        "Beendet nur die Live-Anzeige in diesem Fenster. Das Gerät misst weiter – zum Anhalten „Scope stopp“ drücken.",
     },
     stopScope: {
       label: "Scope stopp",
@@ -175,7 +179,8 @@ export const control = {
       saving: "Wird gespeichert…",
       savingRail: "Speichert…",
       more: "Weitere Aufnahmearten",
-      helper: "Speichert das aktuelle Bild als Aufnahme. Live wird dabei angehalten.",
+      helper:
+        "Speichert das aktuelle Bild als Aufnahme. Live wird dabei angehalten.",
       fullResolution: "Volle Auflösung (langsam)…",
       fullResolutionHint: "Liest den ganzen Gerätespeicher",
       screenshot: "Bildschirmfoto des Oszilloskops",
@@ -190,12 +195,14 @@ export const control = {
       thumbnailFailed: "Vorschau nicht verfügbar",
       downloadFailedTitle: "Herunterladen fehlgeschlagen",
       downloadFailed: "Das Bildschirmfoto konnte nicht geladen werden.",
-      filename: (device: string, stamp: string) => `bildschirmfoto_${device}_${stamp}.png`,
+      filename: (device: string, stamp: string) =>
+        `bildschirmfoto_${device}_${stamp}.png`,
     },
     /** Full-resolution dialog: four steps. */
     fullResolution: {
       title: "Volle Auflösung lesen",
-      description: "Liest den gesamten Gerätespeicher statt nur das Bild vom Bildschirm.",
+      description:
+        "Liest den gesamten Gerätespeicher statt nur das Bild vom Bildschirm.",
       steps: {
         explain: "Was passiert?",
         check: "Einstellungen prüfen",
@@ -204,8 +211,10 @@ export const control = {
       },
       explain: {
         lead: "Das Oszilloskop liest seinen gesamten Speicher aus – bis zu mehreren Millionen Punkte pro Kanal, statt der wenigen hundert Punkte, die auf dem Bildschirm zu sehen sind.",
-        stopped: "Das Gerät wird dabei angehalten. Während des Lesens sind alle anderen Aktionen gesperrt.",
-        useful: "Sinnvoll, wenn du in Details hineinzoomen willst oder eine Frequenzanalyse (FFT) machen möchtest.",
+        stopped:
+          "Das Gerät wird dabei angehalten. Während des Lesens sind alle anderen Aktionen gesperrt.",
+        useful:
+          "Sinnvoll, wenn du in Details hineinzoomen willst oder eine Frequenzanalyse (FFT) machen möchtest.",
       },
       check: {
         depth: "Speichertiefe",
@@ -216,7 +225,8 @@ export const control = {
         durationUnknown: "etwa 5–60 s",
         durationRange: (from: string, to: string) => `etwa ${from} bis ${to}`,
         change: "Anpassen am Gerät",
-        changeHow: "Am Oszilloskop unter „Acquire → Mem Depth“ stellst du die Speichertiefe ein.",
+        changeHow:
+          "Am Oszilloskop unter „Acquire → Mem Depth“ stellst du die Speichertiefe ein.",
         changeWhy:
           "Warum? Eine größere Speichertiefe liefert mehr Details und eine feinere Frequenzauflösung, dauert aber länger. Weniger aktive Kanäle verkürzen das Lesen.",
       },
@@ -280,9 +290,12 @@ export const control = {
       dismiss: "Meldung schließen",
       elapsed: (t: string) => `seit ${t}`,
       done: {
-        capture: (n: number | null) => (n ? `Aufnahme #${n} gespeichert` : "Aufnahme gespeichert"),
+        capture: (n: number | null) =>
+          n ? `Aufnahme #${n} gespeichert` : "Aufnahme gespeichert",
         "full-resolution": (n: number | null) =>
-          n ? `Volle Auflösung gespeichert (Aufnahme #${n})` : "Volle Auflösung gespeichert",
+          n
+            ? `Volle Auflösung gespeichert (Aufnahme #${n})`
+            : "Volle Auflösung gespeichert",
         screenshot: () => "Bildschirmfoto gespeichert",
         autoscale: () => "Auto-Setup abgeschlossen",
         series: () => "Serienaufnahme beendet",
@@ -338,7 +351,10 @@ export const control = {
       hint: "Gib das andere Gerät frei, damit andere es nutzen können, oder behalte beide Geräte gleichzeitig.",
       cancel: "Abbrechen",
       both: "Beide behalten",
-      switch: (n: number) => (n === 1 ? "Anderes freigeben und übernehmen" : "Andere freigeben und übernehmen"),
+      switch: (n: number) =>
+        n === 1
+          ? "Anderes freigeben und übernehmen"
+          : "Andere freigeben und übernehmen",
       checking: "Prüfe Sperren…",
     },
     level: {
@@ -390,7 +406,11 @@ export const control = {
       eod: (time: string) =>
         `Um ${time} werden alle Geräte freigegeben – lade deine Aufnahmen vorher hoch.`,
       eodIn: (minutes: number) =>
-        minutes <= 0 ? "gleich" : minutes === 1 ? "in 1 Minute" : `in ${minutes} Minuten`,
+        minutes <= 0
+          ? "gleich"
+          : minutes === 1
+            ? "in 1 Minute"
+            : `in ${minutes} Minuten`,
       eodUpload: "Zum Hochladen",
       offline: "Das Gerät ist offline.",
       error: "Das Gerät meldet einen Fehler.",
@@ -408,7 +428,9 @@ export const control = {
       actionsRegion: "Aktionen",
       inspectorRegion: "Einstellungen",
       exportName: (deviceId: string, capture: number | null) =>
-        capture === null ? `${deviceId}_Live` : `${deviceId}_Aufnahme-${capture}`,
+        capture === null
+          ? `${deviceId}_Live`
+          : `${deviceId}_Aufnahme-${capture}`,
     },
     layout: {
       collapseActions: "Aktionen einklappen",
@@ -428,7 +450,8 @@ export const control = {
     },
     /** Reasons shown in the read-only settings banner. */
     inspector: {
-      passive: "Dieses Gerät wird in einem anderen Tab gesteuert. Übernimm es hier, um Einstellungen zu ändern.",
+      passive:
+        "Dieses Gerät wird in einem anderen Tab gesteuert. Übernimm es hier, um Einstellungen zu ändern.",
       lost: "Die Verbindung zum Gerät ist verloren. Übernimm es erneut, um Einstellungen zu ändern.",
     },
   },

@@ -1,5 +1,8 @@
 import type { DeviceDetail } from "../../../../api/types";
-import { useDeviceSessionSelector, type LockStatus } from "../../../state/deviceSession";
+import {
+  useDeviceSessionSelector,
+  type LockStatus,
+} from "../../../state/deviceSession";
 
 /** The slice of the session the header needs. */
 export interface HeaderModel {
@@ -17,7 +20,9 @@ export interface HeaderModel {
 const shallowEqual = (a: HeaderModel, b: HeaderModel) =>
   (Object.keys(a) as (keyof HeaderModel)[]).every((k) => Object.is(a[k], b[k]));
 
-const select = (s: Parameters<Parameters<typeof useDeviceSessionSelector>[1]>[0]): HeaderModel => ({
+const select = (
+  s: Parameters<Parameters<typeof useDeviceSessionSelector>[1]>[0],
+): HeaderModel => ({
   device: s.device,
   lockStatus: s.lock.status,
   since: s.lock.since,
@@ -45,4 +50,3 @@ export function useHeaderModel(deviceId: string): HeaderModel {
 export function archivePath(sessionId: string | undefined): string {
   return sessionId ? `/archive/${sessionId}` : "/sessions";
 }
-

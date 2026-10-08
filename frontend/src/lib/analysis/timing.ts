@@ -13,7 +13,13 @@ export const frequency: Analysis = {
     const p = periodOf(t);
     return {
       values: [
-        { id: "frequency", label: "Frequenz", value: p > 0 ? 1 / p : NaN, unit: "Hz", traceId: t.id },
+        {
+          id: "frequency",
+          label: "Frequenz",
+          value: p > 0 ? 1 / p : NaN,
+          unit: "Hz",
+          traceId: t.id,
+        },
       ],
     };
   },
@@ -27,7 +33,15 @@ export const period: Analysis = {
   inputs: { traces: 1 },
   compute([t]) {
     return {
-      values: [{ id: "period", label: "Periode", value: periodOf(t), unit: "s", traceId: t.id }],
+      values: [
+        {
+          id: "period",
+          label: "Periode",
+          value: periodOf(t),
+          unit: "s",
+          traceId: t.id,
+        },
+      ],
     };
   },
 };
@@ -79,7 +93,13 @@ export const riseTimeAnalysis: Analysis = {
   compute([t]) {
     return {
       values: [
-        { id: "rise-time", label: "Anstiegszeit (10–90 %)", value: riseTime(t), unit: "s", traceId: t.id },
+        {
+          id: "rise-time",
+          label: "Anstiegszeit (10–90 %)",
+          value: riseTime(t),
+          unit: "s",
+          traceId: t.id,
+        },
       ],
     };
   },
@@ -108,7 +128,8 @@ export function phaseDegrees(ref: Trace, other: Trace): number {
     while (j < b.length - 1 && b[j + 1] < tr) j++;
     const candidates = [b[j], b[Math.min(j + 1, b.length - 1)]];
     let best = candidates[0] - tr;
-    for (const c of candidates) if (Math.abs(c - tr) < Math.abs(best)) best = c - tr;
+    for (const c of candidates)
+      if (Math.abs(c - tr) < Math.abs(best)) best = c - tr;
     const angle = (2 * Math.PI * best) / T;
     sin += Math.sin(angle);
     cos += Math.cos(angle);

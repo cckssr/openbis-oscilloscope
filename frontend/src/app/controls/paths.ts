@@ -1,6 +1,11 @@
 /** Mapping from registry definitions to store setting paths and resolved values. */
 import type { SettingPath } from "../state/deviceSession/types";
-import type { ControlContext, ControlDef, ControlGroupDef, Resolvable } from "./types";
+import type {
+  ControlContext,
+  ControlDef,
+  ControlGroupDef,
+  Resolvable,
+} from "./types";
 
 /**
  * Setting path of one control.
@@ -14,7 +19,8 @@ export function controlPath(
   def: ControlDef,
   channel?: number,
 ): SettingPath {
-  if (group.perChannel) return `channels.${channel ?? 1}.${def.key}` as SettingPath;
+  if (group.perChannel)
+    return `channels.${channel ?? 1}.${def.key}` as SettingPath;
   return `${group.pathPrefix ?? group.id}.${def.key}` as SettingPath;
 }
 
@@ -25,5 +31,7 @@ export function controlPath(
  * @returns The resolved value
  */
 export function resolve<T>(value: Resolvable<T>, ctx: ControlContext): T {
-  return typeof value === "function" ? (value as (c: ControlContext) => T)(ctx) : value;
+  return typeof value === "function"
+    ? (value as (c: ControlContext) => T)(ctx)
+    : value;
 }

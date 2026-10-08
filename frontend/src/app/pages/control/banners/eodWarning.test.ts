@@ -30,7 +30,9 @@ describe("eodMinutesLeft", () => {
   });
 
   it("handles a reset shortly after midnight", () => {
-    expect(eodMinutesLeft(new Date("2026-10-07T23:55:00Z"), "00:05", "UTC")).toBe(10);
+    expect(
+      eodMinutesLeft(new Date("2026-10-07T23:55:00Z"), "00:05", "UTC"),
+    ).toBe(10);
   });
 
   it("ignores malformed config", () => {

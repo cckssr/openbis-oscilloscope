@@ -37,19 +37,34 @@ export interface BannerProps {
  * @param props - See {@link BannerProps}
  * @returns The banner
  */
-export function Banner({ tone, icon: Icon, title, children, action, role = "status", className, testId }: BannerProps) {
+export function Banner({
+  tone,
+  icon: Icon,
+  title,
+  children,
+  action,
+  role = "status",
+  className,
+  testId,
+}: BannerProps) {
   return (
     <div
       role={role}
       data-testid={testId}
-      className={cn("flex flex-wrap items-center gap-x-3 gap-y-2 border-b-2 px-4 py-2 text-sm", TONE[tone], className)}
+      className={cn(
+        "flex flex-wrap items-center gap-x-3 gap-y-2 border-b-2 px-4 py-2 text-sm",
+        TONE[tone],
+        className,
+      )}
     >
       <Icon className={cn("size-5 shrink-0", ICON_TONE[tone])} aria-hidden />
       <div className="min-w-0 flex-1">
         {title && <p className="font-semibold">{title}</p>}
         {children && <p>{children}</p>}
       </div>
-      {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
+      {action && (
+        <div className="flex shrink-0 items-center gap-2">{action}</div>
+      )}
     </div>
   );
 }

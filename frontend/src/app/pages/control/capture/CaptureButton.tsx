@@ -2,12 +2,20 @@ import { Loader2, Save } from "lucide-react";
 import { de } from "../../../../i18n/de";
 import { DisabledReason } from "../../../components/common";
 import { Button } from "../../../components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../../../components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "../../../components/ui/tooltip";
 import { cn } from "../../../components/ui/utils";
 import { useAuth } from "../../../context/AuthContext";
 import { availability } from "../actions/availability";
 import type { ActionLayout } from "../actions/layout";
-import { useActionModel, useDeviceActions, useDeviceSessionSelector } from "../actions/session";
+import {
+  useActionModel,
+  useDeviceActions,
+  useDeviceSessionSelector,
+} from "../actions/session";
 import { withShortcut } from "../actions/shortcuts";
 import { CaptureMenu } from "./CaptureMenu";
 import { useFullResolutionDialog } from "./FullResolutionProvider";
@@ -29,7 +37,8 @@ const WRAPPER: Record<ActionLayout, string> = {
 };
 
 const PRIMARY: Record<ActionLayout, string> = {
-  column: "h-auto min-h-9 min-w-0 flex-1 justify-start rounded-r-none py-1.5 text-left leading-tight whitespace-normal coarse:min-h-11",
+  column:
+    "h-auto min-h-9 min-w-0 flex-1 justify-start rounded-r-none py-1.5 text-left leading-tight whitespace-normal coarse:min-h-11",
   icon: "size-9 rounded-b-none px-0 coarse:size-11",
   rail: "h-auto min-h-12 w-full flex-col gap-0.5 rounded-b-none px-1 py-1.5 text-[11px] leading-tight whitespace-normal coarse:min-h-[3.25rem]",
   bar: "h-11 rounded-r-none px-6 coarse:h-12",
@@ -60,13 +69,20 @@ export function CaptureButton({ deviceId, layout }: CaptureButtonProps) {
   if (!av.capture.visible) return null;
   const saving = model.capturing && !model.seriesOn;
   const reason = av.capture.reason;
-  const menuDisabled = !!reason && (!av.fullResolution.visible || !!av.fullResolution.reason) &&
+  const menuDisabled =
+    !!reason &&
+    (!av.fullResolution.visible || !!av.fullResolution.reason) &&
     (!av.screenshot.visible || !!av.screenshot.reason);
 
   const takeScreenshot = async () => {
     const result = await actions.saveScreenshot();
     if (result && token && sessionId) {
-      showScreenshotToast({ token, sessionId, artifactId: result.artifactId, deviceId });
+      showScreenshotToast({
+        token,
+        sessionId,
+        artifactId: result.artifactId,
+        deviceId,
+      });
     }
   };
 
@@ -81,21 +97,52 @@ export function CaptureButton({ deviceId, layout }: CaptureButtonProps) {
       onClick={() => void actions.saveCapture()}
       className={PRIMARY[layout]}
     >
-      {saving ? <Loader2 className="animate-spin" aria-hidden /> : <Save aria-hidden />}
-      <span className={layout === "rail" ? "text-center" : layout === "icon" ? "sr-only" : undefined}>
+      {saving ? (
+        <Loader2 className="animate-spin" aria-hidden />
+      ) : (
+        <Save aria-hidden />
+      )}
+      <span
+        className={
+          layout === "rail"
+            ? "text-center"
+            : layout === "icon"
+              ? "sr-only"
+              : undefined
+        }
+      >
         {saving
-          ? layout === "rail" ? t.savingRail : t.saving
-          : layout === "rail" ? t.saveRail : t.save}
+          ? layout === "rail"
+            ? t.savingRail
+            : t.saving
+          : layout === "rail"
+            ? t.saveRail
+            : t.save}
       </span>
     </Button>
   );
 
   const group = (
-    <div className={cn("flex", layout === "rail" || layout === "icon" ? "flex-col" : "w-full")}>
-      {reason ? primary : (
+    <div
+      className={cn(
+        "flex",
+        layout === "rail" || layout === "icon" ? "flex-col" : "w-full",
+      )}
+    >
+      {reason ? (
+        primary
+      ) : (
         <Tooltip>
           <TooltipTrigger asChild>{primary}</TooltipTrigger>
-          <TooltipContent side={layout === "column" ? "left" : layout === "icon" ? "right" : "bottom"}>
+          <TooltipContent
+            side={
+              layout === "column"
+                ? "left"
+                : layout === "icon"
+                  ? "right"
+                  : "bottom"
+            }
+          >
             {withShortcut(t.helper, "capture")}
           </TooltipContent>
         </Tooltip>
@@ -112,11 +159,18 @@ export function CaptureButton({ deviceId, layout }: CaptureButtonProps) {
   );
 
   return (
-    <div className={WRAPPER[layout]} data-testid="capture-button" data-layout={layout}>
+    <div
+      className={WRAPPER[layout]}
+      data-testid="capture-button"
+      data-layout={layout}
+    >
       {reason ? (
         <DisabledReason
           reason={reason}
-          className={cn(layout === "rail" && "w-full", layout !== "column" && "[&>p]:hidden!")}
+          className={cn(
+            layout === "rail" && "w-full",
+            layout !== "column" && "[&>p]:hidden!",
+          )}
         >
           {group}
         </DisabledReason>

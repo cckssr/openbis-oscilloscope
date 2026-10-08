@@ -23,12 +23,25 @@ export interface ScreenshotToastTarget {
  * @param date - Time of the screenshot
  * @returns The file name
  */
-export function screenshotFilename(deviceId: string, date = new Date()): string {
-  const iso = date.toISOString().replace(/[-:]/g, "").replace("T", "-").slice(0, 15);
+export function screenshotFilename(
+  deviceId: string,
+  date = new Date(),
+): string {
+  const iso = date
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace("T", "-")
+    .slice(0, 15);
   return t.filename(deviceId, iso);
 }
 
-function ScreenshotToastBody({ target, onClose }: { target: ScreenshotToastTarget; onClose: () => void }) {
+function ScreenshotToastBody({
+  target,
+  onClose,
+}: {
+  target: ScreenshotToastTarget;
+  onClose: () => void;
+}) {
   const [blob, setBlob] = useState<Blob | null>(null);
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -57,7 +70,12 @@ function ScreenshotToastBody({ target, onClose }: { target: ScreenshotToastTarge
   const download = async () => {
     try {
       const data =
-        blob ?? (await fetchArtifactScreenshot(target.token, target.sessionId, target.artifactId));
+        blob ??
+        (await fetchArtifactScreenshot(
+          target.token,
+          target.sessionId,
+          target.artifactId,
+        ));
       downloadBlob(data, screenshotFilename(target.deviceId));
     } catch (err) {
       notifyError(err, t.downloadFailed, t.downloadFailedTitle);
@@ -73,12 +91,22 @@ function ScreenshotToastBody({ target, onClose }: { target: ScreenshotToastTarge
         {url ? (
           <img src={url} alt={t.alt} className="size-full object-cover" />
         ) : failed ? (
-          <ImageOff className="size-5 text-(--lab-text-secondary)" aria-label={t.thumbnailFailed} />
+          <ImageOff
+            className="size-5 text-(--lab-text-secondary)"
+            aria-label={t.thumbnailFailed}
+          />
         ) : null}
       </div>
       <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
-        <p className="text-sm font-medium text-(--lab-text-primary)">{t.saved}</p>
-        <Button type="button" variant="secondary" size="sm" onClick={() => void download()}>
+        <p className="text-sm font-medium text-(--lab-text-primary)">
+          {t.saved}
+        </p>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={() => void download()}
+        >
           <Download aria-hidden />
           {t.download}
         </Button>
@@ -102,7 +130,12 @@ function ScreenshotToastBody({ target, onClose }: { target: ScreenshotToastTarge
  * @param target - Where the screenshot lives in the archive
  */
 export function showScreenshotToast(target: ScreenshotToastTarget): void {
-  toast.custom((id) => <ScreenshotToastBody target={target} onClose={() => toast.dismiss(id)} />, {
-    duration: 12_000,
-  });
+  toast.custom(
+    (id) => (
+      <ScreenshotToastBody target={target} onClose={() => toast.dismiss(id)} />
+    ),
+    {
+      duration: 12_000,
+    },
+  );
 }

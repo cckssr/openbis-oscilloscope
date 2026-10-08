@@ -13,7 +13,8 @@ const channelConfig = (ctx: ControlContext) =>
   ctx.channel === undefined ? undefined : ctx.settings.channels[ctx.channel];
 
 /** Channel controls other than the on/off toggle only make sense for an enabled channel. */
-const whenEnabled = (ctx: ControlContext) => channelConfig(ctx)?.enabled === true;
+const whenEnabled = (ctx: ControlContext) =>
+  channelConfig(ctx)?.enabled === true;
 
 /**
  * One-line summary of a channel, or of all channels when no channel is given.

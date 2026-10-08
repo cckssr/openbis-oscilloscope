@@ -24,12 +24,15 @@ const select = (s: DeviceSessionState): Slice => ({
   frame: s.frame,
   applied: s.settings.applied,
   lastCapture: s.lastCapture,
-  saving: s.jobs.some((j) => j.status === "running" && SAVING_KINDS.has(j.kind)),
+  saving: s.jobs.some(
+    (j) => j.status === "running" && SAVING_KINDS.has(j.kind),
+  ),
   sessionId: s.lock.sessionId ?? s.lock.previousSessionId,
   scopeMemoryDepth: s.memoryDepth,
 });
 
-const same = (a: Slice, b: Slice) => (Object.keys(a) as (keyof Slice)[]).every((k) => Object.is(a[k], b[k]));
+const same = (a: Slice, b: Slice) =>
+  (Object.keys(a) as (keyof Slice)[]).every((k) => Object.is(a[k], b[k]));
 
 /**
  * Everything the plot region renders, derived from the session (re-renders
@@ -39,8 +42,14 @@ const same = (a: Slice, b: Slice) => (Object.keys(a) as (keyof Slice)[]).every((
  */
 export function usePlotModel(deviceId: string) {
   const s = useDeviceSessionSelector(deviceId, select, same);
-  const overlays = useMemo(() => buildPlotOverlays(s.frame, s.applied), [s.frame, s.applied]);
-  const shownCapture = s.frame && s.lastCapture && s.frame === s.lastCapture.frame ? s.lastCapture : null;
+  const overlays = useMemo(
+    () => buildPlotOverlays(s.frame, s.applied),
+    [s.frame, s.applied],
+  );
+  const shownCapture =
+    s.frame && s.lastCapture && s.frame === s.lastCapture.frame
+      ? s.lastCapture
+      : null;
   return {
     frame: s.frame,
     overlays,

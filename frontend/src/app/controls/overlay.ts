@@ -4,7 +4,11 @@ import type {
   SettingValue,
   SettingsSnapshot,
 } from "../state/deviceSession/types";
-import { groupOf, mergeGroup, withGroup } from "../state/deviceSession/settingsPaths";
+import {
+  groupOf,
+  mergeGroup,
+  withGroup,
+} from "../state/deviceSession/settingsPaths";
 
 /**
  * Overlays pending edits onto the applied snapshot so control definitions
@@ -18,8 +22,13 @@ export function overlayPending(
   applied: SettingsSnapshot,
   pending: Partial<Record<SettingPath, SettingValue>>,
 ): SettingsSnapshot {
-  const byGroup = new Map<ReturnType<typeof groupOf>, Array<[SettingPath, SettingValue]>>();
-  for (const [path, value] of Object.entries(pending) as Array<[SettingPath, SettingValue]>) {
+  const byGroup = new Map<
+    ReturnType<typeof groupOf>,
+    Array<[SettingPath, SettingValue]>
+  >();
+  for (const [path, value] of Object.entries(pending) as Array<
+    [SettingPath, SettingValue]
+  >) {
     if (value === undefined) continue;
     const group = groupOf(path);
     byGroup.set(group, [...(byGroup.get(group) ?? []), [path, value]]);

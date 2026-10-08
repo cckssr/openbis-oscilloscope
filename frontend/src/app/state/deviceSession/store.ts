@@ -85,11 +85,17 @@ export class DeviceSessionStore {
       this.jobs,
       {
         stopLoops: async () => {
-          await Promise.all([this.captures.stopSeries(), this.live.stopAndWait()]);
+          await Promise.all([
+            this.captures.stopSeries(),
+            this.live.stopAndWait(),
+          ]);
         },
         stopActivity: async () => {
           this.settings.reset();
-          await Promise.all([this.captures.stopSeries(), this.live.stopAndWait()]);
+          await Promise.all([
+            this.captures.stopSeries(),
+            this.live.stopAndWait(),
+          ]);
         },
         loadSessionData: () => this.loadSessionData(),
       },
@@ -126,9 +132,10 @@ export class DeviceSessionStore {
   start(): Promise<void> {
     if (!this.started) {
       this.lock.start();
-      this.started = Promise.all([this.lock.refreshDevice(), this.settings.preload()]).then(
-        () => undefined,
-      );
+      this.started = Promise.all([
+        this.lock.refreshDevice(),
+        this.settings.preload(),
+      ]).then(() => undefined);
     }
     return this.started;
   }

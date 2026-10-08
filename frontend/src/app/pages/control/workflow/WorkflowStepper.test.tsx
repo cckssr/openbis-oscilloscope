@@ -6,7 +6,12 @@ import type { Workflow } from "../../../state/deviceSession";
 const workflow: Workflow = {
   steps: [
     { id: "take", label: "Gerät übernehmen", state: "done" },
-    { id: "setup", label: "Signal einstellen", state: "active", optional: true },
+    {
+      id: "setup",
+      label: "Signal einstellen",
+      state: "active",
+      optional: true,
+    },
     { id: "capture", label: "Aufnehmen", state: "todo" },
     { id: "annotate", label: "Notieren & auswählen", state: "blocked" },
     { id: "upload", label: "Hochladen", state: "todo" },
@@ -36,17 +41,29 @@ describe("WorkflowStepper", () => {
     renderStepper();
     const items = screen.getAllByRole("listitem");
     expect(items).toHaveLength(5);
-    expect(items.map((i) => i.getAttribute("data-state"))).toEqual(["done", "active", "todo", "blocked", "todo"]);
+    expect(items.map((i) => i.getAttribute("data-state"))).toEqual([
+      "done",
+      "active",
+      "todo",
+      "blocked",
+      "todo",
+    ]);
     expect(screen.getByText("Gerät übernehmen: erledigt")).toBeTruthy();
-    expect(screen.getByText("Notieren & auswählen: noch nicht möglich")).toBeTruthy();
+    expect(
+      screen.getByText("Notieren & auswählen: noch nicht möglich"),
+    ).toBeTruthy();
     expect(items[1].getAttribute("aria-current")).toBe("step");
     expect(screen.getByText("(optional)")).toBeTruthy();
   });
 
   it("shows the 'Als Nächstes' hint under the steps", () => {
     renderStepper();
-    expect(screen.getByTestId("next-hint").textContent).toContain("Als Nächstes");
-    expect(screen.getByTestId("next-hint").textContent).toContain("Drücke „Live starten“");
+    expect(screen.getByTestId("next-hint").textContent).toContain(
+      "Als Nächstes",
+    );
+    expect(screen.getByTestId("next-hint").textContent).toContain(
+      "Drücke „Live starten“",
+    );
   });
 
   it("links step ⑤ to the archive of the session", () => {
@@ -68,11 +85,19 @@ describe("WorkflowStepper", () => {
   it("compact mode drops the '(optional)' suffix and renders the trailing control", () => {
     render(
       <MemoryRouter>
-        <WorkflowStepper deviceId="scope-01" compact trailing={<button>Ebene</button>} />
+        <WorkflowStepper
+          deviceId="scope-01"
+          compact
+          trailing={<button>Ebene</button>}
+        />
       </MemoryRouter>,
     );
     expect(screen.queryByText("(optional)")).toBeNull();
     expect(screen.getByRole("button", { name: "Ebene" })).toBeTruthy();
-    expect(screen.getByRole("navigation").contains(screen.getByRole("button", { name: "Ebene" }))).toBe(false);
+    expect(
+      screen
+        .getByRole("navigation")
+        .contains(screen.getByRole("button", { name: "Ebene" })),
+    ).toBe(false);
   });
 });

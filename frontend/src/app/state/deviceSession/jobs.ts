@@ -38,7 +38,10 @@ export class JobTracker {
       status: "running",
       cancellable: options.cancellable ?? false,
     };
-    this.host.update((s) => ({ ...s, jobs: [job, ...s.jobs].slice(0, MAX_JOBS) }));
+    this.host.update((s) => ({
+      ...s,
+      jobs: [job, ...s.jobs].slice(0, MAX_JOBS),
+    }));
     return id;
   }
 
@@ -53,7 +56,10 @@ export class JobTracker {
   ): void {
     this.host.update((s) => {
       if (!s.jobs.some((j) => j.id === id)) return s;
-      return { ...s, jobs: s.jobs.map((j) => (j.id === id ? { ...j, ...patch } : j)) };
+      return {
+        ...s,
+        jobs: s.jobs.map((j) => (j.id === id ? { ...j, ...patch } : j)),
+      };
     });
   }
 
@@ -63,7 +69,11 @@ export class JobTracker {
    * @param status - Final status
    * @param error - Error message for `error`
    */
-  finish(id: string, status: "done" | "error" | "cancelled", error?: string): void {
+  finish(
+    id: string,
+    status: "done" | "error" | "cancelled",
+    error?: string,
+  ): void {
     this.host.update((s) => {
       if (!s.jobs.some((j) => j.id === id)) return s;
       return {

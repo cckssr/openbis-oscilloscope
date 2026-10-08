@@ -40,7 +40,10 @@ function Tool({ icon, label, hint, onClick, pressed, disabled }: ToolProps) {
       aria-label={label}
       title={disabled ? t.disabledHint : hint}
       disabled={disabled}
-      className={cn(pressed && "border-(--lab-accent) bg-(--lab-accent)/10 text-(--lab-accent) hover:bg-(--lab-accent)/15")}
+      className={cn(
+        pressed &&
+          "border-(--lab-accent) bg-(--lab-accent)/10 text-(--lab-accent) hover:bg-(--lab-accent)/15",
+      )}
     >
       {icon}
       {/* Labels only when tools and extras fit on one row (~900 px). */}
@@ -68,15 +71,55 @@ export function PlotToolbar({
   extras,
 }: PlotToolbarProps) {
   return (
-    <div role="toolbar" aria-label={t.group} className="flex shrink-0 flex-wrap items-center gap-1.5">
+    <div
+      role="toolbar"
+      aria-label={t.group}
+      className="flex shrink-0 flex-wrap items-center gap-1.5"
+    >
       <div className="inline-flex gap-1" role="group">
-        <Tool icon={<ZoomIn />} label={t.zoom} hint={t.zoomHint} pressed={dragMode === "zoom"} disabled={disabled} onClick={() => onDragMode("zoom")} />
-        <Tool icon={<Hand />} label={t.pan} hint={t.panHint} pressed={dragMode === "pan"} disabled={disabled} onClick={() => onDragMode("pan")} />
+        <Tool
+          icon={<ZoomIn />}
+          label={t.zoom}
+          hint={t.zoomHint}
+          pressed={dragMode === "zoom"}
+          disabled={disabled}
+          onClick={() => onDragMode("zoom")}
+        />
+        <Tool
+          icon={<Hand />}
+          label={t.pan}
+          hint={t.panHint}
+          pressed={dragMode === "pan"}
+          disabled={disabled}
+          onClick={() => onDragMode("pan")}
+        />
       </div>
-      <Tool icon={<Maximize2 />} label={t.autoscale} hint={t.autoscaleHint} pressed={autoscaleOn} disabled={disabled} onClick={onAutoscale} />
-      <Tool icon={<RotateCcw />} label={t.reset} hint={t.resetHint} disabled={disabled} onClick={onReset} />
-      <Tool icon={<Ruler />} label={t.cursors} hint={t.cursorsHint} pressed={cursorsOn} disabled={disabled} onClick={onToggleCursors} />
-      {extras && <div className="ml-auto flex items-center gap-1.5">{extras}</div>}
+      <Tool
+        icon={<Maximize2 />}
+        label={t.autoscale}
+        hint={t.autoscaleHint}
+        pressed={autoscaleOn}
+        disabled={disabled}
+        onClick={onAutoscale}
+      />
+      <Tool
+        icon={<RotateCcw />}
+        label={t.reset}
+        hint={t.resetHint}
+        disabled={disabled}
+        onClick={onReset}
+      />
+      <Tool
+        icon={<Ruler />}
+        label={t.cursors}
+        hint={t.cursorsHint}
+        pressed={cursorsOn}
+        disabled={disabled}
+        onClick={onToggleCursors}
+      />
+      {extras && (
+        <div className="ml-auto flex items-center gap-1.5">{extras}</div>
+      )}
     </div>
   );
 }

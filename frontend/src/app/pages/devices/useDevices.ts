@@ -25,7 +25,9 @@ export interface UseDevicesResult {
 function applyEvent(devices: Device[], event: DeviceEvent): Device[] {
   if (event.type !== "device_state") return devices;
   return devices.map((d) =>
-    d.id === event.device_id ? { ...d, state: event.state, last_error: event.last_error } : d,
+    d.id === event.device_id
+      ? { ...d, state: event.state, last_error: event.last_error }
+      : d,
   );
 }
 
@@ -65,7 +67,11 @@ export function useDevices(token: string | null): UseDevicesResult {
           outcome.failure = null;
         } catch (err) {
           outcome.failure = err;
-          setError(err instanceof Error && err.message ? err.message : de.devices.loadError);
+          setError(
+            err instanceof Error && err.message
+              ? err.message
+              : de.devices.loadError,
+          );
         }
       } while (queued.current);
     } finally {

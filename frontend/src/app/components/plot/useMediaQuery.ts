@@ -13,7 +13,7 @@ export function useMediaQuery(query: string): boolean {
       mql.addEventListener("change", notify);
       return () => mql.removeEventListener("change", notify);
     },
-    () => (typeof window !== "undefined" && !!window.matchMedia?.(query).matches),
+    () => typeof window !== "undefined" && !!window.matchMedia?.(query).matches,
     () => false,
   );
 }

@@ -50,7 +50,11 @@ function finishedText(job: Job, captureNumber: number | null): string {
 export function StatusBar({ deviceId, className }: StatusBarProps) {
   const { jobs, busy, captureNumber } = useDeviceSessionSelector(
     deviceId,
-    (s): BarSlice => ({ jobs: s.jobs, busy: s.busy, captureNumber: s.lastCapture?.number ?? null }),
+    (s): BarSlice => ({
+      jobs: s.jobs,
+      busy: s.busy,
+      captureNumber: s.lastCapture?.number ?? null,
+    }),
     sameSlice,
   );
   const actions = useDeviceActions(deviceId);
@@ -60,11 +64,20 @@ export function StatusBar({ deviceId, className }: StatusBarProps) {
 
   let content;
   if (job && running) {
-    const percent = job.progress === undefined ? null : Math.round(job.progress * 100);
+    const percent =
+      job.progress === undefined ? null : Math.round(job.progress * 100);
     content = (
       <>
-        <Loader2 className="size-4 shrink-0 animate-spin text-(--lab-accent)" aria-hidden />
-        <span className="min-w-0 shrink truncate font-medium" data-testid="status-label">{job.label}</span>
+        <Loader2
+          className="size-4 shrink-0 animate-spin text-(--lab-accent)"
+          aria-hidden
+        />
+        <span
+          className="min-w-0 shrink truncate font-medium"
+          data-testid="status-label"
+        >
+          {job.label}
+        </span>
         {percent !== null ? (
           <>
             <Progress
@@ -73,15 +86,22 @@ export function StatusBar({ deviceId, className }: StatusBarProps) {
               aria-label={job.label}
               data-testid="status-progress"
             />
-            <span className="shrink-0 tabular-nums text-(--lab-text-secondary)">{percent} %</span>
+            <span className="shrink-0 tabular-nums text-(--lab-text-secondary)">
+              {percent} %
+            </span>
           </>
         ) : (
-          <span className="shrink-0 tabular-nums text-(--lab-text-secondary)" data-testid="status-elapsed">
+          <span
+            className="shrink-0 tabular-nums text-(--lab-text-secondary)"
+            data-testid="status-elapsed"
+          >
             {t.elapsed(formatDuration((now - job.startedAt) / 1000))}
           </span>
         )}
         {job.detail && (
-          <span className="hidden min-w-0 truncate text-(--lab-text-secondary) @lg:inline">{job.detail}</span>
+          <span className="hidden min-w-0 truncate text-(--lab-text-secondary) @lg:inline">
+            {job.detail}
+          </span>
         )}
         {job.cancellable && job.kind === "full-resolution" && (
           <Button
@@ -101,11 +121,20 @@ export function StatusBar({ deviceId, className }: StatusBarProps) {
     content = (
       <>
         {ok ? (
-          <CircleCheck className="size-4 shrink-0 text-(--lab-success)" aria-hidden />
+          <CircleCheck
+            className="size-4 shrink-0 text-(--lab-success)"
+            aria-hidden
+          />
         ) : (
-          <TriangleAlert className="size-4 shrink-0 text-(--lab-warning)" aria-hidden />
+          <TriangleAlert
+            className="size-4 shrink-0 text-(--lab-warning)"
+            aria-hidden
+          />
         )}
-        <span className="min-w-0 truncate font-medium" data-testid="status-result">
+        <span
+          className="min-w-0 truncate font-medium"
+          data-testid="status-result"
+        >
           {finishedText(job, captureNumber)}
         </span>
         <button
@@ -121,15 +150,28 @@ export function StatusBar({ deviceId, className }: StatusBarProps) {
   } else if (busy) {
     content = (
       <>
-        <Loader2 className="size-4 shrink-0 animate-spin text-(--lab-accent)" aria-hidden />
-        <span className="truncate" data-testid="status-busy">{busy}</span>
+        <Loader2
+          className="size-4 shrink-0 animate-spin text-(--lab-accent)"
+          aria-hidden
+        />
+        <span className="truncate" data-testid="status-busy">
+          {busy}
+        </span>
       </>
     );
   } else {
     content = (
       <>
-        <span className="size-2 shrink-0 rounded-full bg-(--lab-success)" aria-hidden />
-        <span className="text-(--lab-text-secondary)" data-testid="status-ready">{t.ready}</span>
+        <span
+          className="size-2 shrink-0 rounded-full bg-(--lab-success)"
+          aria-hidden
+        />
+        <span
+          className="text-(--lab-text-secondary)"
+          data-testid="status-ready"
+        >
+          {t.ready}
+        </span>
       </>
     );
   }

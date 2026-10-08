@@ -12,7 +12,10 @@ import type { Frame, SettingsSnapshot } from "../../../state/deviceSession";
  * @param applied - Applied settings, if loaded
  * @returns Overlays (empty when nothing can be placed)
  */
-export function buildPlotOverlays(frame: Frame | null, applied: SettingsSnapshot | null): Overlay[] {
+export function buildPlotOverlays(
+  frame: Frame | null,
+  applied: SettingsSnapshot | null,
+): Overlay[] {
   if (!frame || frame.traces.length === 0) return [];
   const useApplied = frame.source === "live" && applied !== null;
   const trigger: TriggerConfig = useApplied ? applied.trigger : frame.trigger;
@@ -21,8 +24,16 @@ export function buildPlotOverlays(frame: Frame | null, applied: SettingsSnapshot
     : frame.timebase.offsetS;
 
   const overlays: Overlay[] = [];
-  const source: Trace | undefined = frame.traces.find((t) => t.id === trigger.source);
-  if (source) overlays.push({ kind: "trigger-level", traceId: source.id, value: trigger.level_v });
-  if (Number.isFinite(offsetS)) overlays.push({ kind: "trigger-time", value: offsetS });
+  const source: Trace | undefined = frame.traces.find(
+    (t) => t.id === trigger.source,
+  );
+  if (source)
+    overlays.push({
+      kind: "trigger-level",
+      traceId: source.id,
+      value: trigger.level_v,
+    });
+  if (Number.isFinite(offsetS))
+    overlays.push({ kind: "trigger-time", value: offsetS });
   return overlays;
 }

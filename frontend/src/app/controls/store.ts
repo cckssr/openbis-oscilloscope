@@ -26,8 +26,14 @@ export interface InspectorModel {
  * @returns The model; re-renders only when one of these slices changes
  */
 export function useInspectorModel(deviceId: string): InspectorModel {
-  const capabilities = useDeviceSessionSelector(deviceId, (s) => s.capabilities);
-  const channelCount = useDeviceSessionSelector(deviceId, (s) => s.channelCount);
+  const capabilities = useDeviceSessionSelector(
+    deviceId,
+    (s) => s.capabilities,
+  );
+  const channelCount = useDeviceSessionSelector(
+    deviceId,
+    (s) => s.channelCount,
+  );
   const applied = useDeviceSessionSelector(deviceId, (s) => s.settings.applied);
   const pending = useDeviceSessionSelector(deviceId, (s) => s.settings.pending);
   const loading = useDeviceSessionSelector(deviceId, (s) => s.settings.loading);

@@ -3,7 +3,11 @@
  * optimistic mutations (upload selection, notes) with rollback + toast.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { flagArtifact, listArtifacts, setAnnotation } from "../../../api/sessions";
+import {
+  flagArtifact,
+  listArtifacts,
+  setAnnotation,
+} from "../../../api/sessions";
 import type { Artifact } from "../../../api/types";
 import { de } from "../../../i18n/de";
 import { notifyError } from "../../../lib/notify";
@@ -39,7 +43,10 @@ export interface ArchiveData {
  * @param sessionId - Control session UUID
  * @returns The artifacts plus loading state and mutation helpers
  */
-export function useArchive(token: string | null, sessionId: string | undefined): ArchiveData {
+export function useArchive(
+  token: string | null,
+  sessionId: string | undefined,
+): ArchiveData {
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -82,14 +89,18 @@ export function useArchive(token: string | null, sessionId: string | undefined):
       if (!token || !sessionId || captures.length === 0) return;
       const ids = captures.flatMap((c) => c.artifactIds);
       const previous = new Map<string, boolean>();
-      for (const c of captures) for (const a of c.artifacts) previous.set(a.artifact_id, a.persist);
+      for (const c of captures)
+        for (const a of c.artifacts) previous.set(a.artifact_id, a.persist);
       setArtifacts((prev) => withPersist(prev, ids, wanted));
       const results = await Promise.allSettled(
         ids.map((id) => flagArtifact(token, sessionId, id, wanted)),
       );
-      const failed = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
+      const failed = results.find(
+        (r): r is PromiseRejectedResult => r.status === "rejected",
+      );
       if (failed) {
-        if (alive.current) setArtifacts((prev) => restorePersist(prev, previous));
+        if (alive.current)
+          setArtifacts((prev) => restorePersist(prev, previous));
         notifyError(failed.reason, t.select.flagErrorText, t.select.flagError);
         // Some requests may have succeeded: re-sync with the server's truth.
         await refresh();
@@ -109,12 +120,20 @@ export function useArchive(token: string | null, sessionId: string | undefined):
       try {
         await setAnnotation(token, sessionId, acquisitionId, next);
       } catch (err) {
-        if (alive.current) setArtifacts((prev) => withAnnotation(prev, acquisitionId, before));
+        if (alive.current)
+          setArtifacts((prev) => withAnnotation(prev, acquisitionId, before));
         notifyError(err, t.note.saveErrorText, t.note.saveError);
       }
     },
     [token, sessionId],
   );
 
-  return { artifacts, isLoading, isRefreshing, refresh, setUploadSelection, saveNote };
+  return {
+    artifacts,
+    isLoading,
+    isRefreshing,
+    refresh,
+    setUploadSelection,
+    saveNote,
+  };
 }

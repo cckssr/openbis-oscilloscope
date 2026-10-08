@@ -1,1 +1,4 @@
-export { SettingsInspector, type SettingsInspectorProps } from "./SettingsInspector";
+export {
+  SettingsInspector,
+  type SettingsInspectorProps,
+} from "./SettingsInspector";

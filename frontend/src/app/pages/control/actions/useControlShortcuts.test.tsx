@@ -4,9 +4,15 @@ import { useControlShortcuts } from "./useControlShortcuts";
 import { FakeSession, heldState } from "./testing";
 
 const h = vi.hoisted(() => ({ fake: null as unknown as FakeSession }));
-vi.mock("./session", (orig) => import("./testing").then((m) => m.sessionMock(orig, () => h.fake)));
+vi.mock("./session", (orig) =>
+  import("./testing").then((m) => m.sessionMock(orig, () => h.fake)),
+);
 
-function Harness({ onOpenFullResolution }: { onOpenFullResolution?: () => void }) {
+function Harness({
+  onOpenFullResolution,
+}: {
+  onOpenFullResolution?: () => void;
+}) {
   useControlShortcuts("scope-01", { onOpenFullResolution });
   return (
     <div>
@@ -57,7 +63,11 @@ describe("useControlShortcuts", () => {
     const { getByTestId } = render(<Harness />);
     for (const id of ["typing", "select", "note"]) {
       fireEvent.keyDown(getByTestId(id), { key: "s", bubbles: true });
-      fireEvent.keyDown(getByTestId(id), { key: " ", code: "Space", bubbles: true });
+      fireEvent.keyDown(getByTestId(id), {
+        key: " ",
+        code: "Space",
+        bubbles: true,
+      });
     }
     expect(h.fake.actions.saveCapture).not.toHaveBeenCalled();
     expect(h.fake.actions.startLive).not.toHaveBeenCalled();

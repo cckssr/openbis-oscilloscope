@@ -24,9 +24,16 @@ export function EodBanner({ deviceId, now }: { deviceId: string; now?: Date }) {
   const config = useAppConfig();
   const tick = useNow(30_000, now === undefined);
   const model = useHeaderModel(deviceId);
-  const relevant = model.lockStatus === "held" || model.lockStatus === "passive" || model.notUploaded > 0;
+  const relevant =
+    model.lockStatus === "held" ||
+    model.lockStatus === "passive" ||
+    model.notUploaded > 0;
   if (!config || !relevant) return null;
-  const left = eodMinutesLeft(now ?? new Date(tick), config.eod_reset_time, config.eod_timezone);
+  const left = eodMinutesLeft(
+    now ?? new Date(tick),
+    config.eod_reset_time,
+    config.eod_timezone,
+  );
   if (left === null) return null;
   return (
     <Banner

@@ -15,7 +15,11 @@ interface RememberToggleProps {
  * @param props - See {@link RememberToggleProps}
  * @returns The toggle button
  */
-export function RememberToggle({ pinned, fieldLabel, onToggle }: RememberToggleProps) {
+export function RememberToggle({
+  pinned,
+  fieldLabel,
+  onToggle,
+}: RememberToggleProps) {
   const Icon = pinned ? Pin : PinOff;
   return (
     <button

@@ -10,13 +10,22 @@ vi.mock("../../../api/events");
 vi.mock("../../../api/config");
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
-const MINE = { owner_user: "me", acquired_at: 1, is_mine: true, session_id: "sess-old" };
+const MINE = {
+  owner_user: "me",
+  acquired_at: 1,
+  is_mine: true,
+  session_id: "sess-old",
+};
 
 let scope: FakeScope;
 let store: DeviceSessionStore;
 
 function make() {
-  store = new DeviceSessionStore({ deviceId: "scope-01", token: "tok", createChannel: noChannel });
+  store = new DeviceSessionStore({
+    deviceId: "scope-01",
+    token: "tok",
+    createChannel: noChannel,
+  });
   return store;
 }
 
@@ -62,9 +71,25 @@ describe("settings preload on start", () => {
 describe("restore last capture after a reclaim", () => {
   function archive() {
     scope.artifacts = [
-      makeArtifact("a1", { acquisition_id: "A", channel: 1, created_at: "2026-10-08T09:00:00Z" }),
-      makeArtifact("b1", { acquisition_id: "B", channel: 1, created_at: "2026-10-08T10:00:00Z", annotation: "RC-Glied", persist: true }),
-      makeArtifact("b2", { acquisition_id: "B", channel: 2, created_at: "2026-10-08T10:00:01Z", annotation: "RC-Glied", persist: true }),
+      makeArtifact("a1", {
+        acquisition_id: "A",
+        channel: 1,
+        created_at: "2026-10-08T09:00:00Z",
+      }),
+      makeArtifact("b1", {
+        acquisition_id: "B",
+        channel: 1,
+        created_at: "2026-10-08T10:00:00Z",
+        annotation: "RC-Glied",
+        persist: true,
+      }),
+      makeArtifact("b2", {
+        acquisition_id: "B",
+        channel: 2,
+        created_at: "2026-10-08T10:00:01Z",
+        annotation: "RC-Glied",
+        persist: true,
+      }),
     ];
   }
 
@@ -92,11 +117,16 @@ describe("restore last capture after a reclaim", () => {
   it("keeps lastCapture (note, flag) when the waveforms cannot be loaded", async () => {
     scope.device.lock = MINE;
     archive();
-    vi.mocked(sessions.getArtifactWaveform).mockRejectedValue(new Error("gone"));
+    vi.mocked(sessions.getArtifactWaveform).mockRejectedValue(
+      new Error("gone"),
+    );
     await make().start();
 
     const s = store.getState();
-    expect(s.lastCapture).toMatchObject({ acquisitionId: "B", note: "RC-Glied" });
+    expect(s.lastCapture).toMatchObject({
+      acquisitionId: "B",
+      note: "RC-Glied",
+    });
     expect(s.lastCapture?.frame.traces).toEqual([]);
     expect(s.frame).toBeNull();
   });

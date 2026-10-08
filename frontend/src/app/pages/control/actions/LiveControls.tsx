@@ -1,4 +1,12 @@
-import { Pause, Play, Repeat, Square, Target, WandSparkles, Zap } from "lucide-react";
+import {
+  Pause,
+  Play,
+  Repeat,
+  Square,
+  Target,
+  WandSparkles,
+  Zap,
+} from "lucide-react";
 import { de } from "../../../../i18n/de";
 import { HelpPopover } from "../../../components/common";
 import { cn } from "../../../components/ui/utils";
@@ -45,7 +53,8 @@ export function LiveControls({ deviceId, level, layout }: LiveControlsProps) {
   const inlineReason = layout === "column" && !groupReason;
   const expert = level === "expert";
 
-  const liveRunning = model.liveStatus === "on" || model.liveStatus === "paused";
+  const liveRunning =
+    model.liveStatus === "on" || model.liveStatus === "paused";
   const liveStarting = model.liveStatus === "starting";
   const overflow = layout === "bar" && expert;
   const moreItems: MoreMenuItem[] = [];
@@ -84,20 +93,41 @@ export function LiveControls({ deviceId, level, layout }: LiveControlsProps) {
   }
 
   return (
-    <div className={cn(CONTAINER[layout])} data-testid="live-controls" data-layout={layout}>
+    <div
+      className={cn(CONTAINER[layout])}
+      data-testid="live-controls"
+      data-layout={layout}
+    >
       {av.liveToggle.visible && (
         <ActionButton
           layout={layout}
           testId="live-toggle"
           icon={liveRunning ? <Square /> : <Play />}
-          label={liveStarting ? t.live.starting : liveRunning ? t.live.stop : t.live.start}
-          railLabel={liveStarting ? t.live.railStarting : liveRunning ? t.live.railStop : t.live.railStart}
+          label={
+            liveStarting
+              ? t.live.starting
+              : liveRunning
+                ? t.live.stop
+                : t.live.start
+          }
+          railLabel={
+            liveStarting
+              ? t.live.railStarting
+              : liveRunning
+                ? t.live.railStop
+                : t.live.railStart
+          }
           variant={liveRunning ? "danger" : "outline"}
           loading={liveStarting}
           reason={av.liveToggle.reason}
           inlineReason={inlineReason}
-          hint={withShortcut(liveRunning ? t.live.stopHint : t.live.startHint, "live")}
-          onClick={() => (liveRunning ? actions.stopLive() : void actions.startLive())}
+          hint={withShortcut(
+            liveRunning ? t.live.stopHint : t.live.startHint,
+            "live",
+          )}
+          onClick={() =>
+            liveRunning ? actions.stopLive() : void actions.startLive()
+          }
         />
       )}
       {av.stopScope.visible && (
@@ -114,7 +144,12 @@ export function LiveControls({ deviceId, level, layout }: LiveControlsProps) {
         />
       )}
       {av.autoscale.visible && (
-        <div className={cn("flex items-center gap-1", layout === "rail" && "w-full")}>
+        <div
+          className={cn(
+            "flex items-center gap-1",
+            layout === "rail" && "w-full",
+          )}
+        >
           <div className="min-w-0 flex-1">
             <ActionButton
               layout={layout}
@@ -129,7 +164,10 @@ export function LiveControls({ deviceId, level, layout }: LiveControlsProps) {
             />
           </div>
           {(layout === "column" || layout === "bar") && (
-            <HelpPopover label={t.autoscale.helpLabel} title={t.autoscale.helpTitle}>
+            <HelpPopover
+              label={t.autoscale.helpLabel}
+              title={t.autoscale.helpTitle}
+            >
               {t.autoscale.help}
             </HelpPopover>
           )}
@@ -171,14 +209,24 @@ export function LiveControls({ deviceId, level, layout }: LiveControlsProps) {
               ? `${t.series.stop} · ${t.series.count(model.seriesCount)}`
               : t.series.start
           }
-          railLabel={model.seriesOn ? `${t.series.railStop} ${model.seriesCount}` : t.series.rail}
+          railLabel={
+            model.seriesOn
+              ? `${t.series.railStop} ${model.seriesCount}`
+              : t.series.rail
+          }
           variant={model.seriesOn ? "danger" : "secondary"}
           // The running label ("… stoppen · 4 Aufnahmen") is longer than the 260 px column: wrap instead of clipping.
-          className={layout === "column" ? "h-auto min-h-9 py-1.5 text-left whitespace-normal coarse:min-h-11" : undefined}
+          className={
+            layout === "column"
+              ? "h-auto min-h-9 py-1.5 text-left whitespace-normal coarse:min-h-11"
+              : undefined
+          }
           reason={av.series.reason}
           inlineReason={inlineReason}
           hint={t.series.hint}
-          onClick={() => (model.seriesOn ? actions.stopSeries() : actions.startSeries())}
+          onClick={() =>
+            model.seriesOn ? actions.stopSeries() : actions.startSeries()
+          }
         />
       )}
       {overflow && <MoreMenu items={moreItems} />}

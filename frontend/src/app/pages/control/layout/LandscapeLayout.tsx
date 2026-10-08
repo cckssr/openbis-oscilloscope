@@ -16,7 +16,13 @@ const t = de.control.page.layout;
  * @param props.groups - Settings groups for the right rail
  * @returns The main region
  */
-export function LandscapeLayout({ slots, groups }: { slots: ControlSlots; groups: InspectorGroupInfo[] }) {
+export function LandscapeLayout({
+  slots,
+  groups,
+}: {
+  slots: ControlSlots;
+  groups: InspectorGroupInfo[];
+}) {
   const [settingsGroup, setSettingsGroup] = useState<string | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
 
@@ -45,7 +51,8 @@ export function LandscapeLayout({ slots, groups }: { slots: ControlSlots; groups
         title={t.settingsSheetTitle}
         description={t.settingsSheetDescription}
       >
-        {settingsGroup !== null && slots.inspector({ layout: "tabs", initialGroupId: settingsGroup })}
+        {settingsGroup !== null &&
+          slots.inspector({ layout: "tabs", initialGroupId: settingsGroup })}
       </ContentSheet>
       <ContentSheet
         open={noteOpen}

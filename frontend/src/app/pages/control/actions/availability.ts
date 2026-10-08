@@ -34,8 +34,13 @@ export type ActionId =
  * @param capability - The capability
  * @returns true when present or unknown
  */
-export function hasCapability(model: ActionModel, capability: Capability): boolean {
-  return model.capabilities.length === 0 || model.capabilities.includes(capability);
+export function hasCapability(
+  model: ActionModel,
+  capability: Capability,
+): boolean {
+  return (
+    model.capabilities.length === 0 || model.capabilities.includes(capability)
+  );
 }
 
 /**
@@ -63,22 +68,32 @@ export function commonReason(model: ActionModel): string | null {
   return model.busy;
 }
 
-const allowed = (visible: boolean, reason: string | null): Availability => ({ visible, reason });
+const allowed = (visible: boolean, reason: string | null): Availability => ({
+  visible,
+  reason,
+});
 
 /**
  * Computes visibility and disabled reason of every action.
  * @param model - Action model
  * @returns One entry per {@link ActionId}
  */
-export function availability(model: ActionModel): Record<ActionId, Availability> {
+export function availability(
+  model: ActionModel,
+): Record<ActionId, Availability> {
   const common = commonReason(model);
   const noSeries = model.seriesOn ? r.seriesRunning : null;
-  const liveRunning = model.liveStatus === "on" || model.liveStatus === "paused";
+  const liveRunning =
+    model.liveStatus === "on" || model.liveStatus === "paused";
   return {
     // Stopping live is a local action and stays possible whenever live runs (A7).
     liveToggle: allowed(
       hasCapability(model, "run") && hasCapability(model, "preview"),
-      liveRunning ? null : model.liveStatus === "starting" ? r.liveStarting : common,
+      liveRunning
+        ? null
+        : model.liveStatus === "starting"
+          ? r.liveStarting
+          : common,
     ),
     stopScope: allowed(hasCapability(model, "stop"), common),
     autoscale: allowed(hasCapability(model, "autoscale"), common ?? noSeries),
@@ -89,7 +104,10 @@ export function availability(model: ActionModel): Record<ActionId, Availability>
       model.seriesOn && model.lockStatus === "held" ? null : common,
     ),
     capture: allowed(hasCapability(model, "acquire"), common ?? noSeries),
-    fullResolution: allowed(hasCapability(model, "acquire"), common ?? noSeries),
+    fullResolution: allowed(
+      hasCapability(model, "acquire"),
+      common ?? noSeries,
+    ),
     screenshot: allowed(hasCapability(model, "screenshot"), common),
   };
 }

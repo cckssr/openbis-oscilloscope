@@ -95,7 +95,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, isLoading, login, loginFromOpenBISCookie, logout }}>
+    <AuthContext.Provider
+      value={{ token, user, isLoading, login, loginFromOpenBISCookie, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

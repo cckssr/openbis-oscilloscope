@@ -38,11 +38,16 @@ export interface LayoutOptions {
   fitSeq?: number;
 }
 
-function yTitle(traces: Trace[], mode: YMode): { title: string; suffix: string } {
+function yTitle(
+  traces: Trace[],
+  mode: YMode,
+): { title: string; suffix: string } {
   if (mode === "divisions") return { title: t.divisions, suffix: "" };
   const units = new Set(traces.map((tr) => tr.yUnit));
-  if (units.size === 1 && units.has("dBV")) return { title: t.level, suffix: "" };
-  if (units.size === 1 && units.has("A")) return { title: t.current, suffix: "A" };
+  if (units.size === 1 && units.has("dBV"))
+    return { title: t.level, suffix: "" };
+  if (units.size === 1 && units.has("A"))
+    return { title: t.current, suffix: "A" };
   return { title: t.voltage, suffix: "V" };
 }
 
@@ -53,7 +58,19 @@ function yTitle(traces: Trace[], mode: YMode): { title: string; suffix: string }
  * @returns A fresh layout object (Plotly stores and mutates the one it is given)
  */
 export function buildLayout(o: LayoutOptions): Partial<Layout> {
-  const { mode, traces, frame, zoomed, dragMode, decor, plotWidth, viewKey, xScale, fit, fitSeq = 0 } = o;
+  const {
+    mode,
+    traces,
+    frame,
+    zoomed,
+    dragMode,
+    decor,
+    plotWidth,
+    viewKey,
+    xScale,
+    fit,
+    fitSeq = 0,
+  } = o;
   const freq = traces.length > 0 && traces.every((tr) => tr.xUnit === "Hz");
   const { title: yAxisTitle, suffix: ySuffix } = yTitle(traces, mode);
 
@@ -82,7 +99,11 @@ export function buildLayout(o: LayoutOptions): Partial<Layout> {
     xaxis: {
       // Copy: Plotly writes the user's zoom into the arrays it is given.
       range: fit ? [fit.x[0] / f, fit.x[1] / f] : [frame[0] / f, frame[1] / f],
-      title: { text: freq ? t.frequency : t.time, standoff: 6, font: { size: 12 } },
+      title: {
+        text: freq ? t.frequency : t.time,
+        standoff: 6,
+        font: { size: 12 },
+      },
       ticksuffix: xScale.suffix,
       tickformat: SCALED_FORMAT,
       hoverformat: ".5~f",
@@ -90,7 +111,10 @@ export function buildLayout(o: LayoutOptions): Partial<Layout> {
       tick0: frame[0] / f,
       dtick: divWidth * step,
       nticks: Math.max(3, Math.round(plotWidth / 90)),
-      minor: scopeGrid && step > 1 ? { dtick: divWidth, showgrid: true, gridcolor: MINOR_GRID } : undefined,
+      minor:
+        scopeGrid && step > 1
+          ? { dtick: divWidth, showgrid: true, gridcolor: MINOR_GRID }
+          : undefined,
       gridcolor: GRID,
       zeroline: false,
       showline: true,
@@ -100,7 +124,14 @@ export function buildLayout(o: LayoutOptions): Partial<Layout> {
     },
     yaxis: {
       ...(mode === "divisions"
-        ? { range: fit?.y ? [fit.y[0], fit.y[1]] : [-Y_DIVISIONS / 2, Y_DIVISIONS / 2], tickmode: "linear", tick0: -Y_DIVISIONS / 2, dtick: 1 }
+        ? {
+            range: fit?.y
+              ? [fit.y[0], fit.y[1]]
+              : [-Y_DIVISIONS / 2, Y_DIVISIONS / 2],
+            tickmode: "linear",
+            tick0: -Y_DIVISIONS / 2,
+            dtick: 1,
+          }
         : { autorange: true, nticks: 9 }),
       title: { text: yAxisTitle, standoff: 4, font: { size: 12 } },
       ticksuffix: ySuffix,

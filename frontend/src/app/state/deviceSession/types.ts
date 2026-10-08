@@ -27,12 +27,7 @@ import type { Timebase, Trace } from "../../../lib/trace";
  * - `lost`: heartbeat failed / lock expired; all loops are stopped.
  */
 export type LockStatus =
-  | "none"
-  | "acquiring"
-  | "held"
-  | "passive"
-  | "releasing"
-  | "lost";
+  "none" | "acquiring" | "held" | "passive" | "releasing" | "lost";
 
 export interface LockState {
   status: LockStatus;
@@ -270,7 +265,8 @@ export interface DeviceSession {
 // Workflow (review §4.1) — pure selector over the state
 // ---------------------------------------------------------------------------
 
-export type WorkflowStepId = "take" | "setup" | "capture" | "annotate" | "upload";
+export type WorkflowStepId =
+  "take" | "setup" | "capture" | "annotate" | "upload";
 
 export interface WorkflowStep {
   id: WorkflowStepId;

@@ -2,7 +2,11 @@ import { useMemo } from "react";
 import { Skeleton } from "../../../components/ui/skeleton";
 import { cn } from "../../../components/ui/utils";
 import { de } from "../../../../i18n/de";
-import { getControlGroups, type ControlContext, type ControlLevel } from "../../../controls";
+import {
+  getControlGroups,
+  type ControlContext,
+  type ControlLevel,
+} from "../../../controls";
 import { useInspectorModel } from "../../../controls/store";
 import { GroupAccordion } from "./GroupAccordion";
 import { GroupBody } from "./GroupBody";
@@ -47,7 +51,8 @@ export function SettingsInspector({
   initialGroupId,
   className,
 }: SettingsInspectorProps) {
-  const { capabilities, channelCount, settings, loading } = useInspectorModel(deviceId);
+  const { capabilities, channelCount, settings, loading } =
+    useInspectorModel(deviceId);
   const groups = useMemo(
     () => getControlGroups({ level, capabilities, channelCount }),
     [level, capabilities, channelCount],
@@ -73,9 +78,14 @@ export function SettingsInspector({
     content = <p className="help-text">{t.noGroups}</p>;
   } else {
     const body = { deviceId, ctx, disabled: !canEdit, disabledReason: reason };
-    if (layout === "accordion") content = <GroupAccordion groups={groups} {...body} />;
-    else if (groups.length === 1) content = <GroupBody group={groups[0]} {...body} />;
-    else content = <GroupTabs groups={groups} initialGroupId={initialGroupId} {...body} />;
+    if (layout === "accordion")
+      content = <GroupAccordion groups={groups} {...body} />;
+    else if (groups.length === 1)
+      content = <GroupBody group={groups[0]} {...body} />;
+    else
+      content = (
+        <GroupTabs groups={groups} initialGroupId={initialGroupId} {...body} />
+      );
   }
 
   return (
@@ -84,7 +94,9 @@ export function SettingsInspector({
       data-level={level}
       className={cn("@container flex min-w-0 flex-col gap-3", className)}
     >
-      {!canEdit && <ReadOnlyBanner reason={readOnlyReason} onTakeControl={onTakeControl} />}
+      {!canEdit && (
+        <ReadOnlyBanner reason={readOnlyReason} onTakeControl={onTakeControl} />
+      )}
       <div className={cn("min-w-0", !canEdit && "opacity-70")}>{content}</div>
     </section>
   );

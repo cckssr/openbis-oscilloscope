@@ -16,7 +16,10 @@ const pendingDispose = new WeakMap<DeviceSessionRegistry, () => void>();
  */
 export function DeviceSessionProvider({ children }: { children: ReactNode }) {
   const { token } = useAuth();
-  const registry = useMemo(() => (token ? new DeviceSessionRegistry(token) : null), [token]);
+  const registry = useMemo(
+    () => (token ? new DeviceSessionRegistry(token) : null),
+    [token],
+  );
 
   useEffect(() => {
     if (!registry) return;
@@ -30,6 +33,8 @@ export function DeviceSessionProvider({ children }: { children: ReactNode }) {
   }, [registry]);
 
   return (
-    <DeviceSessionContext.Provider value={registry}>{children}</DeviceSessionContext.Provider>
+    <DeviceSessionContext.Provider value={registry}>
+      {children}
+    </DeviceSessionContext.Provider>
   );
 }

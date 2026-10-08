@@ -9,7 +9,8 @@ export const login = {
     checking: "Prüfe …",
     noSession:
       "Keine openBIS-Anmeldung gefunden. Bitte zuerst im geöffneten openBIS-Tab anmelden und dann hier erneut prüfen.",
-    expired: "Die openBIS-Sitzung ist abgelaufen. Bitte in openBIS neu anmelden.",
+    expired:
+      "Die openBIS-Sitzung ist abgelaufen. Bitte in openBIS neu anmelden.",
   },
   advanced: {
     toggle: "Erweitert: Sitzungstoken eingeben",
@@ -21,7 +22,8 @@ export const login = {
   },
   errors: {
     invalidToken: "Token ungültig oder abgelaufen.",
-    server: (status: number, message: string) => `Serverfehler ${status}: ${message}`,
+    server: (status: number, message: string) =>
+      `Serverfehler ${status}: ${message}`,
     unreachable: "Backend nicht erreichbar. Läuft der Server?",
   },
 } as const;

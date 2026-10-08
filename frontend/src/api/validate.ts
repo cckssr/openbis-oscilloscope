@@ -43,7 +43,9 @@ export function parseOrThrow<T>(
 ): T {
   const result = schema.safeParse(raw);
   if (result.success) return result.data;
-  console.warn(`[api] Invalid response from ${label}: ${describeIssues(result.error)}`);
+  console.warn(
+    `[api] Invalid response from ${label}: ${describeIssues(result.error)}`,
+  );
   // 502: the server answered 2xx, but with something this client cannot use.
   throw new ApiError(502, INVALID_RESPONSE, INVALID_RESPONSE_MESSAGE);
 }
@@ -65,7 +67,10 @@ export function filterValid<T>(
   items.forEach((item, index) => {
     const result = schema.safeParse(item);
     if (result.success) out.push(result.data);
-    else console.warn(`[api] Skipped invalid ${label}[${index}]: ${describeIssues(result.error)}`);
+    else
+      console.warn(
+        `[api] Skipped invalid ${label}[${index}]: ${describeIssues(result.error)}`,
+      );
   });
   return out;
 }
@@ -98,7 +103,9 @@ export function parseList<T>(
  * @returns A schema producing only the valid elements
  */
 export function lenientArray<T>(element: z.ZodType<T>, label: string) {
-  return z.array(z.unknown()).transform((items) => filterValid(element, items, label));
+  return z
+    .array(z.unknown())
+    .transform((items) => filterValid(element, items, label));
 }
 
 /**

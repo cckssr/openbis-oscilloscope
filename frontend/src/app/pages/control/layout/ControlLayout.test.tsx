@@ -23,9 +23,19 @@ function makeSlots() {
       {extras}
     </div>
   ));
-  const inspector = vi.fn(({ layout, initialGroupId }: { layout: string; initialGroupId?: string }) => (
-    <div data-testid={`inspector-${layout}`}>inspector {initialGroupId ?? "-"}</div>
-  ));
+  const inspector = vi.fn(
+    ({
+      layout,
+      initialGroupId,
+    }: {
+      layout: string;
+      initialGroupId?: string;
+    }) => (
+      <div data-testid={`inspector-${layout}`}>
+        inspector {initialGroupId ?? "-"}
+      </div>
+    ),
+  );
   const slots: ControlSlots = {
     header: <div>HEADER</div>,
     banners: null,
@@ -56,8 +66,17 @@ describe("breakpointForWidth", () => {
 describe("ControlLayout slot placement", () => {
   it("desktop: column actions and the inspector side by side with the plot", () => {
     const { slots, actions, inspector } = makeSlots();
-    render(<ControlLayout slots={slots} groups={groups} breakpoint="desktop" />);
-    for (const text of ["HEADER", "STEPPER", "PLOT", "READOUTS", "STATUS", "LAST card"]) {
+    render(
+      <ControlLayout slots={slots} groups={groups} breakpoint="desktop" />,
+    );
+    for (const text of [
+      "HEADER",
+      "STEPPER",
+      "PLOT",
+      "READOUTS",
+      "STATUS",
+      "LAST card",
+    ]) {
       expect(screen.getByText(text)).toBeTruthy();
     }
     expect(actions).toHaveBeenCalledWith("column");
@@ -68,17 +87,24 @@ describe("ControlLayout slot placement", () => {
 
   it("landscape: icon rail, inspector only in a sheet opened from the rail", () => {
     const { slots, actions, inspector } = makeSlots();
-    render(<ControlLayout slots={slots} groups={groups} breakpoint="landscape" />);
+    render(
+      <ControlLayout slots={slots} groups={groups} breakpoint="landscape" />,
+    );
     expect(actions).toHaveBeenCalledWith("rail", expect.anything());
     expect(inspector).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: /Trigger/ }));
-    expect(inspector).toHaveBeenCalledWith({ layout: "tabs", initialGroupId: "trigger" });
+    expect(inspector).toHaveBeenCalledWith({
+      layout: "tabs",
+      initialGroupId: "trigger",
+    });
     expect(screen.getByTestId("inspector-tabs")).toBeTruthy();
   });
 
   it("portrait: bottom action bar with Notiz and Einstellungen, accordion in a sheet", () => {
     const { slots, actions, inspector } = makeSlots();
-    render(<ControlLayout slots={slots} groups={groups} breakpoint="portrait" />);
+    render(
+      <ControlLayout slots={slots} groups={groups} breakpoint="portrait" />,
+    );
     expect(actions).toHaveBeenCalledWith("bar", expect.anything());
     expect(screen.getByRole("button", { name: "Notiz" })).toBeTruthy();
     expect(inspector).not.toHaveBeenCalled();
@@ -88,7 +114,9 @@ describe("ControlLayout slot placement", () => {
 
   it("portrait: Notiz opens the compact last-capture card in a sheet", () => {
     const { slots } = makeSlots();
-    render(<ControlLayout slots={slots} groups={groups} breakpoint="portrait" />);
+    render(
+      <ControlLayout slots={slots} groups={groups} breakpoint="portrait" />,
+    );
     expect(screen.queryByText("LAST compact")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Notiz" }));
     expect(screen.getByText("LAST compact")).toBeTruthy();

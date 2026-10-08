@@ -19,7 +19,8 @@ const ICON: Record<WorkflowStep["state"], LucideIcon> = {
 
 const STATE_CLASS: Record<WorkflowStep["state"], string> = {
   todo: "border-(--lab-border) text-(--lab-text-secondary)",
-  active: "border-(--lab-accent) bg-(--lab-accent)/10 text-(--lab-accent) font-semibold",
+  active:
+    "border-(--lab-accent) bg-(--lab-accent)/10 text-(--lab-accent) font-semibold",
   done: "border-(--lab-success) text-(--lab-success)",
   blocked: "border-dashed border-(--lab-border) text-(--lab-disabled-text)",
 };
@@ -42,7 +43,13 @@ export interface StepChipProps {
  * @param props - See {@link StepChipProps}
  * @returns A list item
  */
-export function StepChip({ step, index, compact, href, connector }: StepChipProps) {
+export function StepChip({
+  step,
+  index,
+  compact,
+  href,
+  connector,
+}: StepChipProps) {
   const Icon = ICON[step.state];
   const showLabel = !compact || step.state === "active";
   const state = t.state[step.state];
@@ -61,7 +68,8 @@ export function StepChip({ step, index, compact, href, connector }: StepChipProp
       {showLabel ? (
         <span aria-hidden>{step.label}</span>
       ) : (
-        step.state !== "done" && step.state !== "blocked" && <span aria-hidden>{index + 1}</span>
+        step.state !== "done" &&
+        step.state !== "blocked" && <span aria-hidden>{index + 1}</span>
       )}
       {showLabel && !compact && step.optional && step.state !== "done" && (
         <span aria-hidden className="text-xs font-normal">
@@ -87,13 +95,19 @@ export function StepChip({ step, index, compact, href, connector }: StepChipProp
       title={compact ? `${step.label} – ${state}` : undefined}
     >
       {href ? (
-        <Link to={href} className={cn(cls, "hover:bg-(--lab-panel)")} title={t.archiveTitle}>
+        <Link
+          to={href}
+          className={cn(cls, "hover:bg-(--lab-panel)")}
+          title={t.archiveTitle}
+        >
           {body}
         </Link>
       ) : (
         <span className={cls}>{body}</span>
       )}
-      {connector && <span aria-hidden className="h-0.5 w-3 bg-(--lab-border)" />}
+      {connector && (
+        <span aria-hidden className="h-0.5 w-3 bg-(--lab-border)" />
+      )}
     </li>
   );
 }
@@ -116,7 +130,12 @@ export interface WorkflowStepperProps {
  * @param props - See {@link WorkflowStepperProps}
  * @returns The strip
  */
-export function WorkflowStepper({ deviceId, compact = false, trailing, className }: WorkflowStepperProps) {
+export function WorkflowStepper({
+  deviceId,
+  compact = false,
+  trailing,
+  className,
+}: WorkflowStepperProps) {
   const { steps, next } = useWorkflow(deviceId);
   const { archiveSessionId } = useHeaderModel(deviceId);
   return (
@@ -136,13 +155,23 @@ export function WorkflowStepper({ deviceId, compact = false, trailing, className
               index={i}
               compact={compact}
               connector={i < steps.length - 1}
-              href={s.id === "upload" && s.state !== "blocked" ? archivePath(archiveSessionId) : undefined}
+              href={
+                s.id === "upload" && s.state !== "blocked"
+                  ? archivePath(archiveSessionId)
+                  : undefined
+              }
             />
           ))}
         </ol>
       </nav>
       {trailing && <div className="ml-auto shrink-0">{trailing}</div>}
-      <p className={cn("min-w-0 text-sm text-(--lab-text-primary)", trailing && "w-full")} data-testid="next-hint">
+      <p
+        className={cn(
+          "min-w-0 text-sm text-(--lab-text-primary)",
+          trailing && "w-full",
+        )}
+        data-testid="next-hint"
+      >
         <span className="font-semibold">{t.next}:</span> {next}
       </p>
     </div>

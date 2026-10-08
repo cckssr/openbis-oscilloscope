@@ -21,12 +21,23 @@ export interface GroupBodyProps {
  * @param props - See {@link GroupBodyProps}
  * @returns The group content
  */
-export function GroupBody({ deviceId, group, ctx, disabled, disabledReason }: GroupBodyProps) {
+export function GroupBody({
+  deviceId,
+  group,
+  ctx,
+  disabled,
+  disabledReason,
+}: GroupBodyProps) {
   const Custom = group.component;
   return (
     <RegionBoundary name={group.label} resetKeys={[deviceId]}>
       {Custom ? (
-        <Custom deviceId={deviceId} group={group} ctx={ctx} disabled={disabled} />
+        <Custom
+          deviceId={deviceId}
+          group={group}
+          ctx={ctx}
+          disabled={disabled}
+        />
       ) : group.perChannel ? (
         <ChannelSections
           deviceId={deviceId}

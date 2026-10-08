@@ -1,10 +1,20 @@
 import { useState } from "react";
 import { ChevronDown, Download, LoaderCircle } from "lucide-react";
 import { de } from "../../../i18n/de";
-import { listExporters, runExporter, type ExportInput, type Exporter } from "../../../lib/export";
+import {
+  listExporters,
+  runExporter,
+  type ExportInput,
+  type Exporter,
+} from "../../../lib/export";
 import { notifyError } from "../../../lib/notify";
 import { Button } from "../ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 
 const t = de.plot.export;
 
@@ -47,18 +57,30 @@ export function ExportMenu({ input, className }: ExportMenuProps) {
           size="sm"
           className={className}
           disabled={disabled}
-          title={exporters.length === 0 ? t.noneHint : busy ? t.running : undefined}
+          title={
+            exporters.length === 0 ? t.noneHint : busy ? t.running : undefined
+          }
         >
-          {busy ? <LoaderCircle className="animate-spin" aria-hidden /> : <Download aria-hidden />}
+          {busy ? (
+            <LoaderCircle className="animate-spin" aria-hidden />
+          ) : (
+            <Download aria-hidden />
+          )}
           {busy ? t.running : t.button}
           <ChevronDown aria-hidden />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {exporters.map((e) => (
-          <DropdownMenuItem key={e.id} onSelect={() => void run(e)} className="coarse:min-h-11">
+          <DropdownMenuItem
+            key={e.id}
+            onSelect={() => void run(e)}
+            className="coarse:min-h-11"
+          >
             {e.label}
-            <span className="ml-auto pl-3 font-mono text-xs text-(--lab-text-secondary)">.{e.ext}</span>
+            <span className="ml-auto pl-3 font-mono text-xs text-(--lab-text-secondary)">
+              .{e.ext}
+            </span>
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

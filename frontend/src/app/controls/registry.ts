@@ -1,5 +1,10 @@
 /** Module-level registry of control groups; the inspector renders whatever is registered. */
-import type { ControlDef, ControlGroupDef, ControlLevel, GroupFilter } from "./types";
+import type {
+  ControlDef,
+  ControlGroupDef,
+  ControlLevel,
+  GroupFilter,
+} from "./types";
 
 const groups: ControlGroupDef[] = [];
 
@@ -25,7 +30,10 @@ export function registerControlGroup(def: ControlGroupDef): () => void {
  * @param chosen - Level selected in the UI
  * @returns True for basic items always, expert items only in expert mode
  */
-export function isVisibleAtLevel(level: ControlLevel, chosen: ControlLevel): boolean {
+export function isVisibleAtLevel(
+  level: ControlLevel,
+  chosen: ControlLevel,
+): boolean {
   return level === "basic" || chosen === "expert";
 }
 
@@ -45,7 +53,8 @@ export function getControlGroups(filter: GroupFilter): ControlGroupDef[] {
   const result: ControlGroupDef[] = [];
   for (const group of groups) {
     if (!isVisibleAtLevel(group.level, filter.level)) continue;
-    if (group.requires && !filter.capabilities.includes(group.requires)) continue;
+    if (group.requires && !filter.capabilities.includes(group.requires))
+      continue;
     if (group.perChannel && filter.channelCount < 1) continue;
     const controls = group.controls.filter((c) => controlAllowed(c, filter));
     if (controls.length === 0 && !group.component) continue;

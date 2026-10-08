@@ -29,7 +29,12 @@ export function ReadOnlyBanner({ reason, onTakeControl }: ReadOnlyBannerProps) {
         {reason ?? t.readOnlyBanner}
       </p>
       {onTakeControl && (
-        <Button size="sm" variant="secondary" className="coarse:h-11" onClick={onTakeControl}>
+        <Button
+          size="sm"
+          variant="secondary"
+          className="coarse:h-11"
+          onClick={onTakeControl}
+        >
           {t.takeControl}
         </Button>
       )}

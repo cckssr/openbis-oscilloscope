@@ -65,13 +65,20 @@ export function SegmentedControl({
         <SelectTrigger
           id={id}
           aria-label={ariaLabel}
-          className={cn("coarse:data-[size=default]:h-11 coarse:text-base", className)}
+          className={cn(
+            "coarse:data-[size=default]:h-11 coarse:text-base",
+            className,
+          )}
         >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           {items.map((o) => (
-            <SelectItem key={o.value} value={o.value} className="coarse:min-h-11">
+            <SelectItem
+              key={o.value}
+              value={o.value}
+              className="coarse:min-h-11"
+            >
               {o.label}
             </SelectItem>
           ))}
@@ -125,7 +132,9 @@ export function SegmentedControl({
               }}
               className={cn(
                 "flex-1 rounded border-2 font-medium transition-colors coarse:min-h-11 coarse:text-sm",
-                size === "button" ? "h-9 px-4 text-sm coarse:h-11" : "min-h-8 px-3 py-1 text-xs",
+                size === "button"
+                  ? "h-9 px-4 text-sm coarse:h-11"
+                  : "min-h-8 px-3 py-1 text-xs",
                 "outline-none focus-visible:ring-2 focus-visible:ring-(--lab-accent)/40",
                 "disabled:cursor-not-allowed disabled:border-(--lab-border) disabled:bg-(--lab-disabled-bg) disabled:text-(--lab-disabled-text)",
                 active

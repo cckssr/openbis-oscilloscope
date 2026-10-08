@@ -9,7 +9,9 @@ function single(
   trace: Trace,
   value: number,
 ): { values: Measurement[] } {
-  return { values: [{ id, label, value, unit: trace.yUnit, traceId: trace.id }] };
+  return {
+    values: [{ id, label, value, unit: trace.yUnit, traceId: trace.id }],
+  };
 }
 
 export const vpp: Analysis = {
@@ -76,6 +78,11 @@ export const rms: Analysis = {
       sum += v * v;
       count++;
     }
-    return single("rms", "Effektivwert", t, count ? Math.sqrt(sum / count) : NaN);
+    return single(
+      "rms",
+      "Effektivwert",
+      t,
+      count ? Math.sqrt(sum / count) : NaN,
+    );
   },
 };

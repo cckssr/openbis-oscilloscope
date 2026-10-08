@@ -22,15 +22,24 @@ export interface ControlLayoutProps {
  * @param props - See {@link ControlLayoutProps}
  * @returns The full-height page shell
  */
-export function ControlLayout({ slots, groups, breakpoint }: ControlLayoutProps) {
+export function ControlLayout({
+  slots,
+  groups,
+  breakpoint,
+}: ControlLayoutProps) {
   const detected = useBreakpoint();
   const bp = breakpoint ?? detected;
 
   return (
     <div
       data-breakpoint={bp}
-      className={cn("grid h-dvh min-h-0 w-full min-w-0 overflow-hidden bg-(--lab-bg)", "grid-cols-[minmax(0,1fr)] grid-rows-[auto_auto_auto_minmax(0,1fr)_auto]")}
-      style={{ gridTemplateAreas: '"header" "stepper" "banners" "main" "statusbar"' }}
+      className={cn(
+        "grid h-dvh min-h-0 w-full min-w-0 overflow-hidden bg-(--lab-bg)",
+        "grid-cols-[minmax(0,1fr)] grid-rows-[auto_auto_auto_minmax(0,1fr)_auto]",
+      )}
+      style={{
+        gridTemplateAreas: '"header" "stepper" "banners" "main" "statusbar"',
+      }}
     >
       <div style={{ gridArea: "header" }}>{slots.header}</div>
       <div style={{ gridArea: "stepper" }}>{slots.stepper}</div>
@@ -39,7 +48,9 @@ export function ControlLayout({ slots, groups, breakpoint }: ControlLayoutProps)
       </div>
       <main style={{ gridArea: "main" }} className="min-h-0 min-w-0">
         {bp === "desktop" && <DesktopLayout slots={slots} />}
-        {bp === "landscape" && <LandscapeLayout slots={slots} groups={groups} />}
+        {bp === "landscape" && (
+          <LandscapeLayout slots={slots} groups={groups} />
+        )}
         {bp === "portrait" && <PortraitLayout slots={slots} />}
       </main>
       <div style={{ gridArea: "statusbar" }}>{slots.statusbar}</div>

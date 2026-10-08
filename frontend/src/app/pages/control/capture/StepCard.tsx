@@ -19,7 +19,13 @@ export interface StepCardProps {
  * @param props - See {@link StepCardProps}
  * @returns The card
  */
-export function StepCard({ n, title, state, summary, children }: StepCardProps) {
+export function StepCard({
+  n,
+  title,
+  state,
+  summary,
+  children,
+}: StepCardProps) {
   return (
     <section
       aria-current={state === "active" ? "step" : undefined}
@@ -27,7 +33,9 @@ export function StepCard({ n, title, state, summary, children }: StepCardProps) 
       data-state={state}
       className={cn(
         "rounded-lg border p-3",
-        state === "active" ? "border-(--lab-accent) bg-white" : "border-(--lab-border) bg-(--lab-panel)",
+        state === "active"
+          ? "border-(--lab-accent) bg-white"
+          : "border-(--lab-border) bg-(--lab-panel)",
         state === "todo" && "text-(--lab-text-secondary)",
       )}
     >
@@ -45,10 +53,14 @@ export function StepCard({ n, title, state, summary, children }: StepCardProps) 
         </span>
         <h3 className="text-sm font-medium">{title}</h3>
         {state !== "active" && summary && (
-          <span className="ml-auto min-w-0 truncate text-xs text-(--lab-text-secondary)">{summary}</span>
+          <span className="ml-auto min-w-0 truncate text-xs text-(--lab-text-secondary)">
+            {summary}
+          </span>
         )}
       </header>
-      {state === "active" && children && <div className="mt-3 space-y-3 text-sm">{children}</div>}
+      {state === "active" && children && (
+        <div className="mt-3 space-y-3 text-sm">{children}</div>
+      )}
     </section>
   );
 }

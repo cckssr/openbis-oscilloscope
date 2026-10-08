@@ -30,7 +30,11 @@ type Phase = { at: number; phase: "fading" | "gone" };
  * @param props - See {@link ControlStatusProps}
  * @returns The indicator (an empty live region while idle)
  */
-export function ControlStatus({ status, compact = false, className }: ControlStatusProps) {
+export function ControlStatus({
+  status,
+  compact = false,
+  className,
+}: ControlStatusProps) {
   const [hidden, setHidden] = useState<Phase | null>(null);
   const appliedAt = status?.state === "applied" ? status.at : null;
 
@@ -41,7 +45,10 @@ export function ControlStatus({ status, compact = false, className }: ControlSta
       () => setHidden({ at: appliedAt, phase: "fading" }),
       Math.max(0, remaining - FADE_MS),
     );
-    const gone = setTimeout(() => setHidden({ at: appliedAt, phase: "gone" }), remaining);
+    const gone = setTimeout(
+      () => setHidden({ at: appliedAt, phase: "gone" }),
+      remaining,
+    );
     return () => {
       clearTimeout(fade);
       clearTimeout(gone);
@@ -56,7 +63,10 @@ export function ControlStatus({ status, compact = false, className }: ControlSta
         <span className={cn(compact && "sr-only")}>{t.applying}</span>
       </span>
     );
-  } else if (status?.state === "applied" && !(hidden?.at === status.at && hidden.phase === "gone")) {
+  } else if (
+    status?.state === "applied" &&
+    !(hidden?.at === status.at && hidden.phase === "gone")
+  ) {
     const fading = hidden?.at === status.at && hidden.phase === "fading";
     content = (
       <span
@@ -72,7 +82,10 @@ export function ControlStatus({ status, compact = false, className }: ControlSta
     );
   } else if (status?.state === "error") {
     content = (
-      <span role="alert" className="inline-flex items-start gap-1 text-(--lab-danger)">
+      <span
+        role="alert"
+        className="inline-flex items-start gap-1 text-(--lab-danger)"
+      >
         <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
         <span className={cn(compact && "sr-only")}>
           {status.error || t.errorFallback}
@@ -82,7 +95,10 @@ export function ControlStatus({ status, compact = false, className }: ControlSta
   }
 
   return (
-    <span aria-live="polite" className={cn("help-text min-w-0 text-right", className)}>
+    <span
+      aria-live="polite"
+      className={cn("help-text min-w-0 text-right", className)}
+    >
       {content}
     </span>
   );

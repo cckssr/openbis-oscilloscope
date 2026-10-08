@@ -30,14 +30,20 @@ interface DetailsStepProps {
 export function DetailsStep({ state, dispatch }: DetailsStepProps) {
   const config = useAppConfig();
   const configured = config?.lab_courses;
-  const courses = configured && configured.length > 0 ? configured : FALLBACK_LAB_COURSES;
+  const courses =
+    configured && configured.length > 0 ? configured : FALLBACK_LAB_COURSES;
   // A remembered course that is no longer offered stays selectable instead of silently vanishing.
   const options =
-    state.meta.labCourse && !courses.some((c) => c.value === state.meta.labCourse)
-      ? [...courses, { value: state.meta.labCourse, label: state.meta.labCourse }]
+    state.meta.labCourse &&
+    !courses.some((c) => c.value === state.meta.labCourse)
+      ? [
+          ...courses,
+          { value: state.meta.labCourse, label: state.meta.labCourse },
+        ]
       : courses;
 
-  const set = (field: MetaField) => (value: string) => dispatch({ type: "setMeta", field, value });
+  const set = (field: MetaField) => (value: string) =>
+    dispatch({ type: "setMeta", field, value });
   const pin = (key: RememberKey) => ({
     pinned: state.pinned[key],
     onToggle: () => dispatch({ type: "togglePin", key }),
@@ -50,7 +56,13 @@ export function DetailsStep({ state, dispatch }: DetailsStepProps) {
         <p className="help-text">{t.intro}</p>
       </div>
 
-      <Field htmlFor="meta-course" label={t.labCourse} required help={t.labCourseHelp} remember={pin("labCourse")}>
+      <Field
+        htmlFor="meta-course"
+        label={t.labCourse}
+        required
+        help={t.labCourseHelp}
+        remember={pin("labCourse")}
+      >
         <NativeSelect
           id="meta-course"
           value={state.meta.labCourse}
@@ -65,7 +77,13 @@ export function DetailsStep({ state, dispatch }: DetailsStepProps) {
         </NativeSelect>
       </Field>
 
-      <Field htmlFor="meta-title" label={t.expTitle} required help={t.expTitleHelp} remember={pin("expTitle")}>
+      <Field
+        htmlFor="meta-title"
+        label={t.expTitle}
+        required
+        help={t.expTitleHelp}
+        remember={pin("expTitle")}
+      >
         <Input
           id="meta-title"
           className={inputClass}
@@ -108,7 +126,13 @@ export function DetailsStep({ state, dispatch }: DetailsStepProps) {
         />
       </Field>
 
-      <Field htmlFor="meta-notes" label={t.notes} optional help={t.notesHelp} remember={pin("notes")}>
+      <Field
+        htmlFor="meta-notes"
+        label={t.notes}
+        optional
+        help={t.notesHelp}
+        remember={pin("notes")}
+      >
         <Textarea
           id="meta-notes"
           rows={2}

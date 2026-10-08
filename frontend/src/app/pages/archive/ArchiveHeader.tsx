@@ -59,11 +59,21 @@ export function ArchiveHeader({
             <RefreshCw className={isRefreshing ? "animate-spin" : ""} />
           </Button>
           <ExportMenu input={selectionExport} />
-          <Button variant="secondary" onClick={onDownloadAll} disabled={zipBusy}>
+          <Button
+            variant="secondary"
+            onClick={onDownloadAll}
+            disabled={zipBusy}
+          >
             {zipBusy ? "…" : t.export.allZip}
           </Button>
-          <DisabledReason reason={uploadCount === 0 ? t.upload.reasonNone : null}>
-            <Button variant="primary" onClick={onUpload} disabled={uploadCount === 0}>
+          <DisabledReason
+            reason={uploadCount === 0 ? t.upload.reasonNone : null}
+          >
+            <Button
+              variant="primary"
+              onClick={onUpload}
+              disabled={uploadCount === 0}
+            >
               <Upload /> {t.upload.button(uploadCount)}
             </Button>
           </DisabledReason>

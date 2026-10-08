@@ -22,7 +22,13 @@ interface CursorOverlayProps {
  * @param props - See {@link CursorOverlayProps}
  * @returns The overlay
  */
-export function CursorOverlay({ range, positions, width, height, onMove }: CursorOverlayProps) {
+export function CursorOverlay({
+  range,
+  positions,
+  width,
+  height,
+  onMove,
+}: CursorOverlayProps) {
   const layerRef = useRef<HTMLDivElement>(null);
   const plotW = Math.max(1, width - MARGIN.l - MARGIN.r);
   const plotH = Math.max(1, height - MARGIN.t - MARGIN.b);
@@ -30,29 +36,37 @@ export function CursorOverlay({ range, positions, width, height, onMove }: Curso
 
   const toX = (value: number) => ((value - range[0]) / span) * plotW;
 
-  const startDrag = (index: 0 | 1) => (e: React.PointerEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const handle = e.currentTarget;
-    handle.setPointerCapture(e.pointerId);
-    const rect = layerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const move = (ev: PointerEvent) => {
-      const frac = (ev.clientX - rect.left - MARGIN.l) / plotW;
-      onMove(index, range[0] + Math.min(1, Math.max(0, frac)) * span);
+  const startDrag =
+    (index: 0 | 1) => (e: React.PointerEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      const handle = e.currentTarget;
+      handle.setPointerCapture(e.pointerId);
+      const rect = layerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const move = (ev: PointerEvent) => {
+        const frac = (ev.clientX - rect.left - MARGIN.l) / plotW;
+        onMove(index, range[0] + Math.min(1, Math.max(0, frac)) * span);
+      };
+      const end = () => {
+        handle.removeEventListener("pointermove", move);
+        handle.removeEventListener("pointerup", end);
+        handle.removeEventListener("pointercancel", end);
+      };
+      handle.addEventListener("pointermove", move);
+      handle.addEventListener("pointerup", end);
+      handle.addEventListener("pointercancel", end);
     };
-    const end = () => {
-      handle.removeEventListener("pointermove", move);
-      handle.removeEventListener("pointerup", end);
-      handle.removeEventListener("pointercancel", end);
-    };
-    handle.addEventListener("pointermove", move);
-    handle.addEventListener("pointerup", end);
-    handle.addEventListener("pointercancel", end);
-  };
 
   return (
-    <div ref={layerRef} className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden={false}>
-      <div className="absolute overflow-hidden" style={{ left: MARGIN.l, top: MARGIN.t, width: plotW, height: plotH }}>
+    <div
+      ref={layerRef}
+      className="pointer-events-none absolute inset-0 overflow-hidden"
+      aria-hidden={false}
+    >
+      <div
+        className="absolute overflow-hidden"
+        style={{ left: MARGIN.l, top: MARGIN.t, width: plotW, height: plotH }}
+      >
         {positions.map((pos, i) => {
           const x = toX(pos);
           if (x < -20 || x > plotW + 20) return null;

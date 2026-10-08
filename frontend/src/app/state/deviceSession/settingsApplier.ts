@@ -12,7 +12,11 @@ import {
   setTimebase,
   setTrigger,
 } from "../../../api/devices";
-import type { ChannelConfig, TimebaseConfig, TriggerConfig } from "../../../api/types";
+import type {
+  ChannelConfig,
+  TimebaseConfig,
+  TriggerConfig,
+} from "../../../api/types";
 import { de } from "../../../i18n/de";
 import { notifyError, errorMessage } from "../../../lib/notify";
 import type { CommandQueue } from "./commandQueue";
@@ -88,12 +92,20 @@ export class SettingsApplier {
       this.patchSettings((s) => ({
         ...s,
         loading: false,
-        applied: { channels: fresh.channels, timebase: fresh.timebase, trigger: fresh.trigger },
+        applied: {
+          channels: fresh.channels,
+          timebase: fresh.timebase,
+          trigger: fresh.trigger,
+        },
       }));
     } catch (err) {
       if (err instanceof DisposedError) return;
       this.patchSettings((s) => ({ ...s, loading: false }));
-      notifyError(err, t.toast.settingsLoadFailed, t.toast.settingsLoadFailedTitle);
+      notifyError(
+        err,
+        t.toast.settingsLoadFailed,
+        t.toast.settingsLoadFailedTitle,
+      );
     }
   }
 
@@ -112,7 +124,11 @@ export class SettingsApplier {
           ? s
           : {
               ...s,
-              applied: { channels: fresh.channels, timebase: fresh.timebase, trigger: fresh.trigger },
+              applied: {
+                channels: fresh.channels,
+                timebase: fresh.timebase,
+                trigger: fresh.trigger,
+              },
             },
       );
     } catch {
@@ -148,7 +164,9 @@ export class SettingsApplier {
       const res = await getMemoryDepth(this.host.token, this.host.deviceId);
       if (this.host.isDisposed()) return;
       this.host.update((s) =>
-        s.memoryDepth === res.memory_depth ? s : { ...s, memoryDepth: res.memory_depth },
+        s.memoryDepth === res.memory_depth
+          ? s
+          : { ...s, memoryDepth: res.memory_depth },
       );
     } catch {
       // the depth is informational; a failure must not disturb the user
@@ -185,7 +203,9 @@ export class SettingsApplier {
     if (!applied || !sessionId || state.lock.status !== "held") return;
 
     const entries = (
-      Object.entries(state.settings.pending) as Array<[SettingPath, SettingValue]>
+      Object.entries(state.settings.pending) as Array<
+        [SettingPath, SettingValue]
+      >
     ).filter(([path]) => groupOf(path) === group);
     if (entries.length === 0) return;
 
@@ -194,7 +214,9 @@ export class SettingsApplier {
       ...s,
       status: {
         ...s.status,
-        ...Object.fromEntries(entries.map(([p]) => [p, { state: "applying", at }])),
+        ...Object.fromEntries(
+          entries.map(([p]) => [p, { state: "applying", at }]),
+        ),
       },
     }));
 
@@ -229,7 +251,13 @@ export class SettingsApplier {
       return setTrigger(token, deviceId, sessionId, config as TriggerConfig);
     }
     const channel = Number(group.split(".")[1]);
-    return setChannelConfig(token, deviceId, channel, sessionId, config as ChannelConfig);
+    return setChannelConfig(
+      token,
+      deviceId,
+      channel,
+      sessionId,
+      config as ChannelConfig,
+    );
   }
 
   /**
@@ -240,7 +268,10 @@ export class SettingsApplier {
    */
   private settle(
     entries: Array<[SettingPath, SettingValue]>,
-    success: { group: SettingGroup; config: ChannelConfig | TimebaseConfig | TriggerConfig } | null,
+    success: {
+      group: SettingGroup;
+      config: ChannelConfig | TimebaseConfig | TriggerConfig;
+    } | null,
     error?: string,
   ): void {
     const at = this.host.now();
@@ -255,7 +286,8 @@ export class SettingsApplier {
           : { state: "applied", at };
       }
       let applied = s.applied;
-      if (success && applied) applied = withGroup(applied, success.group, success.config);
+      if (success && applied)
+        applied = withGroup(applied, success.group, success.config);
       return { ...s, pending, status, applied, touched: s.touched || !error };
     });
   }
@@ -268,14 +300,20 @@ export class SettingsApplier {
     let fresh: SettingsSnapshot;
     try {
       const res = await getSettings(this.host.token, this.host.deviceId);
-      fresh = { channels: res.channels, timebase: res.timebase, trigger: res.trigger };
+      fresh = {
+        channels: res.channels,
+        timebase: res.timebase,
+        trigger: res.trigger,
+      };
     } catch {
       return;
     }
     if (this.host.isDisposed()) return;
     this.patchSettings((s) => {
       if (!s.applied) return s;
-      const hasPending = Object.keys(s.pending).some((p) => groupOf(p as SettingPath) === group);
+      const hasPending = Object.keys(s.pending).some(
+        (p) => groupOf(p as SettingPath) === group,
+      );
       if (hasPending) return s;
       const config =
         group === "timebase"
@@ -283,7 +321,9 @@ export class SettingsApplier {
           : group === "trigger"
             ? fresh.trigger
             : fresh.channels[Number(group.split(".")[1])];
-      return config ? { ...s, applied: withGroup(s.applied, group, config) } : s;
+      return config
+        ? { ...s, applied: withGroup(s.applied, group, config) }
+        : s;
     });
   }
 

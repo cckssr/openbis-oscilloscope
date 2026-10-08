@@ -51,7 +51,8 @@ export interface ActionModel {
  * @returns The model
  */
 export function selectActionModel(s: DeviceSessionState): ActionModel {
-  const running = (kind: string) => s.jobs.some((j) => j.kind === kind && j.status === "running");
+  const running = (kind: string) =>
+    s.jobs.some((j) => j.kind === kind && j.status === "running");
   return {
     lockStatus: s.lock.status,
     busy: s.busy,
@@ -72,7 +73,9 @@ export function selectActionModel(s: DeviceSessionState): ActionModel {
  * @returns true when all fields are equal
  */
 export function sameActionModel(a: ActionModel, b: ActionModel): boolean {
-  return (Object.keys(a) as Array<keyof ActionModel>).every((k) => Object.is(a[k], b[k]));
+  return (Object.keys(a) as Array<keyof ActionModel>).every((k) =>
+    Object.is(a[k], b[k]),
+  );
 }
 
 /**

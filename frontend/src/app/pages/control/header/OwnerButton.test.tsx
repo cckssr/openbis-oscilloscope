@@ -3,7 +3,10 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import type { HeaderModel } from "./model";
 
-const actions = { release: vi.fn(async () => {}), takeControl: vi.fn(async () => {}) };
+const actions = {
+  release: vi.fn(async () => {}),
+  takeControl: vi.fn(async () => {}),
+};
 vi.mock("../actions/session", () => ({ useDeviceActions: () => actions }));
 // The "other device already locked" question has its own test (useTakeControl.test.tsx).
 const request = vi.fn(() => void actions.takeControl());
@@ -11,7 +14,13 @@ vi.mock("./useTakeControl", () => ({
   useTakeControl: () => ({
     request,
     checking: false,
-    dialog: { open: false, onOpenChange: vi.fn(), deviceNames: [], onSwitch: vi.fn(), onKeepBoth: vi.fn() },
+    dialog: {
+      open: false,
+      onOpenChange: vi.fn(),
+      deviceNames: [],
+      onSwitch: vi.fn(),
+      onKeepBoth: vi.fn(),
+    },
   }),
 }));
 
@@ -43,7 +52,10 @@ const renderButton = (m: HeaderModel) =>
   render(
     <MemoryRouter initialEntries={["/device/scope-01"]}>
       <Routes>
-        <Route path="/device/:id" element={<OwnerButton deviceId="scope-01" model={m} />} />
+        <Route
+          path="/device/:id"
+          element={<OwnerButton deviceId="scope-01" model={m} />}
+        />
         <Route path="/archive/:id" element={<p>ARCHIV</p>} />
       </Routes>
     </MemoryRouter>,
@@ -69,7 +81,9 @@ describe("OwnerButton", () => {
     renderButton(model({ notUploaded: 3 }));
     fireEvent.click(screen.getByRole("button", { name: "Gerät freigeben" }));
     expect(actions.release).not.toHaveBeenCalled();
-    expect(screen.getByText("3 Aufnahmen sind noch nicht hochgeladen.")).toBeTruthy();
+    expect(
+      screen.getByText("3 Aufnahmen sind noch nicht hochgeladen."),
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Trotzdem freigeben" }));
     expect(actions.release).toHaveBeenCalledOnce();
   });
@@ -77,7 +91,9 @@ describe("OwnerButton", () => {
   it("'Jetzt hochladen' goes to the archive without releasing", () => {
     renderButton(model({ notUploaded: 1 }));
     fireEvent.click(screen.getByRole("button", { name: "Gerät freigeben" }));
-    expect(screen.getByText("1 Aufnahme ist noch nicht hochgeladen.")).toBeTruthy();
+    expect(
+      screen.getByText("1 Aufnahme ist noch nicht hochgeladen."),
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Jetzt hochladen" }));
     expect(actions.release).not.toHaveBeenCalled();
     expect(screen.getByText("ARCHIV")).toBeTruthy();

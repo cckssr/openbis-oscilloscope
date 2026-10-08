@@ -1,7 +1,15 @@
-import { useDeviceSessionSelector, selectWorkflow, type Workflow } from "../../../state/deviceSession";
+import {
+  useDeviceSessionSelector,
+  selectWorkflow,
+  type Workflow,
+} from "../../../state/deviceSession";
 
 const sameWorkflow = (a: Workflow, b: Workflow) =>
-  a.next === b.next && a.steps.length === b.steps.length && a.steps.every((s, i) => s.id === b.steps[i].id && s.state === b.steps[i].state);
+  a.next === b.next &&
+  a.steps.length === b.steps.length &&
+  a.steps.every(
+    (s, i) => s.id === b.steps[i].id && s.state === b.steps[i].state,
+  );
 
 /**
  * Workflow steps and the "Als Nächstes" hint of a device session.

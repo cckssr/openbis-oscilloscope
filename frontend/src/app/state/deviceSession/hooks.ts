@@ -21,9 +21,9 @@ import type {
 import { readValue } from "./settingsPaths";
 
 /** Provided by `DeviceSessionProvider`; null while logged out. */
-export const DeviceSessionContext = createContext<DeviceSessionRegistry | null | undefined>(
-  undefined,
-);
+export const DeviceSessionContext = createContext<
+  DeviceSessionRegistry | null | undefined
+>(undefined);
 
 /**
  * The registry of all device stores (for actions that touch another device).
@@ -32,7 +32,9 @@ export const DeviceSessionContext = createContext<DeviceSessionRegistry | null |
 export function useDeviceSessionRegistry(): DeviceSessionRegistry | null {
   const registry = useContext(DeviceSessionContext);
   if (registry === undefined) {
-    throw new Error("useDeviceSessionRegistry must be used within <DeviceSessionProvider>");
+    throw new Error(
+      "useDeviceSessionRegistry must be used within <DeviceSessionProvider>",
+    );
   }
   return registry;
 }
@@ -43,12 +45,19 @@ export function useDeviceSessionRegistry(): DeviceSessionRegistry | null {
  * @param deviceId - The device
  * @returns The shared store, or null when nobody is logged in
  */
-export function useDeviceSessionStore(deviceId: string): DeviceSessionStore | null {
+export function useDeviceSessionStore(
+  deviceId: string,
+): DeviceSessionStore | null {
   const registry = useContext(DeviceSessionContext);
   if (registry === undefined) {
-    throw new Error("useDeviceSession must be used within <DeviceSessionProvider>");
+    throw new Error(
+      "useDeviceSession must be used within <DeviceSessionProvider>",
+    );
   }
-  const store = useMemo(() => registry?.get(deviceId) ?? null, [registry, deviceId]);
+  const store = useMemo(
+    () => registry?.get(deviceId) ?? null,
+    [registry, deviceId],
+  );
   useEffect(() => {
     void store?.start();
   }, [store]);
@@ -69,7 +78,10 @@ export function useDeviceSession(deviceId: string): DeviceSession {
     store ? store.subscribe : NO_OP_SUBSCRIBE,
     store ? store.getState : getNoState,
   );
-  return useMemo(() => ({ state: state as DeviceSessionState, actions: store!.actions }), [state, store]);
+  return useMemo(
+    () => ({ state: state as DeviceSessionState, actions: store!.actions }),
+    [state, store],
+  );
 }
 
 function getNoState(): never {
@@ -94,7 +106,10 @@ export function useDeviceSessionSelector<T>(
     () => cache.select(store!.getState(), selector, isEqual),
     [cache, store, selector, isEqual],
   );
-  return useSyncExternalStore(store ? store.subscribe : NO_OP_SUBSCRIBE, getSnapshot);
+  return useSyncExternalStore(
+    store ? store.subscribe : NO_OP_SUBSCRIBE,
+    getSnapshot,
+  );
 }
 
 /** Result of {@link useSetting}. */
@@ -130,7 +145,9 @@ export function useSetting(deviceId: string, path: SettingPath): UseSetting {
     deviceId,
     (s): SettingSlice => ({
       pending: s.settings.pending[path],
-      applied: s.settings.applied ? readValue(s.settings.applied, path) : undefined,
+      applied: s.settings.applied
+        ? readValue(s.settings.applied, path)
+        : undefined,
       status: s.settings.status[path],
     }),
     sameSlice,
@@ -140,7 +157,12 @@ export function useSetting(deviceId: string, path: SettingPath): UseSetting {
     [store, path],
   );
   return useMemo(
-    () => ({ value: slice.pending ?? slice.applied, applied: slice.applied, status: slice.status, set }),
+    () => ({
+      value: slice.pending ?? slice.applied,
+      applied: slice.applied,
+      status: slice.status,
+      set,
+    }),
     [slice, set],
   );
 }

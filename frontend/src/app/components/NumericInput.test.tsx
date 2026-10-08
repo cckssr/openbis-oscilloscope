@@ -2,13 +2,20 @@ import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { NumericInput, type NumericInputProps } from "./NumericInput";
-import { SEC_PER_DIV_STEPS, VOLT_PER_DIV_STEPS, formatPerDiv } from "../../lib/units";
+import {
+  SEC_PER_DIV_STEPS,
+  VOLT_PER_DIV_STEPS,
+  formatPerDiv,
+} from "../../lib/units";
 
 afterEach(cleanup);
 
 /** Controlled wrapper like a real panel: commits update the value. */
 function Harness(
-  props: Partial<NumericInputProps> & { initial: number; log?: (v: number) => void },
+  props: Partial<NumericInputProps> & {
+    initial: number;
+    log?: (v: number) => void;
+  },
 ) {
   const { initial, log, ...rest } = props;
   const [value, setValue] = useState(initial);
@@ -26,13 +33,23 @@ function Harness(
 }
 
 const field = () => screen.getByRole("textbox") as HTMLInputElement;
-const type = (text: string) => fireEvent.change(field(), { target: { value: text } });
+const type = (text: string) =>
+  fireEvent.change(field(), { target: { value: text } });
 const commitByBlur = () => fireEvent.blur(field());
 
 describe("NumericInput", () => {
   it("A1: lets you type a leading minus and commits -0.5 on blur", () => {
     const log = vi.fn();
-    render(<Harness initial={0.3} unit="V" step={0.1} min={-10} max={10} log={log} />);
+    render(
+      <Harness
+        initial={0.3}
+        unit="V"
+        step={0.1}
+        min={-10}
+        max={10}
+        log={log}
+      />,
+    );
     fireEvent.focus(field());
     type("-");
     expect(field().value).toBe("-"); // no immediate parse to 0
@@ -57,7 +74,14 @@ describe("NumericInput", () => {
   it("A2: steps down through the 1-2-5 sequence below 0.5 V/div", () => {
     const log = vi.fn();
     render(
-      <Harness initial={1} unit="V/div" steps={VOLT_PER_DIV_STEPS} min={0.001} max={10} log={log} />,
+      <Harness
+        initial={1}
+        unit="V/div"
+        steps={VOLT_PER_DIV_STEPS}
+        min={0.001}
+        max={10}
+        log={log}
+      />,
     );
     const down = screen.getByRole("button", { name: "Wert verringern" });
     for (let i = 0; i < 4; i++) fireEvent.click(down);
@@ -74,9 +98,23 @@ describe("NumericInput", () => {
   });
 
   it("disables the stepper at the ends of the range", () => {
-    render(<Harness initial={10} steps={VOLT_PER_DIV_STEPS} min={0.001} max={10} />);
-    expect((screen.getByRole("button", { name: "Wert erhöhen" }) as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByRole("button", { name: "Wert verringern" }) as HTMLButtonElement).disabled).toBe(false);
+    render(
+      <Harness initial={10} steps={VOLT_PER_DIV_STEPS} min={0.001} max={10} />,
+    );
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Wert erhöhen",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Wert verringern",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false);
   });
 
   it("A3: linear steps do not accumulate float error", () => {
@@ -127,7 +165,9 @@ describe("NumericInput", () => {
 
   it("shows range errors like 'max. 10 V' without committing", () => {
     const log = vi.fn();
-    render(<Harness initial={1} unit="V" step={0.1} min={-10} max={10} log={log} />);
+    render(
+      <Harness initial={1} unit="V" step={0.1} min={-10} max={10} log={log} />,
+    );
     type("11");
     commitByBlur();
     expect(log).not.toHaveBeenCalled();
@@ -158,7 +198,9 @@ describe("NumericInput", () => {
   });
 
   it("follows external value changes but keeps an in-progress draft while focused", () => {
-    const { rerender } = render(<NumericInput aria-label="Wert" value={1} onCommit={() => {}} />);
+    const { rerender } = render(
+      <NumericInput aria-label="Wert" value={1} onCommit={() => {}} />,
+    );
     rerender(<NumericInput aria-label="Wert" value={2} onCommit={() => {}} />);
     expect(field().value).toBe("2");
     fireEvent.focus(field());
@@ -185,6 +227,12 @@ describe("NumericInput", () => {
     const log = vi.fn();
     render(<Harness initial={1} disabled log={log} />);
     expect(field().disabled).toBe(true);
-    expect((screen.getByRole("button", { name: "Wert erhöhen" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Wert erhöhen",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
   });
 });

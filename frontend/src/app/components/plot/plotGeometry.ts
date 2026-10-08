@@ -99,5 +99,8 @@ export function yExtent(values: Float64Array[], pad = 0.05): Range | null {
 /** True when two ranges agree within a relative tolerance. */
 export function sameRange(a: Range, b: Range, tolerance = 1e-6): boolean {
   const span = Math.abs(b[1] - b[0]) || 1;
-  return Math.abs(a[0] - b[0]) <= span * tolerance && Math.abs(a[1] - b[1]) <= span * tolerance;
+  return (
+    Math.abs(a[0] - b[0]) <= span * tolerance &&
+    Math.abs(a[1] - b[1]) <= span * tolerance
+  );
 }

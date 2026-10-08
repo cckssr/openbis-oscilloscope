@@ -23,7 +23,10 @@ function isTypingTarget(el: EventTarget | null): boolean {
  * @param enabled - true while a preview is visible
  * @param handlers - Navigation callbacks
  */
-export function usePreviewKeys(enabled: boolean, handlers: PreviewKeyHandlers): void {
+export function usePreviewKeys(
+  enabled: boolean,
+  handlers: PreviewKeyHandlers,
+): void {
   const ref = useRef(handlers);
   useEffect(() => {
     ref.current = handlers;
@@ -31,7 +34,14 @@ export function usePreviewKeys(enabled: boolean, handlers: PreviewKeyHandlers): 
   useEffect(() => {
     if (!enabled) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || isTypingTarget(e.target)) return;
+      if (
+        e.altKey ||
+        e.ctrlKey ||
+        e.metaKey ||
+        e.shiftKey ||
+        isTypingTarget(e.target)
+      )
+        return;
       if (e.key === "ArrowLeft") {
         e.preventDefault();
         ref.current.onPrev();

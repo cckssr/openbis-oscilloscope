@@ -18,7 +18,9 @@ vi.mock("../../api/sessions");
 vi.mock("../../api/events");
 vi.mock("../../api/config");
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
-vi.mock("../context/AuthContext", () => ({ useAuth: () => ({ token: "tok" }) }));
+vi.mock("../context/AuthContext", () => ({
+  useAuth: () => ({ token: "tok" }),
+}));
 
 let actions: DeviceSessionActions;
 let scope: FakeScope;
@@ -46,7 +48,10 @@ function Probe() {
 }
 
 function NoteField() {
-  const note = useDeviceSessionSelector("scope-01", (s) => s.lastCapture?.note ?? "");
+  const note = useDeviceSessionSelector(
+    "scope-01",
+    (s) => s.lastCapture?.note ?? "",
+  );
   useEffect(() => {
     noteRenders += 1;
   });
@@ -54,9 +59,16 @@ function NoteField() {
 }
 
 function ScaleControl() {
-  const { value, status, set } = useSetting("scope-01", "channels.1.scale_v_div");
+  const { value, status, set } = useSetting(
+    "scope-01",
+    "channels.1.scale_v_div",
+  );
   return (
-    <button data-testid="scale" data-status={status?.state ?? ""} onClick={() => set(0.5)}>
+    <button
+      data-testid="scale"
+      data-status={status?.state ?? ""}
+      onClick={() => set(0.5)}
+    >
       {String(value)}
     </button>
   );
@@ -96,7 +108,9 @@ describe("hooks", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(3_000); // ~6 live frames
     });
-    expect(vi.mocked(devices.previewWaveforms).mock.calls.length).toBeGreaterThan(4);
+    expect(
+      vi.mocked(devices.previewWaveforms).mock.calls.length,
+    ).toBeGreaterThan(4);
     expect(renders()).toBe(before);
 
     await act(async () => {
@@ -145,7 +159,9 @@ describe("hooks", () => {
   });
 
   it("the same store is shared by several consumers and survives page unmounts", async () => {
-    const registry = new DeviceSessionRegistry("tok", { createChannel: noChannel });
+    const registry = new DeviceSessionRegistry("tok", {
+      createChannel: noChannel,
+    });
     function Page({ show }: { show: boolean }) {
       return (
         <DeviceSessionContext.Provider value={registry}>

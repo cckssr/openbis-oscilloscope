@@ -45,12 +45,18 @@ export function ControlShell({
       >
         {label}
       </label>
-      {help && <HelpPopover label={de.settings.help(label)}>{help}</HelpPopover>}
+      {help && (
+        <HelpPopover label={de.settings.help(label)}>{help}</HelpPopover>
+      )}
       <ControlStatus status={status} className="ml-auto basis-auto" />
     </div>
   );
   return (
-    <div data-control={path} title={title} className={cn("min-w-0", !inline && "space-y-1")}>
+    <div
+      data-control={path}
+      title={title}
+      className={cn("min-w-0", !inline && "space-y-1")}
+    >
       {inline ? (
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">{header}</div>

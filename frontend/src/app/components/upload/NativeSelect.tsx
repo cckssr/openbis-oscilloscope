@@ -8,7 +8,11 @@ import { cn } from "../ui/utils";
  * @param props - Standard select props
  * @returns The select with a chevron
  */
-export function NativeSelect({ className, children, ...props }: ComponentProps<"select">) {
+export function NativeSelect({
+  className,
+  children,
+  ...props
+}: ComponentProps<"select">) {
   return (
     <div className="relative">
       <select

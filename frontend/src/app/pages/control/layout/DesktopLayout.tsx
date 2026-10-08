@@ -1,5 +1,9 @@
 import { de } from "../../../../i18n/de";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../../../components/ui/resizable";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "../../../components/ui/resizable";
 import { CenterColumn } from "./CenterColumn";
 import { SidePanel } from "./SidePanel";
 import type { ControlSlots } from "./slots";
@@ -11,8 +15,11 @@ const COMPACT_QUERY = "(max-width: 1399px)";
 
 /** Default side-panel widths (px); only read when the panels mount. */
 function defaultWidths(): { actions: number; inspector: number } {
-  const compact = typeof window !== "undefined" && window.matchMedia?.(COMPACT_QUERY).matches;
-  return compact ? { actions: 230, inspector: 300 } : { actions: 260, inspector: 340 };
+  const compact =
+    typeof window !== "undefined" && window.matchMedia?.(COMPACT_QUERY).matches;
+  return compact
+    ? { actions: 230, inspector: 300 }
+    : { actions: 260, inspector: 340 };
 }
 
 /**
@@ -38,7 +45,9 @@ export function DesktopLayout({ slots }: { slots: ControlSlots }) {
         expandLabel={t.expandActions}
         collapsedContent={slots.actions("icon")}
       >
-        <div className="flex flex-col gap-4 pt-6">{slots.actions("column")}</div>
+        <div className="flex flex-col gap-4 pt-6">
+          {slots.actions("column")}
+        </div>
         <div className="mt-4">{slots.lastCapture("card")}</div>
       </SidePanel>
       <ResizableHandle withHandle />

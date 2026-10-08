@@ -8,9 +8,11 @@ import createPlotlyComponent from "react-plotly.js/factory";
 
 // CJS/UMD interop differs between Vite dev (pre-bundled) and build.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const Plotly = ((PlotlyModule as any).default ?? PlotlyModule) as typeof PlotlyModule;
+const Plotly = ((PlotlyModule as any).default ??
+  PlotlyModule) as typeof PlotlyModule;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const factory = ((createPlotlyComponent as any).default ?? createPlotlyComponent) as typeof createPlotlyComponent;
+const factory = ((createPlotlyComponent as any).default ??
+  createPlotlyComponent) as typeof createPlotlyComponent;
 
 /** `<Plot>` bound to the gl2d bundle. */
 export const Plot = factory(Plotly);

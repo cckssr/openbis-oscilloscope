@@ -92,13 +92,13 @@ The `driver` field is a Python dotted import path. The class is loaded dynamical
 
 Everything below is optional. `BaseOscilloscopeDriver.capabilities` derives what `GET /devices/{id}` reports from what your class overrides, so the frontend shows a control only when the driver supports it.
 
-| Override / attribute          | Effect                                                                                                              |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `single()`                    | Arm one acquisition (`POST /devices/{id}/single`, capability `single`). Rigol: `:SINGle`.                           |
-| `force_trigger()`             | Trigger now (`POST …/force-trigger`, capability `force_trigger`). Rigol: `:TFORce`.                                 |
-| `autoscale()`                 | Auto-Setup (`POST …/autoscale`, capability `autoscale`). **Block until the scope settled** (Rigol polls `*OPC?`).   |
-| `channel_count = N`           | Class attribute, default 4. Channels `1..N` are listed, validated and returned by `/settings`.                      |
-| `supports_cancel_acquire = True` | Declare that your long reads honour cancellation (capability `cancel_acquire`).                                  |
+| Override / attribute             | Effect                                                                                                            |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `single()`                       | Arm one acquisition (`POST /devices/{id}/single`, capability `single`). Rigol: `:SINGle`.                         |
+| `force_trigger()`                | Trigger now (`POST …/force-trigger`, capability `force_trigger`). Rigol: `:TFORce`.                               |
+| `autoscale()`                    | Auto-Setup (`POST …/autoscale`, capability `autoscale`). **Block until the scope settled** (Rigol polls `*OPC?`). |
+| `channel_count = N`              | Class attribute, default 4. Channels `1..N` are listed, validated and returned by `/settings`.                    |
+| `supports_cancel_acquire = True` | Declare that your long reads honour cancellation (capability `cancel_acquire`).                                   |
 
 Methods you do not override stay "unsupported": the endpoint answers `400 not_supported` and the capability is not advertised.
 

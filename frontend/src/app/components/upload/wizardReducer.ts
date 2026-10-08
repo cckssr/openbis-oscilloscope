@@ -5,7 +5,10 @@
 import type { CommitResponse } from "../../../api/types";
 import type { CommitRequest } from "../../../api/sessions";
 import { de } from "../../../i18n/de";
-import { EMPTY_SELECTION, type ObjectSelection } from "../OpenBISObjectSelector";
+import {
+  EMPTY_SELECTION,
+  type ObjectSelection,
+} from "../OpenBISObjectSelector";
 import {
   DEFAULT_PINNED,
   EMPTY_META,
@@ -26,7 +29,11 @@ export type WizardAction =
   | { type: "toggleCapture"; id: string }
   | { type: "setSelection"; selection: ObjectSelection }
   | { type: "setTargetMode"; mode: "list" | "manual" }
-  | { type: "setManual"; field: "manualExperimentId" | "manualObjectId"; value: string }
+  | {
+      type: "setManual";
+      field: "manualExperimentId" | "manualObjectId";
+      value: string;
+    }
   | { type: "setMeta"; field: MetaField; value: string }
   | { type: "togglePin"; key: RememberKey }
   | { type: "next" }
@@ -47,7 +54,10 @@ export const OBJECT_ID_PATTERN = /^\/[^/\s]+(\/[^/\s]+){1,2}$/;
  * @param prefs - Remembered form values of this user
  * @returns State on step ① with remembered values applied
  */
-export function initialWizardState(captureIds: string[], prefs: RememberedPrefs): WizardState {
+export function initialWizardState(
+  captureIds: string[],
+  prefs: RememberedPrefs,
+): WizardState {
   return {
     step: "review",
     includedIds: [...captureIds],
@@ -68,11 +78,20 @@ export function initialWizardState(captureIds: string[], prefs: RememberedPrefs)
  * @param state - Wizard state
  * @returns Collection identifier and optional object identifier (trimmed, "" when unset)
  */
-export function targetIdentifiers(state: WizardState): { experimentId: string; objectId: string } {
+export function targetIdentifiers(state: WizardState): {
+  experimentId: string;
+  objectId: string;
+} {
   const { mode, selection, manualExperimentId, manualObjectId } = state.target;
   return mode === "manual"
-    ? { experimentId: manualExperimentId.trim(), objectId: manualObjectId.trim() }
-    : { experimentId: selection.collectionIdentifier, objectId: selection.objectIdentifier };
+    ? {
+        experimentId: manualExperimentId.trim(),
+        objectId: manualObjectId.trim(),
+      }
+    : {
+        experimentId: selection.collectionIdentifier,
+        objectId: selection.objectIdentifier,
+      };
 }
 
 /**
@@ -87,10 +106,15 @@ export function stepIssue(state: WizardState, step: WizardStep): string | null {
     case "review":
       return state.includedIds.length === 0 ? t.review.reasonNone : null;
     case "target": {
-      const { mode, selection, manualExperimentId, manualObjectId } = state.target;
+      const { mode, selection, manualExperimentId, manualObjectId } =
+        state.target;
       if (mode === "manual") {
-        if (!EXPERIMENT_ID_PATTERN.test(manualExperimentId.trim())) return t.target.manualInvalid;
-        if (manualObjectId.trim() && !OBJECT_ID_PATTERN.test(manualObjectId.trim()))
+        if (!EXPERIMENT_ID_PATTERN.test(manualExperimentId.trim()))
+          return t.target.manualInvalid;
+        if (
+          manualObjectId.trim() &&
+          !OBJECT_ID_PATTERN.test(manualObjectId.trim())
+        )
           return t.target.manualObjectInvalid;
         return null;
       }
@@ -125,9 +149,13 @@ export function firstInvalidStep(state: WizardState): WizardStep | null {
  * @param artifactIds - Artifact ids of the ticked captures
  * @returns The request body; empty optional fields are omitted
  */
-export function buildCommitRequest(state: WizardState, artifactIds: string[]): CommitRequest {
+export function buildCommitRequest(
+  state: WizardState,
+  artifactIds: string[],
+): CommitRequest {
   const { experimentId, objectId } = targetIdentifiers(state);
-  const sel = state.target.mode === "list" ? state.target.selection : EMPTY_SELECTION;
+  const sel =
+    state.target.mode === "list" ? state.target.selection : EMPTY_SELECTION;
   const opt = (v: string) => v.trim() || undefined;
   return {
     experiment_id: experimentId,
@@ -158,7 +186,10 @@ function move(state: WizardState, delta: 1 | -1): WizardState {
  * @param action - Action to apply
  * @returns The next state; invalid navigation returns the same state
  */
-export function wizardReducer(state: WizardState, action: WizardAction): WizardState {
+export function wizardReducer(
+  state: WizardState,
+  action: WizardAction,
+): WizardState {
   switch (action.type) {
     case "toggleCapture": {
       const included = state.includedIds.includes(action.id);
@@ -170,21 +201,34 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
       };
     }
     case "setSelection":
-      return { ...state, target: { ...state.target, selection: action.selection } };
+      return {
+        ...state,
+        target: { ...state.target, selection: action.selection },
+      };
     case "setTargetMode":
       return { ...state, target: { ...state.target, mode: action.mode } };
     case "setManual":
-      return { ...state, target: { ...state.target, [action.field]: action.value } };
+      return {
+        ...state,
+        target: { ...state.target, [action.field]: action.value },
+      };
     case "setMeta":
-      return { ...state, meta: { ...state.meta, [action.field]: action.value } };
+      return {
+        ...state,
+        meta: { ...state.meta, [action.field]: action.value },
+      };
     case "togglePin":
-      return { ...state, pinned: { ...state.pinned, [action.key]: !state.pinned[action.key] } };
+      return {
+        ...state,
+        pinned: { ...state.pinned, [action.key]: !state.pinned[action.key] },
+      };
     case "next":
       return move(state, 1);
     case "back":
       return state.submit.status === "submitting" ? state : move(state, -1);
     case "goto": {
-      if (state.submit.status === "submitting" || action.step === "result") return state;
+      if (state.submit.status === "submitting" || action.step === "result")
+        return state;
       const from = STEP_ORDER.indexOf(state.step);
       const to = STEP_ORDER.indexOf(action.step);
       if (to <= from) return { ...state, step: action.step };
@@ -193,16 +237,28 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
       return { ...state, step: action.step };
     }
     case "submitStart":
-      if (state.submit.status === "submitting" || state.submit.status === "success") return state;
+      if (
+        state.submit.status === "submitting" ||
+        state.submit.status === "success"
+      )
+        return state;
       if (firstInvalidStep(state)) return state;
       return { ...state, step: "result", submit: { status: "submitting" } };
     case "submitSuccess":
       return {
         ...state,
         step: "result",
-        submit: { status: "success", result: action.result, count: action.count },
+        submit: {
+          status: "success",
+          result: action.result,
+          count: action.count,
+        },
       };
     case "submitError":
-      return { ...state, step: "result", submit: { status: "error", message: action.message } };
+      return {
+        ...state,
+        step: "result",
+        submit: { status: "error", message: action.message },
+      };
   }
 }

@@ -34,10 +34,15 @@ const PREFIXES: [number, string][] = [
  * @param unit - "s" or "Hz"
  * @returns The scale; factor 1 for empty/non-finite ranges
  */
-export function chooseAxisScale(range: [number, number], unit: string): AxisScale {
+export function chooseAxisScale(
+  range: [number, number],
+  unit: string,
+): AxisScale {
   const maxAbs = Math.max(Math.abs(range[0]), Math.abs(range[1]));
   const [factor, prefix] =
-    (Number.isFinite(maxAbs) && maxAbs > 0 && PREFIXES.find(([f]) => maxAbs >= f * 0.9995)) ||
+    (Number.isFinite(maxAbs) &&
+      maxAbs > 0 &&
+      PREFIXES.find(([f]) => maxAbs >= f * 0.9995)) ||
     PREFIXES[3];
   return { factor, prefix, unit, suffix: ` ${prefix}${unit}` };
 }
@@ -49,7 +54,11 @@ export function chooseAxisScale(range: [number, number], unit: string): AxisScal
  * @param maxDecimals - Decimals kept after scaling (trailing zeros dropped)
  * @returns e.g. "0 ms", "2,5 ms", "−5 µs"
  */
-export function formatAxisValue(value: number, scale: AxisScale, maxDecimals = 6): string {
+export function formatAxisValue(
+  value: number,
+  scale: AxisScale,
+  maxDecimals = 6,
+): string {
   if (!Number.isFinite(value)) return "—";
   const text = (value / scale.factor).toLocaleString("de-DE", {
     maximumFractionDigits: maxDecimals,

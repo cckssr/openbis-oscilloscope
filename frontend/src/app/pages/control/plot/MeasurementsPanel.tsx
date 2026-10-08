@@ -33,9 +33,20 @@ export function MeasurementsPanel({ deviceId, level }: MeasurementsPanelProps) {
 
   return (
     <RegionBoundary name={t.measurements} resetKeys={[deviceId]}>
-      <div className={open ? "rounded border-2 border-(--lab-border) bg-white p-2" : undefined}>
+      <div
+        className={
+          open
+            ? "rounded border-2 border-(--lab-border) bg-white p-2"
+            : undefined
+        }
+      >
         {!open && (
-          <Button variant="ghost" size="sm" aria-expanded={false} onClick={() => setOverride(true)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-expanded={false}
+            onClick={() => setOverride(true)}
+          >
             <ChevronRight aria-hidden />
             {t.showMeasurements}
           </Button>
@@ -43,7 +54,13 @@ export function MeasurementsPanel({ deviceId, level }: MeasurementsPanelProps) {
         {open && (
           <>
             <MeasurementTable traces={traces ?? []} level={level} />
-            <Button variant="ghost" size="sm" className="mt-1" aria-expanded onClick={() => setOverride(false)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-1"
+              aria-expanded
+              onClick={() => setOverride(false)}
+            >
               <ChevronDown aria-hidden />
               {t.hideMeasurements}
             </Button>

@@ -48,24 +48,40 @@ export function PageHeader({
     >
       <div className="flex min-w-0 items-center gap-3">
         {backTo && (
-          <Button asChild variant="secondary" size="icon" aria-label={backLabel} title={backLabel}>
+          <Button
+            asChild
+            variant="secondary"
+            size="icon"
+            aria-label={backLabel}
+            title={backLabel}
+          >
             <Link to={backTo}>
               <ArrowLeft />
             </Link>
           </Button>
         )}
         {!backTo && onBack && (
-          <Button variant="secondary" size="icon" aria-label={backLabel} title={backLabel} onClick={onBack}>
+          <Button
+            variant="secondary"
+            size="icon"
+            aria-label={backLabel}
+            title={backLabel}
+            onClick={onBack}
+          >
             <ArrowLeft />
           </Button>
         )}
         <div className="min-w-0">
-          <h1 className="truncate text-xl font-semibold text-(--lab-text-primary)">{title}</h1>
+          <h1 className="truncate text-xl font-semibold text-(--lab-text-primary)">
+            {title}
+          </h1>
           {subtitle && <p className="help-text truncate">{subtitle}</p>}
         </div>
         {status}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {actions && (
+        <div className="flex flex-wrap items-center gap-2">{actions}</div>
+      )}
     </header>
   );
 }

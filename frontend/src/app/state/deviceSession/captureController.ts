@@ -120,7 +120,11 @@ export class CaptureController {
       const applied = this.host.getState().settings.applied;
       const channels = enabledChannels(applied);
       if (channels && channels.length === 0) {
-        notifyError(new Error(t.toast.noChannel), t.toast.noChannel, t.toast.captureFailedTitle);
+        notifyError(
+          new Error(t.toast.noChannel),
+          t.toast.noChannel,
+          t.toast.captureFailedTitle,
+        );
         return null;
       }
       return await this.runCapture(sessionId, channels, options);
@@ -135,9 +139,13 @@ export class CaptureController {
     { fullResolution, runId, silent }: CaptureOptions,
   ): Promise<Capture | null> {
     const label = fullResolution ? t.jobs.fullResolution : t.jobs.capture;
-    const jobId = this.jobs.start(fullResolution ? "full-resolution" : "capture", label, {
-      cancellable: fullResolution,
-    });
+    const jobId = this.jobs.start(
+      fullResolution ? "full-resolution" : "capture",
+      label,
+      {
+        cancellable: fullResolution,
+      },
+    );
     let unsubscribe: (() => void) | null = null;
     if (fullResolution) {
       this.fullResolutionJob = jobId;
@@ -148,7 +156,10 @@ export class CaptureController {
           event.device_id === this.host.deviceId &&
           event.session_id === sessionId
         ) {
-          this.jobs.update(jobId, { progress: event.done, detail: event.detail });
+          this.jobs.update(jobId, {
+            progress: event.done,
+            detail: event.detail,
+          });
         }
       });
     }
@@ -161,12 +172,17 @@ export class CaptureController {
           if (this.cancelRequested) {
             throw new ApiError(409, "acquisition_cancelled", "cancelled");
           }
-          return acquireWaveforms(this.host.token, this.host.deviceId, sessionId, {
-            channels,
-            maxSamples: fullResolution,
-            runId,
-            includeData: true,
-          });
+          return acquireWaveforms(
+            this.host.token,
+            this.host.deviceId,
+            sessionId,
+            {
+              channels,
+              maxSamples: fullResolution,
+              runId,
+              includeData: true,
+            },
+          );
         },
       );
       if (this.host.isDisposed()) return null;
@@ -194,7 +210,9 @@ export class CaptureController {
       if (!silent) {
         notifySuccess(
           t.toast.captureSaved(number),
-          fullResolution ? t.toast.points(formatPoints(frame.memoryDepth)) : undefined,
+          fullResolution
+            ? t.toast.points(formatPoints(frame.memoryDepth))
+            : undefined,
         );
       }
       void this.loadCounts(false);
@@ -205,7 +223,11 @@ export class CaptureController {
         this.jobs.finish(jobId, "cancelled");
         return null;
       }
-      this.jobs.finish(jobId, "error", errorMessage(err, t.toast.captureFailed));
+      this.jobs.finish(
+        jobId,
+        "error",
+        errorMessage(err, t.toast.captureFailed),
+      );
       notifyError(err, t.toast.captureFailed, t.toast.captureFailedTitle);
       return null;
     } finally {
@@ -235,7 +257,11 @@ export class CaptureController {
       return { artifactId: res.artifact_id };
     } catch (err) {
       if (err instanceof DisposedError) return null;
-      this.jobs.finish(jobId, "error", errorMessage(err, t.toast.screenshotFailed));
+      this.jobs.finish(
+        jobId,
+        "error",
+        errorMessage(err, t.toast.screenshotFailed),
+      );
       notifyError(err, t.toast.screenshotFailed, t.toast.screenshotFailedTitle);
       return null;
     }
@@ -250,8 +276,13 @@ export class CaptureController {
     if (this.host.getState().series.status === "on") return;
     if (!requireControl(this.host) || this.capturing) return;
     const runId = uid();
-    this.host.update((s) => ({ ...s, series: { status: "on", runId, count: 0 } }));
-    const jobId = this.jobs.start("series", t.jobs.series, { cancellable: false });
+    this.host.update((s) => ({
+      ...s,
+      series: { status: "on", runId, count: 0 },
+    }));
+    const jobId = this.jobs.start("series", t.jobs.series, {
+      cancellable: false,
+    });
     this.seriesLoop = this.runSeries(runId, jobId);
   }
 
@@ -261,7 +292,10 @@ export class CaptureController {
    */
   async stopSeries(): Promise<void> {
     if (this.host.getState().series.status === "on") {
-      this.host.update((s) => ({ ...s, series: { ...s.series, status: "off" } }));
+      this.host.update((s) => ({
+        ...s,
+        series: { ...s.series, status: "off" },
+      }));
     }
     this.seriesSleep?.cancel();
     await this.seriesLoop;
@@ -271,20 +305,37 @@ export class CaptureController {
     await this.deps.stopLive();
     const isCurrent = () => {
       const { series, lock } = this.host.getState();
-      return !this.host.isDisposed() && series.status === "on" && series.runId === runId && lock.status === "held";
+      return (
+        !this.host.isDisposed() &&
+        series.status === "on" &&
+        series.runId === runId &&
+        lock.status === "held"
+      );
     };
     try {
       while (isCurrent()) {
         const startedAt = this.host.now();
         if (!this.capturing) {
-          const capture = await this.capture({ fullResolution: false, runId, silent: true });
+          const capture = await this.capture({
+            fullResolution: false,
+            runId,
+            silent: true,
+          });
           if (!isCurrent()) break;
           if (!capture) {
-            this.host.update((s) => ({ ...s, series: { ...s.series, status: "off" } }));
+            this.host.update((s) => ({
+              ...s,
+              series: { ...s.series, status: "off" },
+            }));
             break;
           }
-          this.host.update((s) => ({ ...s, series: { ...s.series, count: s.series.count + 1 } }));
-          this.jobs.update(jobId, { detail: t.jobs.seriesCount(this.host.getState().series.count) });
+          this.host.update((s) => ({
+            ...s,
+            series: { ...s.series, count: s.series.count + 1 },
+          }));
+          this.jobs.update(jobId, {
+            detail: t.jobs.seriesCount(this.host.getState().series.count),
+          });
         }
         this.seriesSleep = cancellableSleep(
           Math.max(0, SERIES_PERIOD_MS - (this.host.now() - startedAt)),
@@ -293,8 +344,14 @@ export class CaptureController {
       }
     } finally {
       if (!this.host.isDisposed()) {
-        const stillOn = this.host.getState().series.runId === runId && this.host.getState().series.status === "on";
-        if (stillOn) this.host.update((s) => ({ ...s, series: { ...s.series, status: "off" } }));
+        const stillOn =
+          this.host.getState().series.runId === runId &&
+          this.host.getState().series.status === "on";
+        if (stillOn)
+          this.host.update((s) => ({
+            ...s,
+            series: { ...s.series, status: "off" },
+          }));
         this.jobs.finish(jobId, "done");
       }
     }
@@ -315,14 +372,24 @@ export class CaptureController {
     const capture = state.lastCapture;
     const sessionId = archiveSessionId(state);
     if (!capture || !sessionId) {
-      notifyError(new Error(t.toast.noCapture), t.toast.noCapture, t.toast.noteFailedTitle);
+      notifyError(
+        new Error(t.toast.noCapture),
+        t.toast.noCapture,
+        t.toast.noteFailedTitle,
+      );
       return;
     }
     try {
-      await setAnnotation(this.host.token, sessionId, capture.acquisitionId, text);
+      await setAnnotation(
+        this.host.token,
+        sessionId,
+        capture.acquisitionId,
+        text,
+      );
       if (flag === true) await this.flagAll(sessionId, capture, true);
     } catch (err) {
-      if (!this.host.isDisposed()) notifyError(err, t.toast.noteFailed, t.toast.noteFailedTitle);
+      if (!this.host.isDisposed())
+        notifyError(err, t.toast.noteFailed, t.toast.noteFailedTitle);
       return;
     }
     this.patchLastCapture(capture.acquisitionId, {
@@ -345,7 +412,8 @@ export class CaptureController {
     try {
       await this.flagAll(sessionId, capture, flagged);
     } catch (err) {
-      if (!this.host.isDisposed()) notifyError(err, t.toast.flagFailed, t.toast.flagFailedTitle);
+      if (!this.host.isDisposed())
+        notifyError(err, t.toast.flagFailed, t.toast.flagFailedTitle);
       return;
     }
     this.patchLastCapture(capture.acquisitionId, { flagged });
@@ -370,13 +438,19 @@ export class CaptureController {
     if (!sessionId) return null;
     try {
       const artifacts = await listArtifacts(this.host.token, sessionId);
-      if (this.host.isDisposed() || archiveSessionId(this.host.getState()) !== sessionId) {
+      if (
+        this.host.isDisposed() ||
+        archiveSessionId(this.host.getState()) !== sessionId
+      ) {
         return null;
       }
       const counts = countsFromArtifacts(artifacts);
       this.host.update((s) => {
         // The last open capture was uploaded: the workflow starts over at "Signal einstellen".
-        const roundDone = counts.total > 0 && counts.notUploaded === 0 && s.counts.notUploaded > 0;
+        const roundDone =
+          counts.total > 0 &&
+          counts.notUploaded === 0 &&
+          s.counts.notUploaded > 0;
         return roundDone
           ? { ...s, counts, settings: { ...s.settings, touched: false } }
           : { ...s, counts };
@@ -403,10 +477,16 @@ export class CaptureController {
     const state = this.host.getState();
     const sessionId = archiveSessionId(state);
     if (state.lastCapture || !sessionId) return;
-    const traces = artifacts.filter((a) => a.artifact_type === "trace" && a.acquisition_id);
+    const traces = artifacts.filter(
+      (a) => a.artifact_type === "trace" && a.acquisition_id,
+    );
     if (traces.length === 0) return;
-    const newest = traces.reduce((a, b) => (b.created_at >= a.created_at ? b : a));
-    const members = traces.filter((a) => a.acquisition_id === newest.acquisition_id);
+    const newest = traces.reduce((a, b) =>
+      b.created_at >= a.created_at ? b : a,
+    );
+    const members = traces.filter(
+      (a) => a.acquisition_id === newest.acquisition_id,
+    );
     const uploaded = members.some((a) => a.uploaded === true);
     const capture: Omit<Capture, "frame"> = {
       acquisitionId: newest.acquisition_id as string,
@@ -414,16 +494,24 @@ export class CaptureController {
       createdAt: newest.created_at,
       number: countsFromArtifacts(artifacts).total,
       fullResolution: false,
-      note: members.find((a) => (a.annotation ?? "").trim() !== "")?.annotation ?? "",
+      note:
+        members.find((a) => (a.annotation ?? "").trim() !== "")?.annotation ??
+        "",
       flagged: !uploaded && members.some((a) => a.persist),
     };
 
     let frame: Capture["frame"] | null = null;
     try {
       const waveforms = await Promise.all(
-        members.map((a) => getArtifactWaveform(this.host.token, sessionId, a.artifact_id)),
+        members.map((a) =>
+          getArtifactWaveform(this.host.token, sessionId, a.artifact_id),
+        ),
       );
-      frame = frameFromArchive(waveforms, this.host.getState().settings.applied, this.host.now());
+      frame = frameFromArchive(
+        waveforms,
+        this.host.getState().settings.applied,
+        this.host.now(),
+      );
     } catch {
       frame = null; // keep the capture (note, flag) even without a plot
     }
@@ -432,18 +520,30 @@ export class CaptureController {
     this.host.update((s) => ({
       ...s,
       // Without waveforms the capture keeps an empty frame and the plot stays as it is.
-      lastCapture: { ...capture, frame: frame ?? frameFromArchive([], applied, this.host.now()) },
+      lastCapture: {
+        ...capture,
+        frame: frame ?? frameFromArchive([], applied, this.host.now()),
+      },
       frame: s.frame ?? frame,
     }));
   }
 
-  private flagAll(sessionId: string, capture: Capture, flagged: boolean): Promise<unknown> {
+  private flagAll(
+    sessionId: string,
+    capture: Capture,
+    flagged: boolean,
+  ): Promise<unknown> {
     return Promise.all(
-      capture.artifactIds.map((id) => flagArtifact(this.host.token, sessionId, id, flagged)),
+      capture.artifactIds.map((id) =>
+        flagArtifact(this.host.token, sessionId, id, flagged),
+      ),
     );
   }
 
-  private patchLastCapture(acquisitionId: string, patch: Partial<Capture>): void {
+  private patchLastCapture(
+    acquisitionId: string,
+    patch: Partial<Capture>,
+  ): void {
     this.host.update((s) =>
       s.lastCapture && s.lastCapture.acquisitionId === acquisitionId
         ? { ...s, lastCapture: { ...s.lastCapture, ...patch } }

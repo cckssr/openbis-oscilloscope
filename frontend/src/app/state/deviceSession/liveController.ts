@@ -71,7 +71,12 @@ export class LiveController {
       return;
     }
     const { live, lock } = this.host.getState();
-    if (this.host.isDisposed() || live.status !== "starting" || lock.status !== "held") return;
+    if (
+      this.host.isDisposed() ||
+      live.status !== "starting" ||
+      lock.status !== "held"
+    )
+      return;
     this.setLive("on");
     this.loop.start();
   }
@@ -160,20 +165,36 @@ export class LiveController {
     const jobId = this.jobs.start("autoscale", t.jobs.autoscale);
     try {
       await this.queue.run(t.busy.autoscale, () =>
-        sendScopeCommand(this.host.token, this.host.deviceId, sessionId, "autoscale"),
+        sendScopeCommand(
+          this.host.token,
+          this.host.deviceId,
+          sessionId,
+          "autoscale",
+        ),
       );
     } catch (err) {
       if (err instanceof DisposedError) return;
-      this.jobs.finish(jobId, "error", errorMessage(err, t.toast.autoscaleFailed));
+      this.jobs.finish(
+        jobId,
+        "error",
+        errorMessage(err, t.toast.autoscaleFailed),
+      );
       notifyError(err, t.toast.autoscaleFailed, t.toast.autoscaleFailedTitle);
       return;
     }
     this.jobs.finish(jobId, "done");
-    this.host.update((s) => ({ ...s, settings: { ...s.settings, touched: true } }));
+    this.host.update((s) => ({
+      ...s,
+      settings: { ...s.settings, touched: true },
+    }));
     await this.deps.reloadSettings();
   }
 
-  private scopeCommand(command: ScopeCommand, label: string, sessionId: string): Promise<void> {
+  private scopeCommand(
+    command: ScopeCommand,
+    label: string,
+    sessionId: string,
+  ): Promise<void> {
     return this.command(label, () =>
       sendScopeCommand(this.host.token, this.host.deviceId, sessionId, command),
     );
@@ -208,12 +229,20 @@ export class LiveController {
     const now = this.host.now();
     const frame = frameFromPreview(resp, now);
     this.host.update((s) => {
-      const applied = mergeFrameIntoApplied(s.settings, resp.channels, resp.timebase, resp.trigger);
+      const applied = mergeFrameIntoApplied(
+        s.settings,
+        resp.channels,
+        resp.timebase,
+        resp.trigger,
+      );
       return {
         ...s,
         frame,
         live: { ...s.live, lastFrameAt: now, error: undefined },
-        settings: applied && applied !== s.settings.applied ? { ...s.settings, applied } : s.settings,
+        settings:
+          applied && applied !== s.settings.applied
+            ? { ...s.settings, applied }
+            : s.settings,
       };
     });
   }

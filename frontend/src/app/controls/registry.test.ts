@@ -4,21 +4,40 @@ import { getControlGroups, registerControlGroup } from "./index";
 import { channelSummary } from "./groups/channels";
 import { resolve } from "./paths";
 import { makeContext } from "./testing";
-import type { ControlGroupDef, EnumControlDef, NumberControlDef } from "./types";
+import type {
+  ControlGroupDef,
+  EnumControlDef,
+  NumberControlDef,
+} from "./types";
 
-const ids = (level: "basic" | "expert", capabilities: string[] = [], channelCount = 4) =>
-  getControlGroups({ level, capabilities, channelCount }).map((g) => g.id);
+const ids = (
+  level: "basic" | "expert",
+  capabilities: string[] = [],
+  channelCount = 4,
+) => getControlGroups({ level, capabilities, channelCount }).map((g) => g.id);
 
 describe("getControlGroups", () => {
   it("shows only the channel group with only the on/off toggle in basic level", () => {
-    const groups = getControlGroups({ level: "basic", capabilities: [], channelCount: 4 });
+    const groups = getControlGroups({
+      level: "basic",
+      capabilities: [],
+      channelCount: 4,
+    });
     expect(groups.map((g) => g.id)).toEqual(["channels"]);
     expect(groups[0].controls.map((c) => c.key)).toEqual(["enabled"]);
   });
 
   it("shows all built-in groups and controls in expert level", () => {
-    const groups = getControlGroups({ level: "expert", capabilities: [], channelCount: 4 });
-    expect(groups.map((g) => g.id)).toEqual(["channels", "timebase", "trigger"]);
+    const groups = getControlGroups({
+      level: "expert",
+      capabilities: [],
+      channelCount: 4,
+    });
+    expect(groups.map((g) => g.id)).toEqual([
+      "channels",
+      "timebase",
+      "trigger",
+    ]);
     expect(groups[0].controls.map((c) => c.key)).toEqual([
       "enabled",
       "scale_v_div",
@@ -63,9 +82,11 @@ describe("getControlGroups", () => {
     it("replaces a group registered twice and keeps its position", () => {
       register({ id: "dup", label: "A" });
       register({ id: "dup", label: "B" });
-      const found = getControlGroups({ level: "expert", capabilities: [], channelCount: 1 }).filter(
-        (g) => g.id === "dup",
-      );
+      const found = getControlGroups({
+        level: "expert",
+        capabilities: [],
+        channelCount: 1,
+      }).filter((g) => g.id === "dup");
       expect(found.map((g) => g.label)).toEqual(["B"]);
     });
   });
@@ -73,7 +94,9 @@ describe("getControlGroups", () => {
 
 describe("summaries", () => {
   it("formats an enabled channel", () => {
-    expect(channelSummary(makeContext(4, 1))).toBe("CH1 · 200 mV/div · DC · 1×");
+    expect(channelSummary(makeContext(4, 1))).toBe(
+      "CH1 · 200 mV/div · DC · 1×",
+    );
   });
 
   it("formats a disabled channel", () => {
@@ -85,17 +108,31 @@ describe("summaries", () => {
   });
 
   it("summarises timebase and trigger groups", () => {
-    const groups = getControlGroups({ level: "expert", capabilities: [], channelCount: 4 });
+    const groups = getControlGroups({
+      level: "expert",
+      capabilities: [],
+      channelCount: 4,
+    });
     const ctx = makeContext();
-    expect(groups.find((g) => g.id === "timebase")?.summary?.(ctx)).toBe("1 ms/div · Versatz 0 s");
-    expect(groups.find((g) => g.id === "trigger")?.summary?.(ctx)).toBe("Auto · CH1 · ↑ · 0 V");
+    expect(groups.find((g) => g.id === "timebase")?.summary?.(ctx)).toBe(
+      "1 ms/div · Versatz 0 s",
+    );
+    expect(groups.find((g) => g.id === "trigger")?.summary?.(ctx)).toBe(
+      "Auto · CH1 · ↑ · 0 V",
+    );
   });
 });
 
 describe("context dependent definitions", () => {
-  const groups = getControlGroups({ level: "expert", capabilities: [], channelCount: 4 });
-  const control = <T,>(group: string, key: string) =>
-    groups.find((g) => g.id === group)!.controls.find((c) => c.key === key) as T;
+  const groups = getControlGroups({
+    level: "expert",
+    capabilities: [],
+    channelCount: 4,
+  });
+  const control = <T>(group: string, key: string) =>
+    groups
+      .find((g) => g.id === group)!
+      .controls.find((c) => c.key === key) as T;
 
   it("steps the channel offset in tenths of V/div", () => {
     const def = control<NumberControlDef>("channels", "offset_v");
@@ -118,7 +155,8 @@ describe("context dependent definitions", () => {
 
   it("offers one trigger source per channel", () => {
     const def = control<EnumControlDef>("trigger", "source");
-    const labels = (n: number) => resolve(def.options, makeContext(n)).map((o) => o.label);
+    const labels = (n: number) =>
+      resolve(def.options, makeContext(n)).map((o) => o.label);
     expect(labels(2)).toEqual(["CH1", "CH2"]);
     expect(labels(4)).toEqual(["CH1", "CH2", "CH3", "CH4"]);
   });

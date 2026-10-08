@@ -50,7 +50,11 @@ function WaveformPlotView({
   const scaleSDiv = timebase?.scaleSDiv;
   const offsetS = timebase?.offsetS ?? 0;
   const frame = useMemo(
-    () => scopeFrame(traces, scaleSDiv ? { scaleSDiv, offsetS, sampleRate: 0 } : undefined),
+    () =>
+      scopeFrame(
+        traces,
+        scaleSDiv ? { scaleSDiv, offsetS, sampleRate: 0 } : undefined,
+      ),
     [traces, scaleSDiv, offsetS],
   );
   const freqAxis = traces.length > 0 && traces.every((t) => t.xUnit === "Hz");
@@ -77,12 +81,22 @@ function WaveformPlotView({
   const visible: Range = liveRange ?? view.committed ?? frame;
 
   const data = useMemo(
-    () => buildPlotData(traces, { mode, window: view.committed ?? frame, plotWidth, xFactor: xScale.factor }),
+    () =>
+      buildPlotData(traces, {
+        mode,
+        window: view.committed ?? frame,
+        plotWidth,
+        xFactor: xScale.factor,
+      }),
     [traces, mode, view.committed, frame, plotWidth, xScale.factor],
   );
-  const decor = useMemo(() => buildOverlayDecor(overlays, traces, mode, xScale.factor), [overlays, traces, mode, xScale.factor]);
+  const decor = useMemo(
+    () => buildOverlayDecor(overlays, traces, mode, xScale.factor),
+    [overlays, traces, mode, xScale.factor],
+  );
   const layout = useMemo(
-    () => buildLayout({
+    () =>
+      buildLayout({
         mode,
         traces,
         frame,
@@ -95,7 +109,19 @@ function WaveformPlotView({
         fit: view.fit,
         fitSeq: view.fitSeq,
       }),
-    [mode, traces, frame, zoomed, view.dragMode, decor, plotWidth, viewKey, xScale, view.fit, view.fitSeq],
+    [
+      mode,
+      traces,
+      frame,
+      zoomed,
+      view.dragMode,
+      decor,
+      plotWidth,
+      viewKey,
+      xScale,
+      view.fit,
+      view.fitSeq,
+    ],
   );
   const config = useMemo(
     () => ({
@@ -134,13 +160,24 @@ function WaveformPlotView({
           layout={layout}
           config={config}
           useResizeHandler
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+          }}
           onRelayout={view.onRelayout}
           onRelayouting={view.onRelayouting}
           onDoubleClick={view.resetView}
         />
         {cursors.enabled && cursors.positions && !empty && width > 0 && (
-          <CursorOverlay range={visible} positions={cursors.positions} width={width} height={height} onMove={cursors.move} />
+          <CursorOverlay
+            range={visible}
+            positions={cursors.positions}
+            width={width}
+            height={height}
+            onMove={cursors.move}
+          />
         )}
         {empty && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/70 p-4 text-center text-sm text-(--lab-text-secondary)">
@@ -151,7 +188,13 @@ function WaveformPlotView({
       {cursors.enabled && cursors.positions && !empty && (
         <CursorReadout traces={traces} positions={cursors.positions} />
       )}
-      {showReadouts && !empty && <ReadoutBar traces={traces} timebase={timebase} memoryDepth={memoryDepth} />}
+      {showReadouts && !empty && (
+        <ReadoutBar
+          traces={traces}
+          timebase={timebase}
+          memoryDepth={memoryDepth}
+        />
+      )}
     </div>
   );
 }

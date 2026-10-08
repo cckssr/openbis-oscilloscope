@@ -24,7 +24,9 @@ describe("RegionBoundary", () => {
       );
     }
     render(<Host />);
-    expect(screen.getByText("Dieser Bereich konnte nicht angezeigt werden")).toBeTruthy();
+    expect(
+      screen.getByText("Dieser Bereich konnte nicht angezeigt werden"),
+    ).toBeTruthy();
     expect(screen.getByText("Bereich: Kurvenanzeige")).toBeTruthy();
     expect(console.error).toHaveBeenCalled();
     // Without fixing the cause the retry fails again; the boundary stays usable.

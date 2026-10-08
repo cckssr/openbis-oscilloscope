@@ -21,7 +21,11 @@ export function ChannelChips({ channels }: { channels: number[] }) {
           key={ch}
           className="inline-flex items-center gap-1 rounded border border-(--lab-border) bg-white px-1.5 py-0.5 text-xs font-medium"
         >
-          <span className="size-2 rounded-full" style={{ backgroundColor: channelColor(ch) }} aria-hidden />
+          <span
+            className="size-2 rounded-full"
+            style={{ backgroundColor: channelColor(ch) }}
+            aria-hidden
+          />
           {channelLabel(ch)}
         </span>
       ))}
@@ -63,7 +67,10 @@ export function CheckBody({
         <dt className="text-(--lab-text-secondary)">{t.check.duration}</dt>
         <dd className="font-medium" data-testid="fr-estimate">
           {range
-            ? t.check.durationRange(formatDuration(range[0]), formatDuration(range[1]))
+            ? t.check.durationRange(
+                formatDuration(range[0]),
+                formatDuration(range[1]),
+              )
             : t.check.durationUnknown}
         </dd>
       </dl>
@@ -79,11 +86,14 @@ export function CheckBody({
 /** Step 3: determinate progress when the job reports it, else indeterminate with elapsed time. */
 export function ReadBody({ job }: { job: Job | null }) {
   const now = useNow(500, true);
-  const percent = job?.progress === undefined ? null : Math.round(job.progress * 100);
+  const percent =
+    job?.progress === undefined ? null : Math.round(job.progress * 100);
   const elapsed = job ? formatDuration((now - job.startedAt) / 1000) : null;
   return (
     <div role="status" aria-live="polite" className="space-y-2">
-      <p className="font-medium">{job?.detail ?? (job ? t.read.reading : t.read.waiting)}</p>
+      <p className="font-medium">
+        {job?.detail ?? (job ? t.read.reading : t.read.waiting)}
+      </p>
       <Progress
         value={percent ?? 100}
         aria-label={t.read.reading}
@@ -109,20 +119,40 @@ export type Outcome =
 export function DoneBody({ outcome }: { outcome: Outcome }) {
   if (outcome.kind === "done") {
     return (
-      <div className="flex items-start gap-2" data-testid="fr-result" data-kind="done">
-        <CircleCheck className="mt-0.5 size-5 shrink-0 text-(--lab-success)" aria-hidden />
+      <div
+        className="flex items-start gap-2"
+        data-testid="fr-result"
+        data-kind="done"
+      >
+        <CircleCheck
+          className="mt-0.5 size-5 shrink-0 text-(--lab-success)"
+          aria-hidden
+        />
         <div>
           <p className="font-medium">{t.done.title}</p>
-          {outcome.points !== null && <p>{t.done.points(formatPoints(outcome.points))}</p>}
-          {outcome.number !== null && <p className="text-(--lab-text-secondary)">{t.done.saved(outcome.number)}</p>}
+          {outcome.points !== null && (
+            <p>{t.done.points(formatPoints(outcome.points))}</p>
+          )}
+          {outcome.number !== null && (
+            <p className="text-(--lab-text-secondary)">
+              {t.done.saved(outcome.number)}
+            </p>
+          )}
         </div>
       </div>
     );
   }
   if (outcome.kind === "cancelled") {
     return (
-      <div className="flex items-start gap-2" data-testid="fr-result" data-kind="cancelled">
-        <OctagonX className="mt-0.5 size-5 shrink-0 text-(--lab-warning)" aria-hidden />
+      <div
+        className="flex items-start gap-2"
+        data-testid="fr-result"
+        data-kind="cancelled"
+      >
+        <OctagonX
+          className="mt-0.5 size-5 shrink-0 text-(--lab-warning)"
+          aria-hidden
+        />
         <div>
           <p className="font-medium">{t.done.cancelledTitle}</p>
           <p className="text-(--lab-text-secondary)">{t.done.cancelled}</p>
@@ -131,11 +161,20 @@ export function DoneBody({ outcome }: { outcome: Outcome }) {
     );
   }
   return (
-    <div className="flex items-start gap-2" data-testid="fr-result" data-kind="error">
-      <TriangleAlert className="mt-0.5 size-5 shrink-0 text-(--lab-danger)" aria-hidden />
+    <div
+      className="flex items-start gap-2"
+      data-testid="fr-result"
+      data-kind="error"
+    >
+      <TriangleAlert
+        className="mt-0.5 size-5 shrink-0 text-(--lab-danger)"
+        aria-hidden
+      />
       <div>
         <p className="font-medium">{t.done.errorTitle}</p>
-        <p className="text-(--lab-text-secondary)">{outcome.message ?? t.done.errorFallback}</p>
+        <p className="text-(--lab-text-secondary)">
+          {outcome.message ?? t.done.errorFallback}
+        </p>
       </div>
     </div>
   );

@@ -14,12 +14,17 @@ const t = de.control.page.banners;
  */
 export function DeviceStateBanner({ deviceId }: { deviceId: string }) {
   const info = useDeviceSessionSelector(deviceId, (s) =>
-    s.lock.status === "held" || !s.device || (s.device.state !== "OFFLINE" && s.device.state !== "ERROR")
+    s.lock.status === "held" ||
+    !s.device ||
+    (s.device.state !== "OFFLINE" && s.device.state !== "ERROR")
       ? null
       : `${s.device.state}|${s.device.last_error ?? ""}`,
   );
   if (!info) return null;
-  const [state, lastError] = [info.slice(0, info.indexOf("|")), info.slice(info.indexOf("|") + 1)];
+  const [state, lastError] = [
+    info.slice(0, info.indexOf("|")),
+    info.slice(info.indexOf("|") + 1),
+  ];
   const offline = state === "OFFLINE";
   return (
     <Banner

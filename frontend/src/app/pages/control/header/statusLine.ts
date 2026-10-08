@@ -9,7 +9,10 @@ const t = de.control.page.header;
  * @returns "14:02"
  */
 export function clockTime(ms: number): string {
-  return new Date(ms).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  return new Date(ms).toLocaleTimeString("de-DE", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 /**

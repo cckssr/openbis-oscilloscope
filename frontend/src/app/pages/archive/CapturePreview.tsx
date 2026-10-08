@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, LoaderCircle, RefreshCw, X } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  LoaderCircle,
+  RefreshCw,
+  X,
+} from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Skeleton } from "../../components/ui/skeleton";
 import { ExportMenu } from "../../components/plot/ExportMenu";
@@ -59,7 +65,8 @@ export function CapturePreview({
       <div className="flex flex-wrap items-center justify-between gap-2 pr-8">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-(--lab-text-primary)">
-            {formatDate(capture.createdAt)} · <span className="font-mono tabular-nums">{time}</span>
+            {formatDate(capture.createdAt)} ·{" "}
+            <span className="font-mono tabular-nums">{time}</span>
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <ChannelChips capture={capture} thumbnailUrl={screenshotUrl} />
@@ -67,13 +74,27 @@ export function CapturePreview({
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="secondary" size="icon" onClick={onPrev} disabled={index <= 0} aria-label={t.prev} title={t.prev}>
+          <Button
+            variant="secondary"
+            size="icon"
+            onClick={onPrev}
+            disabled={index <= 0}
+            aria-label={t.prev}
+            title={t.prev}
+          >
             <ChevronLeft />
           </Button>
           <span className="min-w-14 text-center text-xs text-(--lab-text-secondary) tabular-nums">
             {t.position(index + 1, total)}
           </span>
-          <Button variant="secondary" size="icon" onClick={onNext} disabled={index >= total - 1} aria-label={t.next} title={t.next}>
+          <Button
+            variant="secondary"
+            size="icon"
+            onClick={onNext}
+            disabled={index >= total - 1}
+            aria-label={t.next}
+            title={t.next}
+          >
             <ChevronRight />
           </Button>
           <ExportMenu
@@ -87,7 +108,13 @@ export function CapturePreview({
             }}
           />
           {onClose && (
-            <Button variant="ghost" size="icon" onClick={onClose} aria-label={t.close} title={t.close}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              aria-label={t.close}
+              title={t.close}
+            >
               <X />
             </Button>
           )}
@@ -96,7 +123,9 @@ export function CapturePreview({
 
       <div className="rounded border-2 border-(--lab-border) bg-(--lab-panel) px-3 py-2 text-sm">
         {capture.annotation ? (
-          <span className="text-(--lab-text-primary)">{capture.annotation}</span>
+          <span className="text-(--lab-text-primary)">
+            {capture.annotation}
+          </span>
         ) : (
           <span className="text-(--lab-text-secondary) italic">{t.noNote}</span>
         )}
@@ -105,9 +134,16 @@ export function CapturePreview({
       {capture.kind === "screenshot" ? (
         <div className="flex min-h-48 flex-1 items-center justify-center overflow-auto rounded border-2 border-(--lab-border) bg-white p-2">
           {screenshotUrl ? (
-            <img src={screenshotUrl} alt={t.screenshotAlt} className="max-h-full max-w-full object-contain" />
+            <img
+              src={screenshotUrl}
+              alt={t.screenshotAlt}
+              className="max-h-full max-w-full object-contain"
+            />
           ) : (
-            <LoaderCircle className="size-6 animate-spin text-(--lab-text-secondary)" aria-label="…" />
+            <LoaderCircle
+              className="size-6 animate-spin text-(--lab-text-secondary)"
+              aria-label="…"
+            />
           )}
         </div>
       ) : data.status === "error" ? (
@@ -120,7 +156,10 @@ export function CapturePreview({
       ) : data.status === "loading" ? (
         <Skeleton className="min-h-64 flex-1" />
       ) : (
-        <div ref={setPlotEl} className="min-h-72 flex-1 rounded border-2 border-(--lab-border) bg-white">
+        <div
+          ref={setPlotEl}
+          className="min-h-72 flex-1 rounded border-2 border-(--lab-border) bg-white"
+        >
           <WaveformPlot
             traces={data.traces}
             yMode="volts"
@@ -132,9 +171,11 @@ export function CapturePreview({
         </div>
       )}
 
-      {capture.kind === "trace" && data.status === "ready" && data.traces.length > 0 && (
-        <MeasurementTable traces={data.traces} level="basic" />
-      )}
+      {capture.kind === "trace" &&
+        data.status === "ready" &&
+        data.traces.length > 0 && (
+          <MeasurementTable traces={data.traces} level="basic" />
+        )}
       <p className="help-text">{t.keyHint}</p>
     </div>
   );

@@ -4,7 +4,8 @@ export const settings = {
     ariaLabel: "Geräteeinstellungen",
     loading: "Einstellungen werden geladen…",
     notLoaded: "Die Einstellungen des Geräts sind noch nicht geladen.",
-    notLoadedReadOnly: "Die Einstellungen werden angezeigt, sobald du das Gerät übernommen hast.",
+    notLoadedReadOnly:
+      "Die Einstellungen werden angezeigt, sobald du das Gerät übernommen hast.",
     noGroups: "Für dieses Gerät sind keine Einstellungen verfügbar.",
     readOnlyBanner: "Gerät übernehmen, um Einstellungen zu ändern",
     takeControl: "Gerät übernehmen",
@@ -46,9 +47,18 @@ export const settings = {
         label: "Kopplung",
         help: "Wie das Signal an den Eingang gekoppelt wird: AC blockiert den Gleichanteil, DC zeigt alles, GND zeigt die Nulllinie.",
         options: {
-          AC: { label: "AC", help: "AC: Gleichanteil wird blockiert, nur Wechselspannung sichtbar." },
-          DC: { label: "DC", help: "DC: Das Signal wird vollständig angezeigt." },
-          GND: { label: "GND", help: "GND: Eingang an Masse, zeigt die Nulllinie." },
+          AC: {
+            label: "AC",
+            help: "AC: Gleichanteil wird blockiert, nur Wechselspannung sichtbar.",
+          },
+          DC: {
+            label: "DC",
+            help: "DC: Das Signal wird vollständig angezeigt.",
+          },
+          GND: {
+            label: "GND",
+            help: "GND: Eingang an Masse, zeigt die Nulllinie.",
+          },
         },
       },
       probe: {
@@ -79,7 +89,10 @@ export const settings = {
             label: "Normal",
             help: "Normal: wartet auf einen Trigger und zeigt sonst das letzte Bild.",
           },
-          SINGLE: { label: "Single", help: "Single: nimmt genau ein Bild auf und stoppt." },
+          SINGLE: {
+            label: "Single",
+            help: "Single: nimmt genau ein Bild auf und stoppt.",
+          },
         },
       },
       source: {

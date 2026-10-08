@@ -48,10 +48,26 @@ export const EMPTY_SELECTION: ObjectSelection = {
 
 // German weekday prefix → sort order (0–4 = Mon–Fri, 10 = other)
 const WEEKDAY_ORDER: Record<string, number> = {
-  montag: 0, dienstag: 1, mittwoch: 2, donnerstag: 3, freitag: 4,
-  monday: 0, tuesday: 1, wednesday: 2, thursday: 3, friday: 4,
-  mo: 0, di: 1, mi: 2, do: 3, fr: 4,
-  mon: 0, tue: 1, wed: 2, thu: 3, fri: 4,
+  montag: 0,
+  dienstag: 1,
+  mittwoch: 2,
+  donnerstag: 3,
+  freitag: 4,
+  monday: 0,
+  tuesday: 1,
+  wednesday: 2,
+  thursday: 3,
+  friday: 4,
+  mo: 0,
+  di: 1,
+  mi: 2,
+  do: 3,
+  fr: 4,
+  mon: 0,
+  tue: 1,
+  wed: 2,
+  thu: 3,
+  fri: 4,
 };
 
 function weekdayRank(name: string): number {
@@ -110,16 +126,38 @@ export function resolveSelection(
       };
     }
   }
-  if (next.projectLabel && next.collectionCode && collections?.key === next.projectCode) {
+  if (
+    next.projectLabel &&
+    next.collectionCode &&
+    collections?.key === next.projectCode
+  ) {
     const col = collections.items.find((c) => c.code === next.collectionCode);
     next = col
-      ? next.collectionIdentifier === col.identifier && next.collectionLabel === col.display_name
+      ? next.collectionIdentifier === col.identifier &&
+        next.collectionLabel === col.display_name
         ? next
-        : { ...next, collectionLabel: col.display_name, collectionIdentifier: col.identifier }
-      : { ...next, collectionCode: "", collectionLabel: "", collectionIdentifier: "", objectIdentifier: "", objectLabel: "" };
+        : {
+            ...next,
+            collectionLabel: col.display_name,
+            collectionIdentifier: col.identifier,
+          }
+      : {
+          ...next,
+          collectionCode: "",
+          collectionLabel: "",
+          collectionIdentifier: "",
+          objectIdentifier: "",
+          objectLabel: "",
+        };
   }
-  if (next.collectionIdentifier && next.objectIdentifier && objects?.key === next.collectionCode) {
-    const obj = objects.items.find((o) => o.identifier === next.objectIdentifier);
+  if (
+    next.collectionIdentifier &&
+    next.objectIdentifier &&
+    objects?.key === next.collectionCode
+  ) {
+    const obj = objects.items.find(
+      (o) => o.identifier === next.objectIdentifier,
+    );
     const label = obj ? `${obj.code} (${obj.type})` : "";
     if (!obj) next = { ...next, objectIdentifier: "", objectLabel: "" };
     else if (next.objectLabel !== label) next = { ...next, objectLabel: label };
@@ -142,9 +180,16 @@ interface Props {
  * @param props - Controlled value, change handler, optional "merken" pin
  * @returns The selector
  */
-export function OpenBISObjectSelector({ token, value, onChange, remember, onLoadError }: Props) {
+export function OpenBISObjectSelector({
+  token,
+  value,
+  onChange,
+  remember,
+  onLoadError,
+}: Props) {
   const [projects, setProjects] = useState<ProjectOption[] | null>(null);
-  const [collections, setCollections] = useState<Loaded<CollectionOption> | null>(null);
+  const [collections, setCollections] =
+    useState<Loaded<CollectionOption> | null>(null);
   const [objects, setObjects] = useState<Loaded<ObjectOption> | null>(null);
 
   // Latest callbacks for the async effects (avoids stale closures).
@@ -179,7 +224,16 @@ export function OpenBISObjectSelector({ token, value, onChange, remember, onLoad
     if (!code) return;
     let alive = true;
     listCollections(token, code)
-      .then((items) => alive && setCollections({ key: code, items: items.sort((a, b) => a.display_name.localeCompare(b.display_name)) }))
+      .then(
+        (items) =>
+          alive &&
+          setCollections({
+            key: code,
+            items: items.sort((a, b) =>
+              a.display_name.localeCompare(b.display_name),
+            ),
+          }),
+      )
       .catch((err) => {
         if (!alive) return;
         setCollections({ key: code, items: [] });
@@ -212,8 +266,10 @@ export function OpenBISObjectSelector({ token, value, onChange, remember, onLoad
     if (next !== value) onChangeRef.current(next);
   }, [value, projects, collections, objects]);
 
-  const collectionItems = collections?.key === value.projectCode ? collections.items : null;
-  const objectItems = objects?.key === value.collectionCode ? objects.items : null;
+  const collectionItems =
+    collections?.key === value.projectCode ? collections.items : null;
+  const objectItems =
+    objects?.key === value.collectionCode ? objects.items : null;
 
   const pickProject = (code: string) => {
     const proj = projects?.find((p) => p.code === code);
@@ -251,18 +307,27 @@ export function OpenBISObjectSelector({ token, value, onChange, remember, onLoad
     });
   };
 
-  const loading = (text: string, isLoading: boolean) => (isLoading ? t.loading : text);
+  const loading = (text: string, isLoading: boolean) =>
+    isLoading ? t.loading : text;
 
   return (
     <div className="flex flex-col gap-4">
-      <Field htmlFor="target-group" label={t.group} required help={t.groupHelp} remember={remember}>
+      <Field
+        htmlFor="target-group"
+        label={t.group}
+        required
+        help={t.groupHelp}
+        remember={remember}
+      >
         <NativeSelect
           id="target-group"
           value={value.projectCode}
           disabled={projects === null}
           onChange={(e) => pickProject(e.target.value)}
         >
-          <option value="">{loading(t.groupPlaceholder, projects === null)}</option>
+          <option value="">
+            {loading(t.groupPlaceholder, projects === null)}
+          </option>
           {projects?.map((p) => (
             <option key={p.code} value={p.code}>
               {p.display_name}
@@ -273,7 +338,12 @@ export function OpenBISObjectSelector({ token, value, onChange, remember, onLoad
 
       {projects?.length === 0 && <p className="help-text">{t.noGroups}</p>}
 
-      <Field htmlFor="target-experiment" label={t.experiment} required help={t.experimentHelp}>
+      <Field
+        htmlFor="target-experiment"
+        label={t.experiment}
+        required
+        help={t.experimentHelp}
+      >
         <NativeSelect
           id="target-experiment"
           value={value.collectionCode}
@@ -281,7 +351,10 @@ export function OpenBISObjectSelector({ token, value, onChange, remember, onLoad
           onChange={(e) => pickCollection(e.target.value)}
         >
           <option value="">
-            {loading(t.experimentPlaceholder, !!value.projectCode && collectionItems === null)}
+            {loading(
+              t.experimentPlaceholder,
+              !!value.projectCode && collectionItems === null,
+            )}
           </option>
           {collectionItems?.map((c) => (
             <option key={c.code} value={c.code}>
@@ -291,7 +364,12 @@ export function OpenBISObjectSelector({ token, value, onChange, remember, onLoad
         </NativeSelect>
       </Field>
 
-      <Field htmlFor="target-object" label={t.object} optional help={t.objectHelp}>
+      <Field
+        htmlFor="target-object"
+        label={t.object}
+        optional
+        help={t.objectHelp}
+      >
         <NativeSelect
           id="target-object"
           value={value.objectIdentifier}
@@ -299,7 +377,10 @@ export function OpenBISObjectSelector({ token, value, onChange, remember, onLoad
           onChange={(e) => pickObject(e.target.value)}
         >
           <option value="">
-            {loading(t.objectPlaceholder, !!value.collectionCode && objectItems === null)}
+            {loading(
+              t.objectPlaceholder,
+              !!value.collectionCode && objectItems === null,
+            )}
           </option>
           {objectItems?.map((o) => (
             <option key={o.identifier} value={o.identifier}>

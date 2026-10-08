@@ -23,6 +23,7 @@ export function toNpy(data: Float64Array): Uint8Array {
   for (let i = 0; i < header.length; i++) out[10 + i] = header.charCodeAt(i);
   const offset = 10 + header.length;
   // DataView writes explicit little-endian regardless of platform byte order.
-  for (let i = 0; i < data.length; i++) view.setFloat64(offset + i * 8, data[i], true);
+  for (let i = 0; i < data.length; i++)
+    view.setFloat64(offset + i * 8, data[i], true);
   return out;
 }

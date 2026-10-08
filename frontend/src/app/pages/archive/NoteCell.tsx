@@ -48,7 +48,13 @@ function NoteInput({
  * @param props - See {@link NoteCellProps}
  * @returns The note cell content
  */
-export function NoteCell({ value, editable, editing, onEditingChange, onSave }: NoteCellProps) {
+export function NoteCell({
+  value,
+  editable,
+  editing,
+  onEditingChange,
+  onSave,
+}: NoteCellProps) {
   if (editing && editable) {
     return (
       <NoteInput
@@ -63,7 +69,10 @@ export function NoteCell({ value, editable, editing, onEditingChange, onSave }: 
 
   if (!editable) {
     return (
-      <span className="block truncate text-sm text-(--lab-text-secondary)" title={t.unavailable}>
+      <span
+        className="block truncate text-sm text-(--lab-text-secondary)"
+        title={t.unavailable}
+      >
         {value || "—"}
       </span>
     );

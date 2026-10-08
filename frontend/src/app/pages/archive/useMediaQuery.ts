@@ -7,7 +7,8 @@ import { useEffect, useState } from "react";
  * @returns true while the query matches (false where matchMedia is unavailable)
  */
 export function useMediaQuery(query: string): boolean {
-  const get = () => typeof window !== "undefined" && !!window.matchMedia?.(query).matches;
+  const get = () =>
+    typeof window !== "undefined" && !!window.matchMedia?.(query).matches;
   const [matches, setMatches] = useState(get);
   useEffect(() => {
     const mql = window.matchMedia?.(query);

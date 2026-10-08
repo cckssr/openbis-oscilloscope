@@ -1,5 +1,9 @@
 import { apiFetch } from "./client";
-import { CollectionOptionSchema, ObjectOptionSchema, ProjectOptionSchema } from "./schemas";
+import {
+  CollectionOptionSchema,
+  ObjectOptionSchema,
+  ProjectOptionSchema,
+} from "./schemas";
 import { parseList } from "./validate";
 
 export interface ProjectOption {
@@ -45,7 +49,13 @@ export function listCollections(
   return apiFetch<unknown>(
     `/openbis/structure/collections?project=${encodeURIComponent(project)}`,
     token,
-  ).then((raw) => parseList(CollectionOptionSchema, raw, "GET /openbis/structure/collections"));
+  ).then((raw) =>
+    parseList(
+      CollectionOptionSchema,
+      raw,
+      "GET /openbis/structure/collections",
+    ),
+  );
 }
 
 /**
@@ -61,5 +71,7 @@ export function listObjects(
   return apiFetch<unknown>(
     `/openbis/structure/objects?collection=${encodeURIComponent(collection)}`,
     token,
-  ).then((raw) => parseList(ObjectOptionSchema, raw, "GET /openbis/structure/objects"));
+  ).then((raw) =>
+    parseList(ObjectOptionSchema, raw, "GET /openbis/structure/objects"),
+  );
 }

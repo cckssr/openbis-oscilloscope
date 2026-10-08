@@ -51,10 +51,15 @@ describe("DeviceCard", () => {
 
   it("shows last_error and the supervisor hint for ERROR devices", () => {
     render(
-      <DeviceCard device={{ ...base, state: "ERROR", last_error: "VISA timeout" }} onOpen={() => {}} />,
+      <DeviceCard
+        device={{ ...base, state: "ERROR", last_error: "VISA timeout" }}
+        onOpen={() => {}}
+      />,
     );
     expect(button().disabled).toBe(true);
     expect(screen.getByText("VISA timeout")).toBeTruthy();
-    expect(screen.getAllByText("Bitte Betreuer:in informieren.").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText("Bitte Betreuer:in informieren.").length,
+    ).toBeGreaterThan(0);
   });
 });

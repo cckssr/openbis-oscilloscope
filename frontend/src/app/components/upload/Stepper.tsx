@@ -19,7 +19,10 @@ interface StepperProps {
 export function Stepper({ current, onStepClick }: StepperProps) {
   const currentIndex = STEP_ORDER.indexOf(current);
   return (
-    <ol className="flex items-center gap-1 text-sm" aria-label={de.archive.wizard.title}>
+    <ol
+      className="flex items-center gap-1 text-sm"
+      aria-label={de.archive.wizard.title}
+    >
       {STEP_ORDER.map((step, i) => {
         const done = i < currentIndex;
         const active = i === currentIndex;
@@ -38,13 +41,24 @@ export function Stepper({ current, onStepClick }: StepperProps) {
           </span>
         );
         const label = (
-          <span className={`${active ? "inline" : "hidden lg:inline"} ${active ? "font-medium text-(--lab-text-primary)" : "text-(--lab-text-secondary)"}`}>
+          <span
+            className={`${active ? "inline" : "hidden lg:inline"} ${active ? "font-medium text-(--lab-text-primary)" : "text-(--lab-text-secondary)"}`}
+          >
             {t[step]}
           </span>
         );
         return (
-          <li key={step} className="flex items-center gap-1" aria-current={active ? "step" : undefined}>
-            {i > 0 && <span className="mx-1 h-0.5 w-3 bg-(--lab-border) sm:w-6" aria-hidden />}
+          <li
+            key={step}
+            className="flex items-center gap-1"
+            aria-current={active ? "step" : undefined}
+          >
+            {i > 0 && (
+              <span
+                className="mx-1 h-0.5 w-3 bg-(--lab-border) sm:w-6"
+                aria-hidden
+              />
+            )}
             {clickable ? (
               <button
                 type="button"

@@ -17,7 +17,11 @@ function makeRng(seed = 1): () => number {
 function synth(
   id: string,
   fn: (t: number) => number,
-  { n = 5000, dt = 1e-6, noise = 0 }: { n?: number; dt?: number; noise?: number } = {},
+  {
+    n = 5000,
+    dt = 1e-6,
+    noise = 0,
+  }: { n?: number; dt?: number; noise?: number } = {},
 ): Trace {
   const rng = makeRng(7);
   const x = new Float64Array(n);
@@ -26,17 +30,32 @@ function synth(
     x[i] = i * dt;
     y[i] = fn(x[i]) + noise * rng();
   }
-  return { id, kind: "channel", label: id, color: "#000", x, y, xUnit: "s", yUnit: "V" };
+  return {
+    id,
+    kind: "channel",
+    label: id,
+    color: "#000",
+    x,
+    y,
+    xUnit: "s",
+    yUnit: "V",
+  };
 }
 
-function value(ms: ReturnType<typeof computeMeasurements>, id: string, traceId: string): number {
+function value(
+  ms: ReturnType<typeof computeMeasurements>,
+  id: string,
+  traceId: string,
+): number {
   const m = ms.find((v) => v.id === id && v.traceId === traceId);
   if (!m) throw new Error(`missing ${id} ${traceId}`);
   return m.value;
 }
 
-const sine = (f: number, amp: number, phaseRad = 0, dc = 0) => (t: number) =>
-  dc + amp * Math.sin(2 * Math.PI * f * t - phaseRad);
+const sine =
+  (f: number, amp: number, phaseRad = 0, dc = 0) =>
+  (t: number) =>
+    dc + amp * Math.sin(2 * Math.PI * f * t - phaseRad);
 
 describe("basic measurements", () => {
   const ids = ["vpp", "vmax", "vmin", "mean", "rms", "frequency", "period"];
@@ -61,7 +80,11 @@ describe("basic measurements", () => {
   });
 
   it("finds the frequency of square and triangle waves", () => {
-    const square = synth("CH1", (t) => (Math.floor(t * 2000) % 2 === 0 ? 1 : -1), { noise: 0.05 });
+    const square = synth(
+      "CH1",
+      (t) => (Math.floor(t * 2000) % 2 === 0 ? 1 : -1),
+      { noise: 0.05 },
+    );
     const tri = synth(
       "CH2",
       (t) => {
@@ -85,7 +108,12 @@ describe("basic measurements", () => {
   });
 
   it("skips non-time-domain traces", () => {
-    const spectrum: Trace = { ...synth("FFT(CH1)", () => 0), kind: "analysis", xUnit: "Hz", yUnit: "dBV" };
+    const spectrum: Trace = {
+      ...synth("FFT(CH1)", () => 0),
+      kind: "analysis",
+      xUnit: "Hz",
+      yUnit: "dBV",
+    };
     expect(computeMeasurements([spectrum], ["vpp"])).toEqual([]);
   });
 });
@@ -122,7 +150,9 @@ describe("phase", () => {
   it("reports -45 deg when the second trace leads", () => {
     const a = synth("CH1", sine(1000, 1));
     const b = synth("CH2", sine(1000, 1, -Math.PI / 4));
-    expect(value(computeMeasurements([a, b], ["phase"]), "phase", "CH2")).toBeCloseTo(-45, 0);
+    expect(
+      value(computeMeasurements([a, b], ["phase"]), "phase", "CH2"),
+    ).toBeCloseTo(-45, 0);
   });
 
   it("is stable near 180 deg and works with a chosen reference", () => {

@@ -11,7 +11,12 @@ import { useAuth } from "../../context/AuthContext";
 import type { Capture } from "../../pages/archive/groupArtifacts";
 import { DisabledReason } from "../common";
 import { Button } from "../ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "../ui/dialog";
 import { ConfirmStep } from "./ConfirmStep";
 import { DetailsStep } from "./DetailsStep";
 import { loadPrefs, prefsFromState, savePrefs } from "./rememberedMetadata";
@@ -19,7 +24,12 @@ import { ResultStep } from "./ResultStep";
 import { ReviewStep } from "./ReviewStep";
 import { Stepper } from "./Stepper";
 import { TargetStep } from "./TargetStep";
-import { buildCommitRequest, initialWizardState, stepIssue, wizardReducer } from "./wizardReducer";
+import {
+  buildCommitRequest,
+  initialWizardState,
+  stepIssue,
+  wizardReducer,
+} from "./wizardReducer";
 import { STEP_ORDER } from "./types";
 
 const t = de.archive.wizard;
@@ -42,10 +52,16 @@ interface UploadWizardProps {
  * @param props - See {@link UploadWizardProps}
  * @returns The dialog
  */
-export function UploadWizard({ open, onOpenChange, ...rest }: UploadWizardProps) {
+export function UploadWizard({
+  open,
+  onOpenChange,
+  ...rest
+}: UploadWizardProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {open && <WizardDialogContent {...rest} onClose={() => onOpenChange(false)} />}
+      {open && (
+        <WizardDialogContent {...rest} onClose={() => onOpenChange(false)} />
+      )}
     </Dialog>
   );
 }
@@ -87,7 +103,10 @@ function WizardDialogContent({
       onUploaded();
     } catch (err) {
       notifyError(err, t.result.failed, t.result.toastError);
-      dispatch({ type: "submitError", message: errorMessage(err, t.result.failed) });
+      dispatch({
+        type: "submitError",
+        message: errorMessage(err, t.result.failed),
+      });
     }
   };
 
@@ -127,7 +146,10 @@ function WizardDialogContent({
       if (state.submit.status === "error")
         return (
           <>
-            <Button variant="secondary" onClick={() => dispatch({ type: "goto", step: "confirm" })}>
+            <Button
+              variant="secondary"
+              onClick={() => dispatch({ type: "goto", step: "confirm" })}
+            >
               {t.nav.backToConfirm}
             </Button>
             <Button variant="primary" onClick={submit}>
@@ -154,7 +176,11 @@ function WizardDialogContent({
         </Button>
       ) : (
         <DisabledReason reason={issue}>
-          <Button variant="primary" disabled={!!issue} onClick={() => dispatch({ type: "next" })}>
+          <Button
+            variant="primary"
+            disabled={!!issue}
+            onClick={() => dispatch({ type: "next" })}
+          >
             {t.nav.next} <ArrowRight />
           </Button>
         </DisabledReason>
@@ -178,16 +204,23 @@ function WizardDialogContent({
         <div className="flex flex-wrap items-baseline justify-between gap-x-4">
           <DialogTitle className="text-lg font-semibold">{t.title}</DialogTitle>
           {state.step !== "result" && (
-            <span className="text-sm text-(--lab-text-secondary)">{t.stepOf(stepNo, 4)}</span>
+            <span className="text-sm text-(--lab-text-secondary)">
+              {t.stepOf(stepNo, 4)}
+            </span>
           )}
         </div>
         <DialogDescription id="upload-wizard-description" className="sr-only">
           {t.description}
         </DialogDescription>
-        <Stepper current={state.step} onStepClick={(step) => dispatch({ type: "goto", step })} />
+        <Stepper
+          current={state.step}
+          onStepClick={(step) => dispatch({ type: "goto", step })}
+        />
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">{body}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+        {body}
+      </div>
 
       {footer && (
         <div className="flex flex-wrap items-start justify-between gap-2 border-t-2 border-(--lab-border) px-4 py-3 sm:px-6">

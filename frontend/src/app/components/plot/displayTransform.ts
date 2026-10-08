@@ -14,10 +14,16 @@ export type YMode = "divisions" | "volts";
  * @param hasTimebase - Whether a scope frame is known (empty plot shows the scope grid)
  * @returns The mode to use
  */
-export function resolveYMode(traces: Trace[], requested: YMode | undefined, hasTimebase: boolean): YMode {
+export function resolveYMode(
+  traces: Trace[],
+  requested: YMode | undefined,
+  hasTimebase: boolean,
+): YMode {
   if (requested) return requested;
   if (traces.length === 0) return hasTimebase ? "divisions" : "volts";
-  return traces.every((t) => t.scale && t.yUnit === "V" && t.xUnit === "s") ? "divisions" : "volts";
+  return traces.every((t) => t.scale && t.yUnit === "V" && t.xUnit === "s")
+    ? "divisions"
+    : "volts";
 }
 
 /**
@@ -27,7 +33,11 @@ export function resolveYMode(traces: Trace[], requested: YMode | undefined, hasT
  * @param value - Value in the trace's unit (e.g. volts)
  * @returns Divisions (divisions mode) or the value itself
  */
-export function toDisplay(trace: Pick<Trace, "scale">, mode: YMode, value: number): number {
+export function toDisplay(
+  trace: Pick<Trace, "scale">,
+  mode: YMode,
+  value: number,
+): number {
   if (mode !== "divisions") return value;
   const { perDiv, offset } = trace.scale ?? { perDiv: 1, offset: 0 };
   return (value + offset) / perDiv;
@@ -40,7 +50,11 @@ export function toDisplay(trace: Pick<Trace, "scale">, mode: YMode, value: numbe
  * @param y - Sample values, possibly decimated
  * @returns Display coordinates
  */
-export function toDisplayArray(trace: Pick<Trace, "scale">, mode: YMode, y: Float64Array): Float64Array {
+export function toDisplayArray(
+  trace: Pick<Trace, "scale">,
+  mode: YMode,
+  y: Float64Array,
+): Float64Array {
   if (mode !== "divisions") return y;
   const { perDiv, offset } = trace.scale ?? { perDiv: 1, offset: 0 };
   const out = new Float64Array(y.length);

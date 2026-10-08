@@ -22,11 +22,21 @@ const decimationCache = new WeakMap<Float64Array, CacheEntry>();
  * @param maxPoints - Point budget (≈ 2 × plot width)
  * @returns Decimated x/y
  */
-export function decimateCached(trace: Trace, window: Range, maxPoints: number): Decimated {
+export function decimateCached(
+  trace: Trace,
+  window: Range,
+  maxPoints: number,
+): Decimated {
   const key = `${trace.x.length}|${window[0]}|${window[1]}|${maxPoints}|${trace.x[0]}`;
   const hit = decimationCache.get(trace.y);
   if (hit && hit.key === key) return hit.value;
-  const value = decimateMinMax(trace.x, trace.y, maxPoints, window[0], window[1]);
+  const value = decimateMinMax(
+    trace.x,
+    trace.y,
+    maxPoints,
+    window[0],
+    window[1],
+  );
   decimationCache.set(trace.y, { key, value });
   return value;
 }

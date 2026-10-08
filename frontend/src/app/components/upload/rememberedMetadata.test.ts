@@ -11,7 +11,9 @@ import {
 } from "./rememberedMetadata";
 import { initialWizardState, wizardReducer } from "./wizardReducer";
 
-function memoryStorage(initial: Record<string, string> = {}): PrefsStorage & { data: Record<string, string> } {
+function memoryStorage(
+  initial: Record<string, string> = {},
+): PrefsStorage & { data: Record<string, string> } {
   const data = { ...initial };
   return {
     data,
@@ -36,8 +38,12 @@ describe("loadPrefs", () => {
     expect(loadPrefs("u", memoryStorage()).pinned).toEqual(DEFAULT_PINNED);
     expect(loadPrefs("u", null).meta).toEqual({});
     expect(loadPrefs("u", throwing).meta).toEqual({});
-    expect(loadPrefs("u", memoryStorage({ [prefsKey("u")]: "{nope" })).meta).toEqual({});
-    expect(loadPrefs("u", memoryStorage({ [prefsKey("u")]: "42" })).pinned).toEqual(DEFAULT_PINNED);
+    expect(
+      loadPrefs("u", memoryStorage({ [prefsKey("u")]: "{nope" })).meta,
+    ).toEqual({});
+    expect(
+      loadPrefs("u", memoryStorage({ [prefsKey("u")]: "42" })).pinned,
+    ).toEqual(DEFAULT_PINNED);
   });
 
   it("is separate per user", () => {
@@ -70,14 +76,23 @@ describe("pinned vs unpinned", () => {
     expect(savePrefs("u", prefsFromState(state), st)).toBe(true);
 
     const next = initialWizardState(["b"], loadPrefs("u", st));
-    expect(next.meta).toMatchObject({ labCourse: "GP1", expTitle: "Titel", notes: "Notiz", deviceUnderTest: "" });
+    expect(next.meta).toMatchObject({
+      labCourse: "GP1",
+      expTitle: "Titel",
+      notes: "Notiz",
+      deviceUnderTest: "",
+    });
     expect(next.pinned.notes).toBe(true);
   });
 
   it("clears a field once it is unpinned", () => {
     const st = memoryStorage();
     let state = initialWizardState(["a"], loadPrefs("u", st));
-    state = wizardReducer(state, { type: "setMeta", field: "expTitle", value: "Titel" });
+    state = wizardReducer(state, {
+      type: "setMeta",
+      field: "expTitle",
+      value: "Titel",
+    });
     state = wizardReducer(state, { type: "togglePin", key: "expTitle" });
     savePrefs("u", prefsFromState(state), st);
     const next = initialWizardState(["b"], loadPrefs("u", st));
@@ -94,10 +109,13 @@ describe("pinned vs unpinned", () => {
       collectionIdentifier: "/L/P1/E1",
       objectIdentifier: "/L/O1",
     };
-    let state = wizardReducer(initialWizardState(["a"], loadPrefs("u", memoryStorage())), {
-      type: "setSelection",
-      selection,
-    });
+    let state = wizardReducer(
+      initialWizardState(["a"], loadPrefs("u", memoryStorage())),
+      {
+        type: "setSelection",
+        selection,
+      },
+    );
     expect(prefsFromState(state).target).toEqual({
       projectCode: "P1",
       collectionCode: "E1",
@@ -119,7 +137,11 @@ describe("pinned vs unpinned", () => {
 
 describe("savePrefs", () => {
   it("never throws when storage is unavailable", () => {
-    expect(savePrefs("u", { pinned: { ...DEFAULT_PINNED }, meta: {} }, throwing)).toBe(false);
-    expect(savePrefs("u", { pinned: { ...DEFAULT_PINNED }, meta: {} }, null)).toBe(false);
+    expect(
+      savePrefs("u", { pinned: { ...DEFAULT_PINNED }, meta: {} }, throwing),
+    ).toBe(false);
+    expect(
+      savePrefs("u", { pinned: { ...DEFAULT_PINNED }, meta: {} }, null),
+    ).toBe(false);
   });
 });

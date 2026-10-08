@@ -8,7 +8,8 @@ export const STALE_AFTER_MS = 3000;
  */
 export function formatAge(ms: number): string {
   const age = Math.max(0, ms);
-  if (age < 10_000) return `${(age / 1000).toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} s`;
+  if (age < 10_000)
+    return `${(age / 1000).toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} s`;
   const s = Math.round(age / 1000);
   if (s < 60) return `${s} s`;
   return `${Math.floor(s / 60)} min ${String(s % 60).padStart(2, "0")} s`;

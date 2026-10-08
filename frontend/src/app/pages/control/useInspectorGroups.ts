@@ -9,7 +9,10 @@ import type { InspectorGroupInfo } from "./layout";
  * @param level - Einfach (`basic`) or Erweitert (`expert`)
  * @returns Group descriptors in tab order
  */
-export function useInspectorGroups(deviceId: string, level: ControlLevel): InspectorGroupInfo[] {
+export function useInspectorGroups(
+  deviceId: string,
+  level: ControlLevel,
+): InspectorGroupInfo[] {
   const { capabilities, channelCount } = useInspectorModel(deviceId);
   return useMemo(
     () =>

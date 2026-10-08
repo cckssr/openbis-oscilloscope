@@ -1,10 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "./client";
 import { getMe } from "./auth";
-import { getDevice, getSettings, listDevices, previewWaveforms } from "./devices";
+import {
+  getDevice,
+  getSettings,
+  listDevices,
+  previewWaveforms,
+} from "./devices";
 import { subscribeDeviceEvents } from "./events";
 import { listArtifacts, listMySessions } from "./sessions";
-import { parseDeviceEvent, UserInfoSchema, WaveformDataSchema } from "./schemas";
+import {
+  parseDeviceEvent,
+  UserInfoSchema,
+  WaveformDataSchema,
+} from "./schemas";
 import { parseList, parseOrThrow } from "./validate";
 
 const goodDevice = {
@@ -61,7 +70,11 @@ describe("unknown fields", () => {
 
 describe("capabilities", () => {
   it("drops unknown capability names and keeps known ones", async () => {
-    mockJson({ ...goodDevice, capabilities: ["run", "fft", "autoscale", 7], channel_count: 2 });
+    mockJson({
+      ...goodDevice,
+      capabilities: ["run", "fft", "autoscale", 7],
+      channel_count: 2,
+    });
     const d = await getDevice("t", "scope-01");
     expect(d.capabilities).toEqual(["run", "autoscale"]);
     expect(d.channel_count).toBe(2);
@@ -84,7 +97,11 @@ describe("settings", () => {
   it("keys channels by number and drops a malformed channel entry", async () => {
     mockJson({
       ...base,
-      channels: { "1": goodChannel, "2": { ...goodChannel, coupling: "XX" }, x: goodChannel },
+      channels: {
+        "1": goodChannel,
+        "2": { ...goodChannel, coupling: "XX" },
+        x: goodChannel,
+      },
     });
     const s = await getSettings("t", "scope-01");
     expect(Object.keys(s.channels)).toEqual(["1"]);
@@ -112,7 +129,9 @@ describe("lists", () => {
 
   it("throw invalid_response when the body is not an array", async () => {
     mockJson({ devices: [] });
-    await expect(listDevices("t")).rejects.toMatchObject({ code: "invalid_response" });
+    await expect(listDevices("t")).rejects.toMatchObject({
+      code: "invalid_response",
+    });
   });
 
   it("skip malformed sessions", async () => {
@@ -150,7 +169,11 @@ describe("artifacts", () => {
 
 describe("config", () => {
   it("fills defaults for fields an older backend does not send", async () => {
-    mockJson({ debug: true, version: "0.3.0", lab_courses: [{ value: "GP1", label: "GP1" }, 5] });
+    mockJson({
+      debug: true,
+      version: "0.3.0",
+      lab_courses: [{ value: "GP1", label: "GP1" }, 5],
+    });
     vi.resetModules();
     const { getConfig: fresh } = await import("./config");
     const cfg = await fresh();
@@ -168,12 +191,18 @@ describe("waveform sample arrays", () => {
     target[length - 1] = 2;
     return new Proxy(target, {
       get(t, prop, receiver) {
-        if (prop === Symbol.iterator || prop === "map" || prop === "every" || prop === "forEach") {
+        if (
+          prop === Symbol.iterator ||
+          prop === "map" ||
+          prop === "every" ||
+          prop === "forEach"
+        ) {
           throw new Error(`array was iterated via ${String(prop)}`);
         }
         if (typeof prop === "string" && /^\d+$/.test(prop)) {
           const i = Number(prop);
-          if (i !== 0 && i !== length - 1) throw new Error(`element ${i} was read`);
+          if (i !== 0 && i !== length - 1)
+            throw new Error(`element ${i} was read`);
         }
         return Reflect.get(t, prop, receiver);
       },
@@ -183,7 +212,12 @@ describe("waveform sample arrays", () => {
   it("are not iterated element by element and are returned by reference", () => {
     const time_s = guardedArray(5_000_000);
     const voltage_V = guardedArray(5_000_000);
-    const parsed = WaveformDataSchema.parse({ artifact_id: null, channel: 1, time_s, voltage_V });
+    const parsed = WaveformDataSchema.parse({
+      artifact_id: null,
+      channel: 1,
+      time_s,
+      voltage_V,
+    });
     expect(parsed.time_s).toBe(time_s);
   });
 
@@ -192,16 +226,32 @@ describe("waveform sample arrays", () => {
     const time_s = new Array<number>(n).fill(0);
     const voltage_V = new Array<number>(n).fill(0);
     const t0 = performance.now();
-    WaveformDataSchema.parse({ artifact_id: "a", channel: 2, time_s, voltage_V });
+    WaveformDataSchema.parse({
+      artifact_id: "a",
+      channel: 2,
+      time_s,
+      voltage_V,
+    });
     expect(performance.now() - t0).toBeLessThan(50);
   });
 
   it("reject non-arrays, non-numeric ends and mismatching lengths", () => {
-    const ok = { artifact_id: null, channel: 1, time_s: [0, 1], voltage_V: [0, 1] };
+    const ok = {
+      artifact_id: null,
+      channel: 1,
+      time_s: [0, 1],
+      voltage_V: [0, 1],
+    };
     expect(WaveformDataSchema.safeParse(ok).success).toBe(true);
-    expect(WaveformDataSchema.safeParse({ ...ok, time_s: "abc" }).success).toBe(false);
-    expect(WaveformDataSchema.safeParse({ ...ok, voltage_V: [0, null] }).success).toBe(false);
-    expect(WaveformDataSchema.safeParse({ ...ok, voltage_V: [0] }).success).toBe(false);
+    expect(WaveformDataSchema.safeParse({ ...ok, time_s: "abc" }).success).toBe(
+      false,
+    );
+    expect(
+      WaveformDataSchema.safeParse({ ...ok, voltage_V: [0, null] }).success,
+    ).toBe(false);
+    expect(
+      WaveformDataSchema.safeParse({ ...ok, voltage_V: [0] }).success,
+    ).toBe(false);
   });
 
   it("drop a malformed waveform from a preview but keep the others", async () => {
@@ -234,7 +284,9 @@ describe("top-level validation", () => {
 
   it("getMe rejects a malformed body", async () => {
     mockJson({ nope: true });
-    await expect(getMe("t")).rejects.toMatchObject({ code: "invalid_response" });
+    await expect(getMe("t")).rejects.toMatchObject({
+      code: "invalid_response",
+    });
   });
 
   it("parseList rejects null", () => {
@@ -242,26 +294,57 @@ describe("top-level validation", () => {
   });
 
   it("HTTP errors still surface as the backend's ApiError", async () => {
-    mockJson({ error: "unauthorized", detail: "Token ungültig" }, { status: 401 });
-    await expect(getMe("t")).rejects.toMatchObject({ status: 401, code: "unauthorized" });
+    mockJson(
+      { error: "unauthorized", detail: "Token ungültig" },
+      { status: 401 },
+    );
+    await expect(getMe("t")).rejects.toMatchObject({
+      status: 401,
+      code: "unauthorized",
+    });
   });
 });
 
 describe("SSE events", () => {
   it("returns known valid events", () => {
     expect(
-      parseDeviceEvent({ type: "device_state", device_id: "d", state: "ONLINE", last_error: null, x: 1 }),
-    ).toEqual({ type: "device_state", device_id: "d", state: "ONLINE", last_error: null });
+      parseDeviceEvent({
+        type: "device_state",
+        device_id: "d",
+        state: "ONLINE",
+        last_error: null,
+        x: 1,
+      }),
+    ).toEqual({
+      type: "device_state",
+      device_id: "d",
+      state: "ONLINE",
+      last_error: null,
+    });
     expect(
-      parseDeviceEvent({ type: "lock", device_id: "d", owner_user: null, session_id: null }),
+      parseDeviceEvent({
+        type: "lock",
+        device_id: "d",
+        owner_user: null,
+        session_id: null,
+      }),
     ).toMatchObject({ type: "lock" });
     expect(
-      parseDeviceEvent({ type: "progress", device_id: "d", session_id: "s", job: "acquire", done: 0.5, detail: "CH1" }),
+      parseDeviceEvent({
+        type: "progress",
+        device_id: "d",
+        session_id: "s",
+        job: "acquire",
+        done: 0.5,
+        detail: "CH1",
+      }),
     ).toMatchObject({ done: 0.5 });
   });
 
   it("ignores unknown event types silently", () => {
-    expect(parseDeviceEvent({ type: "firmware_update", device_id: "d" })).toBeNull();
+    expect(
+      parseDeviceEvent({ type: "firmware_update", device_id: "d" }),
+    ).toBeNull();
     expect(parseDeviceEvent("garbage")).toBeNull();
     expect(parseDeviceEvent(null)).toBeNull();
     expect(warn).not.toHaveBeenCalled();
@@ -281,16 +364,28 @@ describe("SSE events", () => {
         controller.close();
       },
     });
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body, { status: 200 })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(body, { status: 200 })),
+    );
     const onEvent = vi.fn();
     const stop = subscribeDeviceEvents("t", onEvent);
     await vi.waitFor(() => expect(onEvent).toHaveBeenCalledTimes(1));
     stop();
-    expect(onEvent.mock.calls[0][0]).toMatchObject({ type: "lock", owner_user: "u" });
+    expect(onEvent.mock.calls[0][0]).toMatchObject({
+      type: "lock",
+      owner_user: "u",
+    });
   });
 
   it("ignores malformed known events with a warning", () => {
-    expect(parseDeviceEvent({ type: "device_state", device_id: "d", state: "EXPLODED" })).toBeNull();
+    expect(
+      parseDeviceEvent({
+        type: "device_state",
+        device_id: "d",
+        state: "EXPLODED",
+      }),
+    ).toBeNull();
     expect(warn).toHaveBeenCalledTimes(1);
   });
 });

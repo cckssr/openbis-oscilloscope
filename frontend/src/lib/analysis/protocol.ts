@@ -59,7 +59,11 @@ export function packTrace(t: Trace): PackedTrace {
     y: t.y,
   };
   if (isUniform(t.x)) {
-    return { ...base, x0: t.x[0], dt: (t.x[t.x.length - 1] - t.x[0]) / (t.x.length - 1) };
+    return {
+      ...base,
+      x0: t.x[0],
+      dt: (t.x[t.x.length - 1] - t.x[0]) / (t.x.length - 1),
+    };
   }
   return { ...base, x: t.x };
 }

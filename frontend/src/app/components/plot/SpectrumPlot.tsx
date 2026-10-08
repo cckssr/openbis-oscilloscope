@@ -32,9 +32,19 @@ function limitSpectrum(s: Trace, fMax: number): Trace {
  * @param props - See {@link SpectrumPlotProps}
  * @returns The spectrum plot
  */
-export function SpectrumPlot({ traces, maxFrequency, viewKey = "spectrum", emptyMessage, toolbarExtras, className }: SpectrumPlotProps) {
+export function SpectrumPlot({
+  traces,
+  maxFrequency,
+  viewKey = "spectrum",
+  emptyMessage,
+  toolbarExtras,
+  className,
+}: SpectrumPlotProps) {
   const spectra = useMemo(() => {
-    const full = traces.filter(isMeasurable).map(computeSpectrum).filter((s) => s.x.length > 0);
+    const full = traces
+      .filter(isMeasurable)
+      .map(computeSpectrum)
+      .filter((s) => s.x.length > 0);
     if (full.length === 0) return [];
     let fMax = maxFrequency;
     if (fMax === undefined) {

@@ -17,7 +17,11 @@ function readXRange(e: RelayoutEvent): Range | "auto" | null {
   const b = e["xaxis.range[1]"];
   if (typeof a === "number" && typeof b === "number") return [a, b];
   const pair = e["xaxis.range"];
-  if (Array.isArray(pair) && typeof pair[0] === "number" && typeof pair[1] === "number") {
+  if (
+    Array.isArray(pair) &&
+    typeof pair[0] === "number" &&
+    typeof pair[1] === "number"
+  ) {
     return [pair[0], pair[1]];
   }
   return null;
@@ -42,10 +46,17 @@ export interface FitRanges {
  * @param xScale - x axis prefix: Plotly sees x divided by `xScale.factor`; state and callers use base units
  * @returns State, event handlers and actions
  */
-export function usePlotView(frame: Range, traces: Trace[], mode: YMode, xScale: AxisScale) {
+export function usePlotView(
+  frame: Range,
+  traces: Trace[],
+  mode: YMode,
+  xScale: AxisScale,
+) {
   const factor = xScale.factor;
   const coarse = useMediaQuery("(pointer: coarse)");
-  const [dragMode, setDragMode] = useState<"zoom" | "pan">(coarse ? "pan" : "zoom");
+  const [dragMode, setDragMode] = useState<"zoom" | "pan">(
+    coarse ? "pan" : "zoom",
+  );
   const [committed, setCommitted] = useState<Range | null>(null);
   const store = useMemo(() => new RangeStore(), []);
   const [graphDiv, setGraphDiv] = useState<HTMLElement | null>(null);
@@ -60,7 +71,10 @@ export function usePlotView(frame: Range, traces: Trace[], mode: YMode, xScale: 
     if (!fitOn) return null;
     const extent = dataExtent(traces);
     if (!extent || !(extent[1] > extent[0])) return null;
-    const y = mode === "divisions" ? yExtent(traces.map((t) => toDisplayArray(t, mode, t.y))) : null;
+    const y =
+      mode === "divisions"
+        ? yExtent(traces.map((t) => toDisplayArray(t, mode, t.y)))
+        : null;
     return { x: extent, ...(y ? { y } : {}) };
   }, [fitOn, traces, mode]);
 
@@ -68,7 +82,9 @@ export function usePlotView(frame: Range, traces: Trace[], mode: YMode, xScale: 
     setFitOn(false);
     const gd = graphDiv;
     if (!gd) return;
-    const update: Record<string, unknown> = { "xaxis.range": [frameLo / factor, frameHi / factor] };
+    const update: Record<string, unknown> = {
+      "xaxis.range": [frameLo / factor, frameHi / factor],
+    };
     if (mode === "divisions") update["yaxis.range"] = [-4, 4];
     else update["yaxis.autorange"] = true;
     void Plotly.relayout(gd as never, update as never);

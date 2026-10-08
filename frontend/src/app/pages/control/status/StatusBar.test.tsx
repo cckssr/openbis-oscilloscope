@@ -1,9 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { StatusBar } from "./StatusBar";
 import { LiveStatusBadge } from "./LiveStatusBadge";
 import { formatAge } from "./age";
-import { FakeSession, heldState, makeCapture, makeJob } from "../actions/testing";
+import {
+  FakeSession,
+  heldState,
+  makeCapture,
+  makeJob,
+} from "../actions/testing";
 
 const h = vi.hoisted(() => ({ fake: null as unknown as FakeSession }));
 vi.mock("../actions/session", (orig) =>
@@ -26,15 +37,25 @@ describe("StatusBar", () => {
   });
 
   it("shows the busy label when no job is known", () => {
-    h.fake = new FakeSession(heldState({ busy: "Einstellung wird übernommen…" }));
+    h.fake = new FakeSession(
+      heldState({ busy: "Einstellung wird übernommen…" }),
+    );
     render(<StatusBar deviceId="scope-01" />);
-    expect(screen.getByTestId("status-busy").textContent).toBe("Einstellung wird übernommen…");
+    expect(screen.getByTestId("status-busy").textContent).toBe(
+      "Einstellung wird übernommen…",
+    );
   });
 
   it("shows a determinate progress bar and a working cancel button", () => {
-    h.fake = new FakeSession(heldState({ jobs: [makeJob({ progress: 0.5, detail: "Kanal 1 von 2" })] }));
+    h.fake = new FakeSession(
+      heldState({
+        jobs: [makeJob({ progress: 0.5, detail: "Kanal 1 von 2" })],
+      }),
+    );
     render(<StatusBar deviceId="scope-01" />);
-    expect(screen.getByTestId("status-label").textContent).toBe("Volle Auflösung wird gelesen…");
+    expect(screen.getByTestId("status-label").textContent).toBe(
+      "Volle Auflösung wird gelesen…",
+    );
     expect(screen.getByTestId("status-progress")).toBeTruthy();
     expect(screen.getByText("50 %")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
@@ -44,7 +65,13 @@ describe("StatusBar", () => {
   it("shows a spinner with elapsed time when no progress is known and no cancel for plain jobs", () => {
     h.fake = new FakeSession(
       heldState({
-        jobs: [makeJob({ kind: "capture", label: "Aufnahme wird gespeichert…", cancellable: false })],
+        jobs: [
+          makeJob({
+            kind: "capture",
+            label: "Aufnahme wird gespeichert…",
+            cancellable: false,
+          }),
+        ],
       }),
     );
     render(<StatusBar deviceId="scope-01" />);
@@ -57,31 +84,56 @@ describe("StatusBar", () => {
     h.fake = new FakeSession(
       heldState({
         jobs: [
-          makeJob({ id: "s", kind: "series", label: "Serienaufnahme läuft…", cancellable: false }),
-          makeJob({ id: "c", kind: "capture", label: "Aufnahme wird gespeichert…", cancellable: false }),
+          makeJob({
+            id: "s",
+            kind: "series",
+            label: "Serienaufnahme läuft…",
+            cancellable: false,
+          }),
+          makeJob({
+            id: "c",
+            kind: "capture",
+            label: "Aufnahme wird gespeichert…",
+            cancellable: false,
+          }),
         ],
       }),
     );
     render(<StatusBar deviceId="scope-01" />);
-    expect(screen.getByTestId("status-label").textContent).toBe("Aufnahme wird gespeichert…");
+    expect(screen.getByTestId("status-label").textContent).toBe(
+      "Aufnahme wird gespeichert…",
+    );
   });
 
   it("shows the result of a finished job and lets it be dismissed", () => {
     h.fake = new FakeSession(
       heldState({
         lastCapture: makeCapture({ number: 5 }),
-        jobs: [makeJob({ kind: "capture", status: "done", cancellable: false })],
+        jobs: [
+          makeJob({ kind: "capture", status: "done", cancellable: false }),
+        ],
       }),
     );
     render(<StatusBar deviceId="scope-01" />);
-    expect(screen.getByTestId("status-result").textContent).toBe("Aufnahme #5 gespeichert");
+    expect(screen.getByTestId("status-result").textContent).toBe(
+      "Aufnahme #5 gespeichert",
+    );
     fireEvent.click(screen.getByRole("button", { name: "Meldung schließen" }));
     expect(h.fake.actions.dismissJob).toHaveBeenCalledWith("job-1");
   });
 
   it("shows a failure with its message", () => {
     h.fake = new FakeSession(
-      heldState({ jobs: [makeJob({ kind: "screenshot", status: "error", error: "Gerät antwortet nicht", cancellable: false })] }),
+      heldState({
+        jobs: [
+          makeJob({
+            kind: "screenshot",
+            status: "error",
+            error: "Gerät antwortet nicht",
+            cancellable: false,
+          }),
+        ],
+      }),
     );
     render(<StatusBar deviceId="scope-01" />);
     expect(screen.getByTestId("status-result").textContent).toBe(
@@ -106,7 +158,9 @@ describe("LiveStatusBadge", () => {
   it("shows LIVE with the frame age and turns amber 'veraltet' after 3 s", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-10-08T14:00:00Z"));
-    h.fake = new FakeSession(heldState({ live: { status: "on", lastFrameAt: Date.now() - 800 } }));
+    h.fake = new FakeSession(
+      heldState({ live: { status: "on", lastFrameAt: Date.now() - 800 } }),
+    );
     render(<LiveStatusBadge deviceId="scope-01" />);
     const badge = screen.getByTestId("live-badge");
     expect(badge.textContent).toContain("LIVE");

@@ -32,6 +32,9 @@ export function makeSnapshot(channelCount = 4): SettingsSnapshot {
  * @param channel - Channel for per-channel controls
  * @returns The context
  */
-export function makeContext(channelCount = 4, channel?: number): ControlContext {
+export function makeContext(
+  channelCount = 4,
+  channel?: number,
+): ControlContext {
   return { settings: makeSnapshot(channelCount), channelCount, channel };
 }

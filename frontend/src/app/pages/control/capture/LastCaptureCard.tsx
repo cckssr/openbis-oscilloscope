@@ -49,7 +49,10 @@ const sameSlice = (a: Slice | null, b: Slice | null) =>
  * @param props - See {@link LastCaptureCardProps}
  * @returns The card, or an empty state before the first capture
  */
-export function LastCaptureCard({ deviceId, layout = "card" }: LastCaptureCardProps) {
+export function LastCaptureCard({
+  deviceId,
+  layout = "card",
+}: LastCaptureCardProps) {
   const capture = useDeviceSessionSelector(
     deviceId,
     (s): Slice | null =>
@@ -81,7 +84,9 @@ export function LastCaptureCard({ deviceId, layout = "card" }: LastCaptureCardPr
         compact ? "p-2" : "p-3",
       )}
     >
-      <h3 className="text-sm font-medium text-(--lab-text-primary)">{t.title}</h3>
+      <h3 className="text-sm font-medium text-(--lab-text-primary)">
+        {t.title}
+      </h3>
       {!capture ? (
         <EmptyState title={t.empty} className={compact ? "py-3" : "py-6"} />
       ) : (
@@ -105,7 +110,9 @@ export function LastCaptureCard({ deviceId, layout = "card" }: LastCaptureCardPr
                 </span>
               ))}
             </span>
-            {capture.fullResolution && <Badge variant="secondary">{t.fullResolutionBadge}</Badge>}
+            {capture.fullResolution && (
+              <Badge variant="secondary">{t.fullResolutionBadge}</Badge>
+            )}
           </div>
           <CaptureNote
             key={capture.acquisitionId}

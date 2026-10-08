@@ -7,7 +7,11 @@ import { useAppConfig } from "../hooks/useAppConfig";
 import { ApiError } from "../../api/client";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../components/ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "../components/ui/collapsible";
 import { de } from "../../i18n/de";
 
 const t = de.login;
@@ -16,7 +20,9 @@ const t = de.login;
 function loginErrorMessage(err: unknown, expiredMessage: string): string {
   if (err instanceof NoOpenBISSessionError) return t.sso.noSession;
   if (err instanceof ApiError) {
-    return err.status === 401 ? expiredMessage : t.errors.server(err.status, err.message);
+    return err.status === 401
+      ? expiredMessage
+      : t.errors.server(err.status, err.message);
   }
   return t.errors.unreachable;
 }
@@ -43,7 +49,11 @@ export function Login() {
   const showAdvanced = advancedOpen ?? !openbisUrl;
 
   const run = useCallback(
-    async (action: () => Promise<void>, expiredMessage: string, silent = false) => {
+    async (
+      action: () => Promise<void>,
+      expiredMessage: string,
+      silent = false,
+    ) => {
       setError(null);
       setIsLoading(true);
       try {
@@ -78,7 +88,9 @@ export function Login() {
     <div className="flex min-h-screen items-center justify-center bg-(--lab-bg) p-4">
       <div className="w-full max-w-md space-y-6 rounded border-2 border-(--lab-border) bg-white p-6 sm:p-8">
         <div>
-          <h1 className="mb-1 text-xl font-semibold text-(--lab-text-primary)">{t.title}</h1>
+          <h1 className="mb-1 text-xl font-semibold text-(--lab-text-primary)">
+            {t.title}
+          </h1>
           <p className="text-sm text-(--lab-text-secondary)">{t.subtitle}</p>
         </div>
 
@@ -108,16 +120,20 @@ export function Login() {
         )}
 
         <Collapsible open={showAdvanced} onOpenChange={setAdvancedOpen}>
-          <CollapsibleTrigger
-            className="group flex min-h-8 w-full items-center gap-1 rounded text-left text-sm font-medium text-(--lab-text-secondary) outline-none hover:text-(--lab-text-primary) focus-visible:ring-2 focus-visible:ring-(--lab-accent)/40 coarse:min-h-11"
-          >
-            <ChevronRight className="size-4 transition-transform group-data-[state=open]:rotate-90" aria-hidden />
+          <CollapsibleTrigger className="group flex min-h-8 w-full items-center gap-1 rounded text-left text-sm font-medium text-(--lab-text-secondary) outline-none hover:text-(--lab-text-primary) focus-visible:ring-2 focus-visible:ring-(--lab-accent)/40 coarse:min-h-11">
+            <ChevronRight
+              className="size-4 transition-transform group-data-[state=open]:rotate-90"
+              aria-hidden
+            />
             {t.advanced.toggle}
           </CollapsibleTrigger>
           <CollapsibleContent>
             <form onSubmit={handleTokenSubmit} className="mt-3 space-y-3">
               <div className="space-y-1">
-                <label htmlFor="session-token" className="text-xs font-medium text-(--lab-text-secondary)">
+                <label
+                  htmlFor="session-token"
+                  className="text-xs font-medium text-(--lab-text-secondary)"
+                >
                   {t.advanced.label}
                 </label>
                 <Input
@@ -133,7 +149,9 @@ export function Login() {
                 {config?.debug && (
                   <p className="help-text">
                     {t.advanced.debugHint}{" "}
-                    <code className="rounded bg-(--lab-panel) px-1 font-mono">debug-token</code>
+                    <code className="rounded bg-(--lab-panel) px-1 font-mono">
+                      debug-token
+                    </code>
                   </p>
                 )}
               </div>
@@ -150,7 +168,10 @@ export function Login() {
         </Collapsible>
 
         {error && (
-          <p role="alert" className="rounded border-2 border-(--lab-danger) px-3 py-2 text-sm text-(--lab-danger)">
+          <p
+            role="alert"
+            className="rounded border-2 border-(--lab-danger) px-3 py-2 text-sm text-(--lab-danger)"
+          >
             {error}
           </p>
         )}

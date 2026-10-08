@@ -79,7 +79,12 @@ export function SidePanel({
         </div>
       ) : (
         <div className="relative flex h-full min-w-0 flex-col">
-          <div className={cn("absolute top-1 z-10", side === "left" ? "right-1" : "left-1")}>
+          <div
+            className={cn(
+              "absolute top-1 z-10",
+              side === "left" ? "right-1" : "left-1",
+            )}
+          >
             <Button
               variant="ghost"
               size="icon"
@@ -91,7 +96,9 @@ export function SidePanel({
               <Collapse />
             </Button>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3 [scrollbar-gutter:stable]">{children}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3 [scrollbar-gutter:stable]">
+            {children}
+          </div>
         </div>
       )}
     </ResizablePanel>

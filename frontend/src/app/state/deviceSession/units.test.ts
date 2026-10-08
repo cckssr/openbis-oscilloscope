@@ -16,7 +16,10 @@ vi.mock("../../../api/devices");
 describe("CommandQueue", () => {
   it("runs commands one at a time in order and publishes busy", async () => {
     const busy: Array<string | null> = [];
-    const queue = new CommandQueue((b) => busy.push(b), () => false);
+    const queue = new CommandQueue(
+      (b) => busy.push(b),
+      () => false,
+    );
     const order: string[] = [];
     let release!: () => void;
     const a = queue.run("A", async () => {
@@ -39,7 +42,10 @@ describe("CommandQueue", () => {
   });
 
   it("a failing command does not block the next one", async () => {
-    const queue = new CommandQueue(() => {}, () => false);
+    const queue = new CommandQueue(
+      () => {},
+      () => false,
+    );
     const failing = queue.run("x", () => Promise.reject(new Error("no")));
     const ok = queue.run("y", async () => 42);
     await expect(failing).rejects.toThrow("no");
@@ -48,7 +54,10 @@ describe("CommandQueue", () => {
 
   it("skips queued commands after dispose", async () => {
     let disposed = false;
-    const queue = new CommandQueue(() => {}, () => disposed);
+    const queue = new CommandQueue(
+      () => {},
+      () => disposed,
+    );
     const fn = vi.fn(async () => 1);
     let release!: () => void;
     void queue.run("a", () => new Promise<void>((r) => (release = r)));
@@ -63,7 +72,13 @@ describe("CommandQueue", () => {
 
 describe("countsFromArtifacts", () => {
   it("is empty for no artifacts", () => {
-    expect(countsFromArtifacts([])).toEqual({ total: 0, withNoteOrFlag: 0, flagged: 0, uploaded: 0, notUploaded: 0 });
+    expect(countsFromArtifacts([])).toEqual({
+      total: 0,
+      withNoteOrFlag: 0,
+      flagged: 0,
+      uploaded: 0,
+      notUploaded: 0,
+    });
   });
 
   it("counts legacy traces without acquisition id individually", () => {
@@ -126,8 +141,18 @@ describe("mergeFrameIntoApplied", () => {
   it("returns the same snapshot when the frame brings nothing new", () => {
     const applied = makeSettings();
     const settings = { ...createInitialState("d").settings, applied };
-    const channels = Object.entries(applied.channels).map(([n, c]) => ({ channel: Number(n), ...c }));
-    expect(mergeFrameIntoApplied(settings, channels, applied.timebase, applied.trigger)).toBe(applied);
+    const channels = Object.entries(applied.channels).map(([n, c]) => ({
+      channel: Number(n),
+      ...c,
+    }));
+    expect(
+      mergeFrameIntoApplied(
+        settings,
+        channels,
+        applied.timebase,
+        applied.trigger,
+      ),
+    ).toBe(applied);
   });
 });
 

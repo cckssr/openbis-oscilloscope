@@ -51,7 +51,8 @@ function fftInPlace(re: Float64Array, im: Float64Array): void {
  */
 export function computeSpectrum(trace: Trace): Trace {
   const rate = sampleRateOf(trace);
-  const n = 1 << Math.floor(Math.log2(Math.min(trace.y.length, MAX_POINTS) || 1));
+  const n =
+    1 << Math.floor(Math.log2(Math.min(trace.y.length, MAX_POINTS) || 1));
   const base = {
     id: `FFT(${trace.id})`,
     kind: "analysis" as const,
@@ -60,7 +61,8 @@ export function computeSpectrum(trace: Trace): Trace {
     xUnit: "Hz" as const,
     yUnit: "dBV" as const,
   };
-  if (n < 8 || !(rate > 0)) return { ...base, x: new Float64Array(0), y: new Float64Array(0) };
+  if (n < 8 || !(rate > 0))
+    return { ...base, x: new Float64Array(0), y: new Float64Array(0) };
 
   const re = new Float64Array(n);
   const im = new Float64Array(n);

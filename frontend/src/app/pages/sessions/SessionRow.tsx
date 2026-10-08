@@ -9,28 +9,43 @@ const t = de.archive.sessions;
 
 function StatusChip({ session }: { session: SessionSummary }) {
   const status = sessionStatus(session);
-  const base = "inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-xs font-medium";
+  const base =
+    "inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-xs font-medium";
   switch (status.kind) {
     case "active":
       return (
-        <span className={`${base} border-(--lab-accent) bg-(--lab-accent)/10 text-(--lab-accent)`}>
+        <span
+          className={`${base} border-(--lab-accent) bg-(--lab-accent)/10 text-(--lab-accent)`}
+        >
           <Radio className="size-3.5" aria-hidden /> {t.status.active}
         </span>
       );
     case "allUploaded":
       return (
-        <span className={`${base} border-(--lab-success) bg-(--lab-success)/10 text-(--lab-success)`}>
-          <CircleCheck className="size-3.5" aria-hidden /> {t.status.allUploaded}
+        <span
+          className={`${base} border-(--lab-success) bg-(--lab-success)/10 text-(--lab-success)`}
+        >
+          <CircleCheck className="size-3.5" aria-hidden />{" "}
+          {t.status.allUploaded}
         </span>
       );
     case "pending":
       return (
-        <span className={`${base} border-(--lab-warning) bg-(--lab-warning)/10 text-(--lab-warning)`}>
-          <CloudOff className="size-3.5" aria-hidden /> {t.status.pending(status.count)}
+        <span
+          className={`${base} border-(--lab-warning) bg-(--lab-warning)/10 text-(--lab-warning)`}
+        >
+          <CloudOff className="size-3.5" aria-hidden />{" "}
+          {t.status.pending(status.count)}
         </span>
       );
     case "empty":
-      return <span className={`${base} border-(--lab-border) text-(--lab-text-secondary)`}>{t.status.empty}</span>;
+      return (
+        <span
+          className={`${base} border-(--lab-border) text-(--lab-text-secondary)`}
+        >
+          {t.status.empty}
+        </span>
+      );
   }
 }
 
@@ -40,10 +55,18 @@ function StatusChip({ session }: { session: SessionSummary }) {
  * @param props.startedAt - Formatted start time
  * @returns A list item
  */
-export function SessionRow({ session, startedAt }: { session: SessionSummary; startedAt: string }) {
+export function SessionRow({
+  session,
+  startedAt,
+}: {
+  session: SessionSummary;
+  startedAt: string;
+}) {
   const { counts } = session;
   const parts = [
-    counts.acquisitions > 0 || counts.screenshots === 0 ? t.counts.captures(counts.acquisitions) : null,
+    counts.acquisitions > 0 || counts.screenshots === 0
+      ? t.counts.captures(counts.acquisitions)
+      : null,
     counts.screenshots > 0 ? t.counts.screenshots(counts.screenshots) : null,
     counts.flagged > 0 ? t.counts.selected(counts.flagged) : null,
     counts.uploaded > 0 ? t.counts.uploaded(counts.uploaded) : null,
@@ -52,7 +75,9 @@ export function SessionRow({ session, startedAt }: { session: SessionSummary; st
   return (
     <li className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded border-2 border-(--lab-border) bg-white px-4 py-3">
       <div className="min-w-0 flex-1">
-        <p className="font-medium text-(--lab-text-primary)">{session.device_label}</p>
+        <p className="font-medium text-(--lab-text-primary)">
+          {session.device_label}
+        </p>
         <p className="help-text">
           {t.started(startedAt)} · {parts.join(" · ")}
         </p>

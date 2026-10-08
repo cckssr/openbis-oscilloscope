@@ -27,7 +27,10 @@ export function readControlLevel(): ControlLevel {
  *
  * @returns `[level, setLevel]`
  */
-export function useControlLevel(): [ControlLevel, (level: ControlLevel) => void] {
+export function useControlLevel(): [
+  ControlLevel,
+  (level: ControlLevel) => void,
+] {
   const [level, setLevelState] = useState<ControlLevel>(readControlLevel);
   const setLevel = useCallback((next: ControlLevel) => {
     setLevelState(next);

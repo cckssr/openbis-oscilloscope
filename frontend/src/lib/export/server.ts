@@ -1,7 +1,8 @@
 import { downloadArtifactsZip, exportArtifactsHdf5 } from "../../api/sessions";
 import type { ExportInput, Exporter } from "./types";
 
-const hasArtifacts = (i: ExportInput) => !!(i.token && i.sessionId && i.artifactIds?.length);
+const hasArtifacts = (i: ExportInput) =>
+  !!(i.token && i.sessionId && i.artifactIds?.length);
 
 export const hdf5Exporter: Exporter = {
   id: "hdf5",

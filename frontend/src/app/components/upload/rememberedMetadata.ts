@@ -4,7 +4,10 @@
  * All storage access is guarded — private mode or blocked storage must never
  * break the wizard.
  */
-import { EMPTY_SELECTION, type ObjectSelection } from "../OpenBISObjectSelector";
+import {
+  EMPTY_SELECTION,
+  type ObjectSelection,
+} from "../OpenBISObjectSelector";
 import {
   REMEMBER_KEYS,
   type MetaField,
@@ -86,7 +89,8 @@ export function loadPrefs(
     if (!data || typeof data !== "object") return fallback;
     const pinned = { ...DEFAULT_PINNED };
     for (const key of REMEMBER_KEYS) {
-      if (typeof data.pinned?.[key] === "boolean") pinned[key] = data.pinned[key];
+      if (typeof data.pinned?.[key] === "boolean")
+        pinned[key] = data.pinned[key];
     }
     const meta: Partial<MetaState> = {};
     for (const field of META_FIELDS) {
@@ -95,11 +99,15 @@ export function loadPrefs(
     }
     const t = data.target;
     const target =
-      pinned.target && t && typeof t.projectCode === "string" && typeof t.collectionCode === "string"
+      pinned.target &&
+      t &&
+      typeof t.projectCode === "string" &&
+      typeof t.collectionCode === "string"
         ? {
             projectCode: t.projectCode,
             collectionCode: t.collectionCode,
-            objectIdentifier: typeof t.objectIdentifier === "string" ? t.objectIdentifier : "",
+            objectIdentifier:
+              typeof t.objectIdentifier === "string" ? t.objectIdentifier : "",
           }
         : undefined;
     return { pinned, meta, target };
@@ -158,7 +166,9 @@ export function savePrefs(
  * @param target - Remembered target, if any
  * @returns A selection to start the wizard with
  */
-export function selectionFromRemembered(target: RememberedTarget | undefined): ObjectSelection {
+export function selectionFromRemembered(
+  target: RememberedTarget | undefined,
+): ObjectSelection {
   if (!target) return EMPTY_SELECTION;
   return {
     ...EMPTY_SELECTION,

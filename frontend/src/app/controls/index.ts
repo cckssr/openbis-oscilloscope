@@ -12,7 +12,11 @@ registerControlGroup(channelsGroup);
 registerControlGroup(timebaseGroup);
 registerControlGroup(triggerGroup);
 
-export { registerControlGroup, getControlGroups, isVisibleAtLevel } from "./registry";
+export {
+  registerControlGroup,
+  getControlGroups,
+  isVisibleAtLevel,
+} from "./registry";
 export { channelSummary } from "./groups/channels";
 export { controlPath } from "./paths";
 export type {

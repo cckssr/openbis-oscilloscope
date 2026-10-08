@@ -52,7 +52,9 @@ describe("rounding", () => {
 
 describe("1-2-5 stepping", () => {
   it("builds the knob sequence", () => {
-    expect(sequence125(1e-3, 1e-1)).toEqual([0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1]);
+    expect(sequence125(1e-3, 1e-1)).toEqual([
+      0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1,
+    ]);
   });
   it("steps below 0.5 V/div (A2)", () => {
     let v = 1;

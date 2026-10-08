@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../../../components/ui/tabs";
 import { cn } from "../../../components/ui/utils";
 import type { ControlGroupDef } from "../../../controls";
 import { GroupBody, type GroupBodyProps } from "./GroupBody";
@@ -20,7 +25,11 @@ export interface GroupLayoutProps extends Omit<GroupBodyProps, "group"> {
  * @param props - See {@link GroupLayoutProps}
  * @returns The tabs
  */
-export function GroupTabs({ groups, initialGroupId, ...body }: GroupLayoutProps) {
+export function GroupTabs({
+  groups,
+  initialGroupId,
+  ...body
+}: GroupLayoutProps) {
   const [value, setValue] = useState(initialGroupId ?? groups[0]?.id);
   const active = groups.some((g) => g.id === value) ? value : groups[0]?.id;
   const scrolling = groups.length > MAX_EQUAL_TABS;

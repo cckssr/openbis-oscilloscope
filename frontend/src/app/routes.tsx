@@ -10,7 +10,9 @@ function RequireAuth({ children }: { children: ReactNode }) {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-(--lab-bg) flex items-center justify-center">
-        <span className="text-sm text-(--lab-text-secondary)">Anmeldung wird geprüft…</span>
+        <span className="text-sm text-(--lab-text-secondary)">
+          Anmeldung wird geprüft…
+        </span>
       </div>
     );
   }
@@ -46,7 +48,8 @@ export const router = createBrowserRouter(
     {
       path: "/device/:deviceId",
       lazy: async () => {
-        const { OscilloscopeControl } = await import("./pages/OscilloscopeControl");
+        const { OscilloscopeControl } =
+          await import("./pages/OscilloscopeControl");
         return {
           element: (
             <RequireAuth>

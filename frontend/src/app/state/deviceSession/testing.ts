@@ -20,7 +20,11 @@ import type {
 import type { ChannelFactory, ChannelLike } from "./tabCoordinator";
 
 /** Waveform with `n` samples. */
-export function waveform(channel: number, n = 8, artifactId: string | null = null): WaveformData {
+export function waveform(
+  channel: number,
+  n = 8,
+  artifactId: string | null = null,
+): WaveformData {
   return {
     artifact_id: artifactId,
     channel,
@@ -29,7 +33,9 @@ export function waveform(channel: number, n = 8, artifactId: string | null = nul
   };
 }
 
-export function makeDevice(overrides: Partial<DeviceDetail> = {}): DeviceDetail {
+export function makeDevice(
+  overrides: Partial<DeviceDetail> = {},
+): DeviceDetail {
   return {
     id: "scope-01",
     label: "Scope 01",
@@ -38,7 +44,17 @@ export function makeDevice(overrides: Partial<DeviceDetail> = {}): DeviceDetail 
     state: "ONLINE",
     last_error: null,
     lock: null,
-    capabilities: ["run", "stop", "acquire", "preview", "screenshot", "single", "force_trigger", "autoscale", "cancel_acquire"],
+    capabilities: [
+      "run",
+      "stop",
+      "acquire",
+      "preview",
+      "screenshot",
+      "single",
+      "force_trigger",
+      "autoscale",
+      "cancel_acquire",
+    ],
     channel_count: 4,
     ...overrides,
   };
@@ -53,7 +69,12 @@ export function makeSettings(): DeviceSettings {
     probe_attenuation: 1,
   });
   return {
-    channels: { 1: channel(true), 2: channel(true), 3: channel(false), 4: channel(false) },
+    channels: {
+      1: channel(true),
+      2: channel(true),
+      3: channel(false),
+      4: channel(false),
+    },
     timebase: { scale_s_div: 1e-3, offset_s: 0, sample_rate: 1e6 },
     trigger: { source: "CH1", level_v: 0, slope: "RISE", mode: "AUTO" },
   };
@@ -69,7 +90,10 @@ export class FakeScope {
   lockCounter = 0;
 
   channelsOf(): AcquiredChannel[] {
-    return Object.entries(this.settings.channels).map(([n, c]) => ({ channel: Number(n), ...c }));
+    return Object.entries(this.settings.channels).map(([n, c]) => ({
+      channel: Number(n),
+      ...c,
+    }));
   }
 }
 
@@ -89,27 +113,38 @@ export function installFakeApi(scope: FakeScope = new FakeScope()): FakeScope {
     eod_reset_time: "23:59",
     eod_timezone: "Europe/Berlin",
   });
-  vi.mocked(devices.getDevice).mockImplementation(async () => structuredClone(scope.device));
+  vi.mocked(devices.getDevice).mockImplementation(async () =>
+    structuredClone(scope.device),
+  );
   vi.mocked(devices.acquireLock).mockImplementation(async (_t, id) => {
     scope.lockCounter += 1;
-    return { control_session_id: `session-${scope.lockCounter}`, device_id: id };
+    return {
+      control_session_id: `session-${scope.lockCounter}`,
+      device_id: id,
+    };
   });
   vi.mocked(devices.releaseLock).mockResolvedValue(undefined);
   vi.mocked(devices.sendHeartbeat).mockResolvedValue(undefined);
   vi.mocked(devices.runDevice).mockResolvedValue(undefined);
   vi.mocked(devices.stopDevice).mockResolvedValue(undefined);
   vi.mocked(devices.sendScopeCommand).mockResolvedValue(undefined);
-  vi.mocked(devices.getSettings).mockImplementation(async () => structuredClone(scope.settings));
+  vi.mocked(devices.getSettings).mockImplementation(async () =>
+    structuredClone(scope.settings),
+  );
   vi.mocked(devices.getMemoryDepth).mockImplementation(async (_t, id) => ({
     device_id: id,
     memory_depth: scope.memoryDepth,
   }));
-  vi.mocked(devices.setChannelConfig).mockImplementation(async (_t, _id, ch, _s, cfg) => {
-    scope.settings.channels[ch] = { ...cfg };
-  });
-  vi.mocked(devices.setTimebase).mockImplementation(async (_t, _id, _s, cfg) => {
-    scope.settings.timebase = { ...scope.settings.timebase, ...cfg };
-  });
+  vi.mocked(devices.setChannelConfig).mockImplementation(
+    async (_t, _id, ch, _s, cfg) => {
+      scope.settings.channels[ch] = { ...cfg };
+    },
+  );
+  vi.mocked(devices.setTimebase).mockImplementation(
+    async (_t, _id, _s, cfg) => {
+      scope.settings.timebase = { ...scope.settings.timebase, ...cfg };
+    },
+  );
   vi.mocked(devices.setTrigger).mockImplementation(async (_t, _id, _s, cfg) => {
     scope.settings.trigger = { ...cfg };
   });
@@ -130,7 +165,12 @@ export function installFakeApi(scope: FakeScope = new FakeScope()): FakeScope {
       const enabled = options.channels ?? [1, 2];
       const artifactIds = enabled.map((n) => `${acquisitionId}-ch${n}`);
       enabled.forEach((n, i) =>
-        scope.artifacts.push(makeArtifact(artifactIds[i], { channel: n, acquisition_id: acquisitionId })),
+        scope.artifacts.push(
+          makeArtifact(artifactIds[i], {
+            channel: n,
+            acquisition_id: acquisitionId,
+          }),
+        ),
       );
       return {
         artifact_ids: artifactIds,
@@ -141,7 +181,9 @@ export function installFakeApi(scope: FakeScope = new FakeScope()): FakeScope {
         timebase: scope.settings.timebase,
         trigger: scope.settings.trigger,
         waveforms: options.includeData
-          ? enabled.map((n, i) => waveform(n, options.maxSamples ? 64 : 8, artifactIds[i]))
+          ? enabled.map((n, i) =>
+              waveform(n, options.maxSamples ? 64 : 8, artifactIds[i]),
+            )
           : undefined,
       };
     },
@@ -149,22 +191,31 @@ export function installFakeApi(scope: FakeScope = new FakeScope()): FakeScope {
   vi.mocked(devices.cancelAcquire).mockResolvedValue({ cancelled: true });
   vi.mocked(devices.saveScreenshot).mockImplementation(async () => {
     const id = `shot-${scope.artifacts.length + 1}`;
-    scope.artifacts.push(makeArtifact(id, { artifact_type: "screenshot", channel: null }));
+    scope.artifacts.push(
+      makeArtifact(id, { artifact_type: "screenshot", channel: null }),
+    );
     return { artifact_id: id };
   });
   vi.mocked(devices.softReleaseLockOnUnload).mockReturnValue(undefined);
-  vi.mocked(sessions.listArtifacts).mockImplementation(async () => structuredClone(scope.artifacts));
-  vi.mocked(sessions.getArtifactWaveform).mockImplementation(async (_t, _s, artifactId) => {
-    const a = scope.artifacts.find((x) => x.artifact_id === artifactId);
-    return waveform(a?.channel ?? 1, 16, artifactId);
-  });
+  vi.mocked(sessions.listArtifacts).mockImplementation(async () =>
+    structuredClone(scope.artifacts),
+  );
+  vi.mocked(sessions.getArtifactWaveform).mockImplementation(
+    async (_t, _s, artifactId) => {
+      const a = scope.artifacts.find((x) => x.artifact_id === artifactId);
+      return waveform(a?.channel ?? 1, 16, artifactId);
+    },
+  );
   vi.mocked(sessions.setAnnotation).mockResolvedValue(undefined);
   vi.mocked(sessions.flagArtifact).mockResolvedValue(undefined);
   vi.mocked(events.subscribeDeviceEvents).mockReturnValue(() => undefined);
   return scope;
 }
 
-export function makeArtifact(id: string, overrides: Partial<Artifact> = {}): Artifact {
+export function makeArtifact(
+  id: string,
+  overrides: Partial<Artifact> = {},
+): Artifact {
   return {
     artifact_id: id,
     artifact_type: "trace",

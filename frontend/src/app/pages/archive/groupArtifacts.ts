@@ -75,7 +75,8 @@ export interface Timeline {
  */
 export function statusOf(artifacts: Artifact[]): CaptureStatus {
   if (artifacts.some((a) => a.persist)) return "selected";
-  if (artifacts.length > 0 && artifacts.every((a) => a.uploaded)) return "uploaded";
+  if (artifacts.length > 0 && artifacts.every((a) => a.uploaded))
+    return "uploaded";
   return "local";
 }
 
@@ -85,7 +86,9 @@ function toCapture(
   acquisitionId: string | null,
   artifacts: Artifact[],
 ): Capture {
-  const sorted = [...artifacts].sort((a, b) => (a.channel ?? 0) - (b.channel ?? 0));
+  const sorted = [...artifacts].sort(
+    (a, b) => (a.channel ?? 0) - (b.channel ?? 0),
+  );
   const times = sorted.map((a) => a.created_at).sort();
   return {
     id,
@@ -167,12 +170,19 @@ export function buildTimeline(artifacts: Artifact[]): Timeline {
     .filter(([, list]) => list.length >= 2)
     .sort(
       ([, a], [, b]) =>
-        Date.parse(a[a.length - 1].createdAt) - Date.parse(b[b.length - 1].createdAt),
+        Date.parse(a[a.length - 1].createdAt) -
+        Date.parse(b[b.length - 1].createdAt),
     );
   const seriesByRun = new Map<string, SeriesGroup>(
     series.map(([runId, list], i) => [
       runId,
-      { type: "series", runId, number: i + 1, captures: list, createdAt: list[0].createdAt },
+      {
+        type: "series",
+        runId,
+        number: i + 1,
+        captures: list,
+        createdAt: list[0].createdAt,
+      },
     ]),
   );
 
@@ -197,7 +207,9 @@ export function buildTimeline(artifacts: Artifact[]): Timeline {
     else days.push({ dayKey, date: entry.createdAt, entries: [entry] });
   }
 
-  const ordered = entries.flatMap((e) => (e.type === "series" ? e.captures : [e.capture]));
+  const ordered = entries.flatMap((e) =>
+    e.type === "series" ? e.captures : [e.capture],
+  );
   return { days, captures: ordered };
 }
 
@@ -206,8 +218,14 @@ export function buildTimeline(artifacts: Artifact[]): Timeline {
  * @param captures - Any list of captures
  * @returns Counts for local, selected and uploaded captures
  */
-export function countByStatus(captures: Capture[]): Record<CaptureStatus, number> {
-  const counts: Record<CaptureStatus, number> = { local: 0, selected: 0, uploaded: 0 };
+export function countByStatus(
+  captures: Capture[],
+): Record<CaptureStatus, number> {
+  const counts: Record<CaptureStatus, number> = {
+    local: 0,
+    selected: 0,
+    uploaded: 0,
+  };
   for (const c of captures) counts[c.status] += 1;
   return counts;
 }
@@ -218,7 +236,9 @@ export function countByStatus(captures: Capture[]): Record<CaptureStatus, number
  * @param captures - Captures of a series or of the whole table
  * @returns "all", "some", "none" or "disabled"
  */
-export function selectionState(captures: Capture[]): "all" | "some" | "none" | "disabled" {
+export function selectionState(
+  captures: Capture[],
+): "all" | "some" | "none" | "disabled" {
   const selectable = captures.filter((c) => c.status !== "uploaded");
   if (selectable.length === 0) return "disabled";
   const selected = selectable.filter((c) => c.status === "selected").length;
@@ -242,7 +262,11 @@ export function selectableCaptures(captures: Capture[]): Capture[] {
  * @param persist - New "selected for upload" value
  * @returns A new array; untouched artifacts keep their identity
  */
-export function withPersist(artifacts: Artifact[], ids: string[], persist: boolean): Artifact[] {
+export function withPersist(
+  artifacts: Artifact[],
+  ids: string[],
+  persist: boolean,
+): Artifact[] {
   const set = new Set(ids);
   return artifacts.map((a) => (set.has(a.artifact_id) ? { ...a, persist } : a));
 }
@@ -258,7 +282,9 @@ export function restorePersist(
   previous: Map<string, boolean>,
 ): Artifact[] {
   return artifacts.map((a) =>
-    previous.has(a.artifact_id) ? { ...a, persist: previous.get(a.artifact_id)! } : a,
+    previous.has(a.artifact_id)
+      ? { ...a, persist: previous.get(a.artifact_id)! }
+      : a,
   );
 }
 
@@ -275,6 +301,8 @@ export function withAnnotation(
   annotation: string,
 ): Artifact[] {
   return artifacts.map((a) =>
-    a.acquisition_id === acquisitionId ? { ...a, annotation: annotation || null } : a,
+    a.acquisition_id === acquisitionId
+      ? { ...a, annotation: annotation || null }
+      : a,
   );
 }

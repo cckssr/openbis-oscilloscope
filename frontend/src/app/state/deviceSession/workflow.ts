@@ -82,7 +82,12 @@ export function selectWorkflow(state: DeviceSessionState): Workflow {
 
 function nextHint(
   state: DeviceSessionState,
-  ctx: { held: boolean; hasData: boolean; roundDone: boolean; hasFrame: boolean },
+  ctx: {
+    held: boolean;
+    hasData: boolean;
+    roundDone: boolean;
+    hasFrame: boolean;
+  },
 ): string {
   const { lock, counts } = state;
   if (lock.status === "passive") return t.next.passive;

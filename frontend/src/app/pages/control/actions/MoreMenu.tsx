@@ -63,7 +63,9 @@ export function MoreMenu({ items }: { items: MoreMenuItem[] }) {
             <span className="mt-0.5">{item.icon}</span>
             <span className="flex flex-col">
               <span className="font-medium">{item.label}</span>
-              <span className="text-xs text-(--lab-text-secondary)">{item.reason ?? item.hint}</span>
+              <span className="text-xs text-(--lab-text-secondary)">
+                {item.reason ?? item.hint}
+              </span>
             </span>
           </DropdownMenuItem>
         ))}

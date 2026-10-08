@@ -1,14 +1,28 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { CaptureButton } from "./CaptureButton";
-import { FullResolutionProvider, useFullResolutionDialog } from "./FullResolutionProvider";
+import {
+  FullResolutionProvider,
+  useFullResolutionDialog,
+} from "./FullResolutionProvider";
 import { FakeSession, heldState, makeJob } from "../actions/testing";
 
-const h = vi.hoisted(() => ({ fake: null as unknown as FakeSession, toast: vi.fn() }));
+const h = vi.hoisted(() => ({
+  fake: null as unknown as FakeSession,
+  toast: vi.fn(),
+}));
 vi.mock("../actions/session", (orig) =>
   import("../actions/testing").then((m) => m.sessionMock(orig, () => h.fake)),
 );
-vi.mock("../../../context/AuthContext", () => ({ useAuth: () => ({ token: "tok" }) }));
+vi.mock("../../../context/AuthContext", () => ({
+  useAuth: () => ({ token: "tok" }),
+}));
 vi.mock("./screenshotToast", () => ({ showScreenshotToast: h.toast }));
 
 beforeEach(() => {
@@ -44,16 +58,26 @@ describe("CaptureButton", () => {
 
   it("shows a visible helper line in the column layout only", () => {
     const { unmount } = renderButton();
-    expect(screen.getByText(/Speichert das aktuelle Bild als Aufnahme/)).toBeTruthy();
+    expect(
+      screen.getByText(/Speichert das aktuelle Bild als Aufnahme/),
+    ).toBeTruthy();
     unmount();
     renderButton("rail");
-    expect(screen.queryByText(/Speichert das aktuelle Bild als Aufnahme/)).toBeNull();
+    expect(
+      screen.queryByText(/Speichert das aktuelle Bild als Aufnahme/),
+    ).toBeNull();
   });
 
   it("shows a spinner and 'Wird gespeichert…' while saving", () => {
     h.fake = new FakeSession(
       heldState({
-        jobs: [makeJob({ kind: "capture", label: "Aufnahme wird gespeichert…", cancellable: false })],
+        jobs: [
+          makeJob({
+            kind: "capture",
+            label: "Aufnahme wird gespeichert…",
+            cancellable: false,
+          }),
+        ],
         busy: "Aufnahme wird gespeichert…",
       }),
     );
@@ -67,8 +91,12 @@ describe("CaptureButton", () => {
   it("is disabled with a reason until the device is taken", () => {
     h.fake = new FakeSession(heldState({ lock: { status: "none" } }));
     renderButton();
-    expect((screen.getByTestId("capture-save") as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getAllByText("Zuerst Gerät übernehmen").length).toBeGreaterThan(0);
+    expect(
+      (screen.getByTestId("capture-save") as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect(
+      screen.getAllByText("Zuerst Gerät übernehmen").length,
+    ).toBeGreaterThan(0);
   });
 
   it("offers full resolution and screenshot in the split menu", () => {
@@ -107,9 +135,13 @@ describe("CaptureButton", () => {
 
   it("attaches a secondary menu toggle under the save button in the rail", () => {
     renderButton("rail");
-    const trigger = screen.getByRole("button", { name: "Weitere Aufnahmearten" });
+    const trigger = screen.getByRole("button", {
+      name: "Weitere Aufnahmearten",
+    });
     expect(trigger.className).not.toContain("bg-(--lab-accent)");
-    expect(screen.getByTestId("capture-save").className).toContain("rounded-b-none");
+    expect(screen.getByTestId("capture-save").className).toContain(
+      "rounded-b-none",
+    );
   });
 
   it("saves a screenshot once and shows the thumbnail toast", async () => {
@@ -129,7 +161,9 @@ describe("CaptureButton", () => {
   });
 
   it("hides the screenshot entry when the device cannot take one", () => {
-    h.fake = new FakeSession(heldState({ capabilities: ["run", "stop", "acquire", "preview"] }));
+    h.fake = new FakeSession(
+      heldState({ capabilities: ["run", "stop", "acquire", "preview"] }),
+    );
     renderButton();
     openMenu();
     expect(screen.queryByText("Bildschirmfoto des Oszilloskops")).toBeNull();

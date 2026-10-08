@@ -27,7 +27,11 @@ export function useScreenshotUrls(
   useEffect(() => {
     if (!token || !sessionId) return;
     for (const a of artifacts) {
-      if (a.artifact_type !== "screenshot" || requested.current.has(a.artifact_id)) continue;
+      if (
+        a.artifact_type !== "screenshot" ||
+        requested.current.has(a.artifact_id)
+      )
+        continue;
       requested.current.add(a.artifact_id);
       fetchArtifactScreenshot(token, sessionId, a.artifact_id)
         .then((blob) => {

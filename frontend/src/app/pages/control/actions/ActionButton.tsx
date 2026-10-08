@@ -2,7 +2,11 @@ import type { ComponentProps, ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { DisabledReason } from "../../../components/common";
 import { Button } from "../../../components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../../../components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "../../../components/ui/tooltip";
 import { cn } from "../../../components/ui/utils";
 import type { ActionLayout } from "./layout";
 
@@ -67,7 +71,15 @@ export function ActionButton({
       className={cn(LAYOUT_CLASS[layout], className)}
     >
       {loading ? <Loader2 className="animate-spin" aria-hidden /> : icon}
-      <span className={layout === "rail" ? "text-center" : layout === "icon" ? "sr-only" : undefined}>
+      <span
+        className={
+          layout === "rail"
+            ? "text-center"
+            : layout === "icon"
+              ? "sr-only"
+              : undefined
+        }
+      >
         {layout === "rail" ? (railLabel ?? label) : label}
       </span>
     </Button>
@@ -77,7 +89,10 @@ export function ActionButton({
     return (
       <DisabledReason
         reason={reason}
-        className={cn(layout === "rail" && "w-full", !inlineReason && "[&>p]:hidden!")}
+        className={cn(
+          layout === "rail" && "w-full",
+          !inlineReason && "[&>p]:hidden!",
+        )}
       >
         {button}
       </DisabledReason>
@@ -99,7 +114,9 @@ export function ActionButton({
   return (
     <Tooltip>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
-      <TooltipContent side={layout === "column" ? "left" : "bottom"}>{hint}</TooltipContent>
+      <TooltipContent side={layout === "column" ? "left" : "bottom"}>
+        {hint}
+      </TooltipContent>
     </Tooltip>
   );
 }

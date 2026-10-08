@@ -5,7 +5,11 @@ import { de } from "../../../i18n/de";
 import { OpenBISObjectSelector } from "../OpenBISObjectSelector";
 import { Field, inputClass } from "./Field";
 import type { WizardState } from "./types";
-import { EXPERIMENT_ID_PATTERN, OBJECT_ID_PATTERN, type WizardAction } from "./wizardReducer";
+import {
+  EXPERIMENT_ID_PATTERN,
+  OBJECT_ID_PATTERN,
+  type WizardAction,
+} from "./wizardReducer";
 
 const t = de.archive.wizard.target;
 
@@ -23,14 +27,19 @@ interface TargetStepProps {
 export function TargetStep({ token, state, dispatch }: TargetStepProps) {
   const { target, pinned } = state;
   const manual = target.mode === "manual";
-  const remember = { pinned: pinned.target, onToggle: () => dispatch({ type: "togglePin", key: "target" }) };
+  const remember = {
+    pinned: pinned.target,
+    onToggle: () => dispatch({ type: "togglePin", key: "target" }),
+  };
 
   const experimentError =
-    target.manualExperimentId && !EXPERIMENT_ID_PATTERN.test(target.manualExperimentId.trim())
+    target.manualExperimentId &&
+    !EXPERIMENT_ID_PATTERN.test(target.manualExperimentId.trim())
       ? t.manualInvalid
       : null;
   const objectError =
-    target.manualObjectId && !OBJECT_ID_PATTERN.test(target.manualObjectId.trim())
+    target.manualObjectId &&
+    !OBJECT_ID_PATTERN.test(target.manualObjectId.trim())
       ? t.manualObjectInvalid
       : null;
 
@@ -45,9 +54,13 @@ export function TargetStep({ token, state, dispatch }: TargetStepProps) {
         <OpenBISObjectSelector
           token={token}
           value={target.selection}
-          onChange={(selection) => dispatch({ type: "setSelection", selection })}
+          onChange={(selection) =>
+            dispatch({ type: "setSelection", selection })
+          }
           remember={remember}
-          onLoadError={() => dispatch({ type: "setTargetMode", mode: "manual" })}
+          onLoadError={() =>
+            dispatch({ type: "setTargetMode", mode: "manual" })
+          }
         />
       )}
 
@@ -55,10 +68,19 @@ export function TargetStep({ token, state, dispatch }: TargetStepProps) {
         <button
           type="button"
           aria-expanded={manual}
-          onClick={() => dispatch({ type: "setTargetMode", mode: manual ? "list" : "manual" })}
+          onClick={() =>
+            dispatch({
+              type: "setTargetMode",
+              mode: manual ? "list" : "manual",
+            })
+          }
           className="flex min-h-10 w-full items-center gap-2 px-3 text-left text-sm font-medium text-(--lab-text-secondary) hover:text-(--lab-text-primary) coarse:min-h-12"
         >
-          {manual ? <ChevronDown className="size-4" aria-hidden /> : <ChevronRight className="size-4" aria-hidden />}
+          {manual ? (
+            <ChevronDown className="size-4" aria-hidden />
+          ) : (
+            <ChevronRight className="size-4" aria-hidden />
+          )}
           {t.advanced}
         </button>
         {manual && (
@@ -79,7 +101,11 @@ export function TargetStep({ token, state, dispatch }: TargetStepProps) {
                 spellCheck={false}
                 className={`${inputClass} font-mono`}
                 onChange={(e) =>
-                  dispatch({ type: "setManual", field: "manualExperimentId", value: e.target.value })
+                  dispatch({
+                    type: "setManual",
+                    field: "manualExperimentId",
+                    value: e.target.value,
+                  })
                 }
               />
             </Field>
@@ -98,7 +124,11 @@ export function TargetStep({ token, state, dispatch }: TargetStepProps) {
                 spellCheck={false}
                 className={`${inputClass} font-mono`}
                 onChange={(e) =>
-                  dispatch({ type: "setManual", field: "manualObjectId", value: e.target.value })
+                  dispatch({
+                    type: "setManual",
+                    field: "manualObjectId",
+                    value: e.target.value,
+                  })
                 }
               />
             </Field>

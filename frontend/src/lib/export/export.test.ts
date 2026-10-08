@@ -21,7 +21,10 @@ function trace(id: string, y: number[], x = [0, 1e-6, 2e-6]): Trace {
 
 describe("csv", () => {
   it("writes time_s plus one column per channel at full resolution", () => {
-    const csv = csvParts([trace("CH1", [0.1, 0.2, 0.3]), trace("CH2", [1, 2, 3])]).join("");
+    const csv = csvParts([
+      trace("CH1", [0.1, 0.2, 0.3]),
+      trace("CH2", [1, 2, 3]),
+    ]).join("");
     expect(csv.split("\n")).toEqual([
       "time_s,CH1_V,CH2_V",
       "0,0.1,1",
@@ -42,7 +45,9 @@ describe("csv", () => {
 describe("npy", () => {
   it("writes a version 1.0 header with 64-byte alignment", () => {
     const bytes = toNpy(Float64Array.from([1, 2, 3]));
-    expect(Array.from(bytes.slice(0, 6))).toEqual([0x93, 0x4e, 0x55, 0x4d, 0x50, 0x59]);
+    expect(Array.from(bytes.slice(0, 6))).toEqual([
+      0x93, 0x4e, 0x55, 0x4d, 0x50, 0x59,
+    ]);
     expect([bytes[6], bytes[7]]).toEqual([1, 0]);
     const view = new DataView(bytes.buffer);
     const headerLen = view.getUint16(8, true);
@@ -64,15 +69,23 @@ describe("npz", () => {
       traces: [trace("CH1", [1, 2, 3]), trace("CH2", [4, 5, 6])],
     });
     const zip = await JSZip.loadAsync(await blob.arrayBuffer());
-    expect(Object.keys(zip.files).sort()).toEqual(["CH1.npy", "CH2.npy", "time_s.npy"]);
+    expect(Object.keys(zip.files).sort()).toEqual([
+      "CH1.npy",
+      "CH2.npy",
+      "time_s.npy",
+    ]);
   });
 });
 
 describe("registry", () => {
   it("offers only applicable exporters", () => {
-    const ids = (i: Parameters<typeof listExporters>[0]) => listExporters(i).map((e) => e.id);
+    const ids = (i: Parameters<typeof listExporters>[0]) =>
+      listExporters(i).map((e) => e.id);
     expect(ids({ baseName: "x" })).toEqual([]);
-    expect(ids({ baseName: "x", traces: [trace("CH1", [1, 2, 3])] })).toEqual(["csv", "npz"]);
+    expect(ids({ baseName: "x", traces: [trace("CH1", [1, 2, 3])] })).toEqual([
+      "csv",
+      "npz",
+    ]);
     expect(
       ids({ baseName: "x", token: "t", sessionId: "s", artifactIds: ["a"] }),
     ).toEqual(["hdf5", "zip"]);

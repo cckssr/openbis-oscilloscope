@@ -38,7 +38,9 @@ export function sessionStatus(s: SessionSummary): SessionStatus {
   const total = totalCaptures(s);
   if (total === 0) return { kind: "empty" };
   const pending = total - s.counts.uploaded;
-  return pending <= 0 ? { kind: "allUploaded" } : { kind: "pending", count: pending };
+  return pending <= 0
+    ? { kind: "allUploaded" }
+    : { kind: "pending", count: pending };
 }
 
 function dayKey(iso: string): string {
@@ -73,7 +75,10 @@ export function groupSessionsByDay(sessions: SessionSummary[]): SessionDay[] {
  * @param now - Reference time (injectable for tests)
  * @returns "today", "yesterday" or null
  */
-export function relativeDay(key: string, now: Date = new Date()): "today" | "yesterday" | null {
+export function relativeDay(
+  key: string,
+  now: Date = new Date(),
+): "today" | "yesterday" | null {
   const at = (offset: number) => {
     const d = new Date(now);
     d.setDate(d.getDate() + offset);

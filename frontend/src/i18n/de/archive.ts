@@ -31,7 +31,8 @@ const page = {
   select: {
     all: "Alle auswählen",
     withNote: "Alle mit Notiz auswählen",
-    withNoteTitle: "Alle noch nicht hochgeladenen Aufnahmen mit Notiz zum Hochladen auswählen",
+    withNoteTitle:
+      "Alle noch nicht hochgeladenen Aufnahmen mit Notiz zum Hochladen auswählen",
     clear: "Auswahl aufheben",
     allAria: "Alle noch nicht hochgeladenen Aufnahmen zum Hochladen auswählen",
     flagError: "Auswahl fehlgeschlagen",
@@ -39,7 +40,8 @@ const page = {
   },
   upload: {
     button: (n: number) => `Hochladen (${n})`,
-    reasonNone: "Wähle zuerst mindestens eine Aufnahme in der Spalte „Hochladen“ aus.",
+    reasonNone:
+      "Wähle zuerst mindestens eine Aufnahme in der Spalte „Hochladen“ aus.",
   },
   table: {
     upload: "Hochladen",
@@ -52,8 +54,10 @@ const page = {
     seriesCount: (n: number) => plural(n, "Aufnahme", "Aufnahmen"),
     seriesToggle: "Serie auf- oder zuklappen",
     screenshot: "Bildschirmfoto",
-    rowUploadAria: (time: string) => `Aufnahme von ${time} zum Hochladen auswählen`,
-    seriesUploadAria: (n: number) => `Alle Aufnahmen der Serie ${n} zum Hochladen auswählen`,
+    rowUploadAria: (time: string) =>
+      `Aufnahme von ${time} zum Hochladen auswählen`,
+    seriesUploadAria: (n: number) =>
+      `Alle Aufnahmen der Serie ${n} zum Hochladen auswählen`,
     uploadedReason:
       "Bereits hochgeladen. Über das Menü „Erneut hochladen“ kann sie noch einmal ausgewählt werden.",
   },
@@ -99,7 +103,8 @@ const page = {
 
 const wizard = {
   title: "Hochladen nach openBIS",
-  description: "Die ausgewählten Aufnahmen werden mit deinen Angaben in openBIS gespeichert.",
+  description:
+    "Die ausgewählten Aufnahmen werden mit deinen Angaben in openBIS gespeichert.",
   stepOf: (i: number, n: number) => `Schritt ${i} von ${n}`,
   steps: {
     review: "Auswahl",
@@ -120,7 +125,8 @@ const wizard = {
   },
   review: {
     heading: "Was wird hochgeladen?",
-    intro: "Entferne das Häkchen bei Aufnahmen, die du jetzt nicht hochladen möchtest.",
+    intro:
+      "Entferne das Häkchen bei Aufnahmen, die du jetzt nicht hochladen möchtest.",
     count: (n: number, total: number) =>
       `${plural(n, "Aufnahme", "Aufnahmen")} von ${total} ausgewählt`,
     empty: "Keine Aufnahme ausgewählt.",
@@ -130,7 +136,8 @@ const wizard = {
   },
   target: {
     heading: "Wohin soll hochgeladen werden?",
-    intro: "Wähle deine Praktikumsgruppe und den Versuch, zu dem die Messdaten gehören.",
+    intro:
+      "Wähle deine Praktikumsgruppe und den Versuch, zu dem die Messdaten gehören.",
     group: "Gruppe",
     groupHelp:
       "In openBIS entspricht die Gruppe dem Projekt deiner Praktikumsgruppe (z. B. „Mittwoch – Gruppe 4“).",
@@ -147,12 +154,14 @@ const wizard = {
     loading: "Lade…",
     loadError: "Die openBIS-Struktur konnte nicht geladen werden",
     loadErrorTitle: "openBIS nicht erreichbar",
-    noGroups: "Keine Gruppen gefunden. Nutze „Erweitert“, um die Kennung deines Versuchs einzugeben.",
+    noGroups:
+      "Keine Gruppen gefunden. Nutze „Erweitert“, um die Kennung deines Versuchs einzugeben.",
     advanced: "Erweitert: Kennung manuell eingeben",
     advancedHint:
       "Nur nötig, wenn dein Versuch in der Liste fehlt. Die Kennung bekommst du von deiner Betreuung.",
     manualExperiment: "Kennung des Versuchs",
-    manualExperimentHelp: "Pfad der openBIS-Sammlung, z. B. /RAUM/PROJEKT/EXPERIMENT-1.",
+    manualExperimentHelp:
+      "Pfad der openBIS-Sammlung, z. B. /RAUM/PROJEKT/EXPERIMENT-1.",
     manualObject: "Kennung der Probe",
     manualObjectHelp: "Optional, z. B. /RAUM/PROBE-1.",
     manualInvalid: "Bitte als /RAUM/PROJEKT/EXPERIMENT eingeben.",
@@ -164,15 +173,19 @@ const wizard = {
   },
   details: {
     heading: "Angaben zum Versuch",
-    intro: "Pflichtfelder sind mit * markiert. Mit der Stecknadel merkst du dir ein Feld für den nächsten Upload.",
+    intro:
+      "Pflichtfelder sind mit * markiert. Mit der Stecknadel merkst du dir ein Feld für den nächsten Upload.",
     labCourse: "Praktikum",
-    labCourseHelp: "Wird in openBIS als Eigenschaft DSO_LAB_COURSE am Datensatz gespeichert.",
+    labCourseHelp:
+      "Wird in openBIS als Eigenschaft DSO_LAB_COURSE am Datensatz gespeichert.",
     labCoursePlaceholder: "Praktikum auswählen…",
     expTitle: "Versuchstitel",
-    expTitleHelp: "Kurzer Titel des Versuchs. openBIS-Eigenschaft: DSO_EXP_TITLE.",
+    expTitleHelp:
+      "Kurzer Titel des Versuchs. openBIS-Eigenschaft: DSO_EXP_TITLE.",
     expTitlePlaceholder: "z. B. RC-Schaltung Frequenzgang",
     expDescription: "Beschreibung",
-    expDescriptionHelp: "Ausführlichere Beschreibung des Versuchs. openBIS-Eigenschaft: DSO_EXP_DESCRIPTION.",
+    expDescriptionHelp:
+      "Ausführlichere Beschreibung des Versuchs. openBIS-Eigenschaft: DSO_EXP_DESCRIPTION.",
     expDescriptionPlaceholder: "Was wurde gemessen und wie?",
     deviceUnderTest: "Messobjekt",
     deviceUnderTestHelp:
@@ -193,7 +206,8 @@ const wizard = {
   },
   confirm: {
     heading: "Alles richtig?",
-    intro: "Prüfe die Zusammenfassung. Hochgeladene Aufnahmen können nicht zurückgenommen werden.",
+    intro:
+      "Prüfe die Zusammenfassung. Hochgeladene Aufnahmen können nicht zurückgenommen werden.",
     captures: "Aufnahmen",
     target: "Ziel",
     group: "Gruppe",
@@ -203,15 +217,18 @@ const wizard = {
     details: "Angaben",
   },
   result: {
-    uploading: (n: number) => `${plural(n, "Aufnahme wird", "Aufnahmen werden")} hochgeladen…`,
+    uploading: (n: number) =>
+      `${plural(n, "Aufnahme wird", "Aufnahmen werden")} hochgeladen…`,
     uploadingHint: "Bitte dieses Fenster geöffnet lassen.",
-    success: (n: number) => `✓ ${plural(n, "Aufnahme", "Aufnahmen")} hochgeladen`,
+    success: (n: number) =>
+      `✓ ${plural(n, "Aufnahme", "Aufnahmen")} hochgeladen`,
     successDataset: (permId: string) => `Datensatz ${permId}`,
     openInOpenbis: "In openBIS öffnen",
     dropbox:
       "Die Daten wurden an die openBIS-Dropbox übergeben. Die Registrierung läuft automatisch und kann einige Minuten dauern.",
     failed: "Hochladen fehlgeschlagen",
-    failedHint: "Deine Aufnahmen sind noch lokal vorhanden und nichts ging verloren.",
+    failedHint:
+      "Deine Aufnahmen sind noch lokal vorhanden und nichts ging verloren.",
     toastSuccess: "Hochgeladen",
     toastError: "Hochladen fehlgeschlagen",
   },

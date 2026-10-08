@@ -32,7 +32,9 @@ export function subscribeDeviceEvents(
         if (!res.ok || !res.body) throw new Error(`SSE ${res.status}`);
         onConnectionChange?.(true);
         retryMs = 1000;
-        const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+        const reader = res.body
+          .pipeThrough(new TextDecoderStream())
+          .getReader();
         let buffer = "";
         for (;;) {
           const { value, done } = await reader.read();

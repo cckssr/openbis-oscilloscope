@@ -24,7 +24,9 @@ import {
 /** True when the page does not scroll horizontally. */
 async function fitsHorizontally(page: Page): Promise<boolean> {
   return page.evaluate(
-    () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    () =>
+      document.documentElement.scrollWidth <=
+      document.documentElement.clientWidth,
   );
 }
 
@@ -32,7 +34,9 @@ async function fitsHorizontally(page: Page): Promise<boolean> {
 async function plotRegion(page: Page) {
   const graph = page.locator(".js-plotly-plot").first();
   await expect(graph).toBeVisible();
-  const region = graph.locator("xpath=ancestor::div[contains(@class,'@container')][1]");
+  const region = graph.locator(
+    "xpath=ancestor::div[contains(@class,'@container')][1]",
+  );
   return box(region);
 }
 
@@ -45,20 +49,26 @@ test.afterEach(resetLocks);
 test.describe("no horizontal overflow", () => {
   test("login", async ({ page }) => {
     await page.goto("login");
-    await expect(page.getByRole("heading", { name: /Oszilloskop/ })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /Oszilloskop/ }),
+    ).toBeVisible();
     expect(await fitsHorizontally(page)).toBe(true);
   });
 
   test("device list", async ({ page }) => {
     await loginAsDebugUser(page);
-    await expect(page.getByRole("heading", { name: /Mock Scope/ }).first()).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /Mock Scope/ }).first(),
+    ).toBeVisible();
     expect(await fitsHorizontally(page)).toBe(true);
   });
 
   test("control page: free, held and live", async ({ page }) => {
     await loginAsDebugUser(page);
     await page.goto("device/scope-01");
-    await expect(page.getByRole("button", { name: /^Gerät übernehmen$/ }).first()).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /^Gerät übernehmen$/ }).first(),
+    ).toBeVisible();
     expect(await fitsHorizontally(page)).toBe(true);
 
     await openAndTake(page);
@@ -69,7 +79,9 @@ test.describe("no horizontal overflow", () => {
     await stopLive(page);
   });
 
-  test("control page in Erweitert with settings open", async ({ page }, testInfo) => {
+  test("control page in Erweitert with settings open", async ({
+    page,
+  }, testInfo) => {
     await loginAsDebugUser(page);
     await openAndTake(page);
     await setLevel(page, "Erweitert");
@@ -87,7 +99,9 @@ test.describe("no horizontal overflow", () => {
   });
 });
 
-test("the owner button and the archive link stay inside the viewport", async ({ page }) => {
+test("the owner button and the archive link stay inside the viewport", async ({
+  page,
+}) => {
   await loginAsDebugUser(page);
   await openAndTake(page);
   const width = page.viewportSize()!.width;
@@ -115,21 +129,31 @@ test("A15: trigger controls are not clipped", async ({ page }, testInfo) => {
   expect(await groups.count()).toBeGreaterThan(0);
   for (const group of await groups.all()) {
     const g = await box(group);
-    expect(g.x + g.width, "radiogroup inside inspector").toBeLessThanOrEqual(panelBox.x + panelBox.width + 0.5);
+    expect(g.x + g.width, "radiogroup inside inspector").toBeLessThanOrEqual(
+      panelBox.x + panelBox.width + 0.5,
+    );
     for (const radio of await group.getByRole("radio").all()) {
       const r = await box(radio);
       expect(r.x, "segment left edge").toBeGreaterThanOrEqual(g.x - 0.5);
-      expect(r.x + r.width, "segment right edge").toBeLessThanOrEqual(g.x + g.width + 0.5);
+      expect(r.x + r.width, "segment right edge").toBeLessThanOrEqual(
+        g.x + g.width + 0.5,
+      );
       // The label itself is not cut off (no text overflow inside the button).
-      const clipped = await radio.evaluate((el) => el.scrollWidth > el.clientWidth + 1);
-      expect(clipped, `label of "${await radio.textContent()}" clipped`).toBe(false);
+      const clipped = await radio.evaluate(
+        (el) => el.scrollWidth > el.clientWidth + 1,
+      );
+      expect(clipped, `label of "${await radio.textContent()}" clipped`).toBe(
+        false,
+      );
     }
   }
   // Every control of the group sits inside the panel.
   for (const c of await panel.locator("[data-control]").all()) {
     if (!(await c.isVisible())) continue;
     const b = await box(c);
-    expect(b.x + b.width).toBeLessThanOrEqual(panelBox.x + panelBox.width + 0.5);
+    expect(b.x + b.width).toBeLessThanOrEqual(
+      panelBox.x + panelBox.width + 0.5,
+    );
   }
   await closeSettings(page, testInfo);
 });
@@ -145,20 +169,36 @@ test("plot gets its share of the screen", async ({ page }, testInfo) => {
 
   switch (layoutOf(testInfo)) {
     case "desktop":
-      expect(widthShare, "plot width share on desktop").toBeGreaterThanOrEqual(0.55);
+      expect(widthShare, "plot width share on desktop").toBeGreaterThanOrEqual(
+        0.55,
+      );
       break;
     case "landscape":
-      expect(widthShare, "plot width share on tablet landscape").toBeGreaterThanOrEqual(0.75);
+      expect(
+        widthShare,
+        "plot width share on tablet landscape",
+      ).toBeGreaterThanOrEqual(0.75);
       break;
     case "portrait":
-      expect(widthShare, "plot width share on tablet portrait").toBeGreaterThanOrEqual(0.9);
-      expect(heightShare, "plot height share on tablet portrait").toBeGreaterThanOrEqual(0.45);
+      expect(
+        widthShare,
+        "plot width share on tablet portrait",
+      ).toBeGreaterThanOrEqual(0.9);
+      expect(
+        heightShare,
+        "plot height share on tablet portrait",
+      ).toBeGreaterThanOrEqual(0.45);
       break;
   }
 });
 
-test("main action buttons are at least 40 px tall on tablets", async ({ page }, testInfo) => {
-  test.skip(!isTablet(testInfo), "touch targets only matter on the tablet projects");
+test("main action buttons are at least 40 px tall on tablets", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    !isTablet(testInfo),
+    "touch targets only matter on the tablet projects",
+  );
   await loginAsDebugUser(page);
   await openAndTake(page);
   await saveCapture(page);
@@ -182,14 +222,19 @@ test("archive touch targets: upload button and row checkbox are at least 40 px",
   page,
   request,
 }, testInfo) => {
-  test.skip(!isTablet(testInfo), "touch targets only matter on the tablet projects");
+  test.skip(
+    !isTablet(testInfo),
+    "touch targets only matter on the tablet projects",
+  );
   await loginAsDebugUser(page);
   const sid = await apiLock(request);
   await apiCapture(request, sid);
   await page.goto(`archive/${sid}`);
   await expect(page.getByRole("table")).toBeVisible();
 
-  const upload = await box(page.getByRole("button", { name: /^Hochladen \(\d+\)$/ }));
+  const upload = await box(
+    page.getByRole("button", { name: /^Hochladen \(\d+\)$/ }),
+  );
   expect(upload.height).toBeGreaterThanOrEqual(40);
   const checkbox = page
     .getByRole("checkbox", { name: /Aufnahme von .* zum Hochladen auswählen/ })
@@ -200,12 +245,19 @@ test("archive touch targets: upload button and row checkbox are at least 40 px",
   expect(hit.height).toBeGreaterThanOrEqual(40);
 });
 
-test("A16: no Plotly notifier text on the archive page after zooming", async ({ page, request }) => {
+test("A16: no Plotly notifier text on the archive page after zooming", async ({
+  page,
+  request,
+}) => {
   await loginAsDebugUser(page);
   await openAndTake(page);
-  const sid = (await (await request.get("http://localhost:8000/devices/scope-01", {
-    headers: { Authorization: "Bearer debug-token" },
-  })).json()).lock.session_id as string;
+  const sid = (
+    await (
+      await request.get("http://localhost:8000/devices/scope-01", {
+        headers: { Authorization: "Bearer debug-token" },
+      })
+    ).json()
+  ).lock.session_id as string;
   await saveCapture(page);
   await zoomPlot(page);
 
@@ -216,7 +268,10 @@ test("A16: no Plotly notifier text on the archive page after zooming", async ({ 
   await expect(page.getByText(/double-click|zoom back out/i)).toHaveCount(0);
 
   // Zooming inside the preview (split view or dialog) must not leak a notifier either.
-  await page.getByRole("button", { name: /^Vorschau \d/ }).first().click();
+  await page
+    .getByRole("button", { name: /^Vorschau \d/ })
+    .first()
+    .click();
   await expect(page.locator(".js-plotly-plot").first()).toBeVisible();
   await zoomPlot(page);
   await page.waitForTimeout(500);

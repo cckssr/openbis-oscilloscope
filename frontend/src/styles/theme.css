@@ -236,7 +236,17 @@
 
 /* Visible keyboard focus everywhere; components with their own ring (outline-none) are unaffected. */
 @layer base {
-  :where(a, button, input, select, textarea, summary, [role="radio"], [role="tab"], [tabindex]):focus-visible {
+  :where(
+    a,
+    button,
+    input,
+    select,
+    textarea,
+    summary,
+    [role="radio"],
+    [role="tab"],
+    [tabindex]
+  ):focus-visible {
     outline: 2px solid var(--lab-accent);
     outline-offset: 2px;
   }

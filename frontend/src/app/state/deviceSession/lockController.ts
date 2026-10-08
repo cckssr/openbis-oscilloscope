@@ -23,7 +23,11 @@ import { errorMessage, notifyError } from "../../../lib/notify";
 import { createInitialState } from "./initialState";
 import { Heartbeat } from "./heartbeat";
 import { uid, type StoreHost } from "./context";
-import { TabCoordinator, defaultChannelFactory, type ChannelFactory } from "./tabCoordinator";
+import {
+  TabCoordinator,
+  defaultChannelFactory,
+  type ChannelFactory,
+} from "./tabCoordinator";
 import type { JobTracker } from "./jobs";
 import type { DeviceSessionState, LockState } from "./types";
 
@@ -165,7 +169,10 @@ export class LockController {
   }
 
   /** Server still has our lock: ask other tabs, then become held or passive. */
-  private async reclaim(sessionId: string, acquiredAtMs?: number): Promise<void> {
+  private async reclaim(
+    sessionId: string,
+    acquiredAtMs?: number,
+  ): Promise<void> {
     this.setLock({ status: "acquiring", sessionId, error: undefined });
     this.sinceHint = acquiredAtMs;
     const otherTab = await this.tabs.queryController(this.tabQueryMs);
@@ -188,7 +195,11 @@ export class LockController {
    */
   async takeControl(): Promise<void> {
     const before = this.host.getState().lock;
-    if (before.status === "held" || before.status === "acquiring" || before.status === "releasing") {
+    if (
+      before.status === "held" ||
+      before.status === "acquiring" ||
+      before.status === "releasing"
+    ) {
       return;
     }
     if (before.status === "passive" && before.sessionId) {
@@ -202,7 +213,10 @@ export class LockController {
     try {
       const device = await this.loadDevice();
       const mine = device?.lock?.is_mine ? device.lock.session_id : undefined;
-      const sessionId = mine ?? (await acquireLock(this.host.token, this.host.deviceId)).control_session_id;
+      const sessionId =
+        mine ??
+        (await acquireLock(this.host.token, this.host.deviceId))
+          .control_session_id;
       if (this.host.isDisposed()) return;
       await this.becomeHeld(sessionId);
       this.jobs.finish(jobId, "done");
@@ -226,7 +240,11 @@ export class LockController {
     await this.hooks.stopLoops();
     if (this.host.getState().busy) {
       // e.g. a full-resolution read: never pull the lock from under it
-      notifyError(new Error(t.lock.releaseBusy), t.lock.releaseBusy, t.lock.releaseFailedTitle);
+      notifyError(
+        new Error(t.lock.releaseBusy),
+        t.lock.releaseBusy,
+        t.lock.releaseFailedTitle,
+      );
       return;
     }
     this.setLock({ status: "releasing" });
@@ -236,7 +254,10 @@ export class LockController {
       await releaseLock(this.host.token, this.host.deviceId, sessionId);
     } catch (err) {
       if (this.host.isDisposed()) return;
-      this.setLock({ status: "held", error: errorMessage(err, t.lock.releaseFailed) });
+      this.setLock({
+        status: "held",
+        error: errorMessage(err, t.lock.releaseFailed),
+      });
       void this.startHeartbeat();
       notifyError(err, t.lock.releaseFailed, t.lock.releaseFailedTitle);
       return;
@@ -274,7 +295,8 @@ export class LockController {
 
   private async startHeartbeat(): Promise<void> {
     const interval = await this.heartbeatInterval();
-    if (this.host.isDisposed() || this.host.getState().lock.status !== "held") return;
+    if (this.host.isDisposed() || this.host.getState().lock.status !== "held")
+      return;
     this.heartbeat.start(interval);
   }
 
@@ -282,7 +304,10 @@ export class LockController {
     try {
       const { lock_ttl_seconds } = await getConfig();
       if (lock_ttl_seconds > 0) {
-        return Math.max(1000, Math.min(DEFAULT_HEARTBEAT_MS, (lock_ttl_seconds * 1000) / 5));
+        return Math.max(
+          1000,
+          Math.min(DEFAULT_HEARTBEAT_MS, (lock_ttl_seconds * 1000) / 5),
+        );
       }
     } catch {
       // config is optional — use the default
@@ -317,7 +342,10 @@ export class LockController {
   private followRelease(sessionId: string): void {
     const { lock } = this.host.getState();
     if (lock.status !== "passive") return;
-    this.host.update((s) => ({ ...s, lock: { status: "none", previousSessionId: sessionId } }));
+    this.host.update((s) => ({
+      ...s,
+      lock: { status: "none", previousSessionId: sessionId },
+    }));
   }
 
   private followLoss(sessionId: string): void {
@@ -325,7 +353,11 @@ export class LockController {
     if (lock.status !== "passive") return;
     this.host.update((s) => ({
       ...s,
-      lock: { status: "lost", previousSessionId: sessionId, error: t.lock.lost },
+      lock: {
+        status: "lost",
+        previousSessionId: sessionId,
+        error: t.lock.lost,
+      },
     }));
   }
 
@@ -349,7 +381,10 @@ export class LockController {
   }
 
   private setLock(patch: Partial<LockState>): void {
-    this.host.update((s: DeviceSessionState) => ({ ...s, lock: { ...s.lock, ...patch } }));
+    this.host.update((s: DeviceSessionState) => ({
+      ...s,
+      lock: { ...s.lock, ...patch },
+    }));
   }
 
   // -------------------------------------------------------------------------
@@ -364,7 +399,11 @@ export class LockController {
   private onUnload = (): void => {
     const { lock } = this.host.getState();
     if (lock.status !== "held" || !lock.sessionId) return;
-    softReleaseLockOnUnload(this.host.token, this.host.deviceId, lock.sessionId);
+    softReleaseLockOnUnload(
+      this.host.token,
+      this.host.deviceId,
+      lock.sessionId,
+    );
   };
 
   /** Page restored from the back/forward cache: restore the full lock TTL at once. */

@@ -15,10 +15,17 @@ export interface ChannelSectionsProps extends GroupComponentProps {
  * @param props - See {@link ChannelSectionsProps}
  * @returns The list of channel sections
  */
-export function ChannelSections({ deviceId, group, ctx, disabled, disabledReason }: ChannelSectionsProps) {
+export function ChannelSections({
+  deviceId,
+  group,
+  ctx,
+  disabled,
+  disabledReason,
+}: ChannelSectionsProps) {
   const [overrides, setOverrides] = useState<Record<number, boolean>>({});
   const enableDef = group.controls.find(
-    (c): c is ToggleControlDef => c.kind === "toggle" && c.key === group.enableKey,
+    (c): c is ToggleControlDef =>
+      c.kind === "toggle" && c.key === group.enableKey,
   );
   const detail = group.controls.filter((c) => c !== enableDef);
 
@@ -38,7 +45,9 @@ export function ChannelSections({ deviceId, group, ctx, disabled, disabledReason
             controls={detail}
             enableDef={enableDef}
             open={overrides[n] ?? ctx.settings.channels[n].enabled}
-            onOpenChange={(open) => setOverrides((prev) => ({ ...prev, [n]: open }))}
+            onOpenChange={(open) =>
+              setOverrides((prev) => ({ ...prev, [n]: open }))
+            }
           />
         ))}
     </div>

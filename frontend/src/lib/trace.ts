@@ -36,8 +36,21 @@ export type Overlay =
     }
   | { kind: "trigger-time"; value: number }
   | { kind: "cursor-x"; id: string; value: number; color?: string }
-  | { kind: "cursor-y"; id: string; traceId: string; value: number; color?: string }
-  | { kind: "marker"; id: string; x: number; y: number; label: string; traceId?: string };
+  | {
+      kind: "cursor-y";
+      id: string;
+      traceId: string;
+      value: number;
+      color?: string;
+    }
+  | {
+      kind: "marker";
+      id: string;
+      x: number;
+      y: number;
+      label: string;
+      traceId?: string;
+    };
 
 /** Horizontal (time) frame of the scope screen. */
 export interface Timebase {
@@ -76,7 +89,9 @@ export function tracesFromWaveforms(
         y: Float64Array.from(w.voltage_V),
         xUnit: "s" as const,
         yUnit: "V" as const,
-        scale: cfg ? { perDiv: cfg.scale_v_div, offset: cfg.offset_v } : undefined,
+        scale: cfg
+          ? { perDiv: cfg.scale_v_div, offset: cfg.offset_v }
+          : undefined,
         coupling: cfg?.coupling,
         probe: cfg?.probe_attenuation,
       };

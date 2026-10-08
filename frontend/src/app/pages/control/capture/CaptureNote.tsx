@@ -82,19 +82,35 @@ export function CaptureNote({
   };
 
   // The store updates `note` only when the write succeeded, so equal text means saved.
-  let status: { icon: React.ReactNode; text: string; tone: string } | null = null;
+  let status: { icon: React.ReactNode; text: string; tone: string } | null =
+    null;
   if (saving) {
-    status = { icon: <Loader2 className="size-3.5 animate-spin" />, text: t.noteSaving, tone: "text-(--lab-text-secondary)" };
+    status = {
+      icon: <Loader2 className="size-3.5 animate-spin" />,
+      text: t.noteSaving,
+      tone: "text-(--lab-text-secondary)",
+    };
   } else if (attempt && !dirty && attempt.text === note) {
-    status = { icon: <Check className="size-3.5" />, text: t.noteSaved, tone: "text-(--lab-success)" };
+    status = {
+      icon: <Check className="size-3.5" />,
+      text: t.noteSaved,
+      tone: "text-(--lab-success)",
+    };
   } else if (attempt && dirty && attempt.text === draft) {
-    status = { icon: <TriangleAlert className="size-3.5" />, text: t.noteFailed, tone: "text-(--lab-danger)" };
+    status = {
+      icon: <TriangleAlert className="size-3.5" />,
+      text: t.noteFailed,
+      tone: "text-(--lab-danger)",
+    };
   }
 
   return (
     <div className="space-y-2">
       <div className="space-y-1">
-        <label htmlFor={NOTE_INPUT_ID} className="text-xs font-medium text-(--lab-text-secondary)">
+        <label
+          htmlFor={NOTE_INPUT_ID}
+          className="text-xs font-medium text-(--lab-text-secondary)"
+        >
           {t.noteLabel}
         </label>
         <Textarea
@@ -109,7 +125,11 @@ export function CaptureNote({
           onKeyDown={(e) => {
             // Leaves the field (saving on blur), so the single-key shortcuts work again.
             if (e.key === "Escape") e.currentTarget.blur();
-            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+            if (
+              e.key === "Enter" &&
+              !e.shiftKey &&
+              !e.nativeEvent.isComposing
+            ) {
               e.preventDefault();
               void save();
             }
@@ -121,7 +141,10 @@ export function CaptureNote({
             role="status"
             aria-live="polite"
             data-testid="note-status"
-            className={cn("flex items-center gap-1 whitespace-nowrap text-xs", status?.tone)}
+            className={cn(
+              "flex items-center gap-1 whitespace-nowrap text-xs",
+              status?.tone,
+            )}
           >
             {status && (
               <>

@@ -61,7 +61,13 @@ export function MySessions() {
         backTo="/"
         backLabel={t.back}
         actions={
-          <Button variant="secondary" size="icon" onClick={refresh} aria-label={t.refresh} title={t.refresh}>
+          <Button
+            variant="secondary"
+            size="icon"
+            onClick={refresh}
+            aria-label={t.refresh}
+            title={t.refresh}
+          >
             <RefreshCw className={isRefreshing ? "animate-spin" : ""} />
           </Button>
         }
@@ -92,14 +98,22 @@ export function MySessions() {
             days.map((day) => {
               const rel = relativeDay(day.dayKey);
               return (
-                <section key={day.dayKey} className="mb-6" aria-label={formatDate(day.date)}>
+                <section
+                  key={day.dayKey}
+                  className="mb-6"
+                  aria-label={formatDate(day.date)}
+                >
                   <h2 className="mb-2 text-xs font-semibold tracking-wide text-(--lab-text-secondary) uppercase">
                     {rel ? `${t[rel]} · ` : ""}
                     {formatDate(day.date)}
                   </h2>
                   <ul className="flex flex-col gap-2">
                     {day.sessions.map((s) => (
-                      <SessionRow key={s.session_id} session={s} startedAt={formatTime(s.created_at)} />
+                      <SessionRow
+                        key={s.session_id}
+                        session={s}
+                        startedAt={formatTime(s.created_at)}
+                      />
                     ))}
                   </ul>
                 </section>

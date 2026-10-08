@@ -4,7 +4,13 @@ import { pngExporter } from "./png";
 import { registerExporter } from "./registry";
 import { hdf5Exporter, zipExporter } from "./server";
 
-for (const e of [csvExporter, npzExporter, pngExporter, hdf5Exporter, zipExporter]) {
+for (const e of [
+  csvExporter,
+  npzExporter,
+  pngExporter,
+  hdf5Exporter,
+  zipExporter,
+]) {
   registerExporter(e);
 }
 

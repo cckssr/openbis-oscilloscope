@@ -13,7 +13,10 @@ import { useDeviceActions } from "../actions/session";
  * @param deviceId - The device about to be taken
  * @returns The user's other locked devices; empty when the list cannot be read (taking then just proceeds)
  */
-export async function findOtherLocks(token: string | null, deviceId: string): Promise<Device[]> {
+export async function findOtherLocks(
+  token: string | null,
+  deviceId: string,
+): Promise<Device[]> {
   if (!token) return [];
   try {
     const devices = await listDevices(token);
@@ -86,7 +89,11 @@ export function useTakeControl(deviceId: string): TakeControlModel {
           await releaseLock(token, d.id, d.lock.session_id);
           return true;
         } catch (err) {
-          notifyError(err, de.control.session.lock.releaseFailed, de.control.session.lock.releaseFailedTitle);
+          notifyError(
+            err,
+            de.control.session.lock.releaseFailed,
+            de.control.session.lock.releaseFailedTitle,
+          );
           return false;
         }
       }),

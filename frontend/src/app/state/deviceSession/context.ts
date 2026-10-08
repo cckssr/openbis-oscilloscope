@@ -50,7 +50,9 @@ export function requireControl(host: StoreHost): string | null {
  * @param state - Current store state
  * @returns The session id, or undefined when there never was a session
  */
-export function archiveSessionId(state: DeviceSessionState): string | undefined {
+export function archiveSessionId(
+  state: DeviceSessionState,
+): string | undefined {
   return state.lock.sessionId ?? state.lock.previousSessionId;
 }
 

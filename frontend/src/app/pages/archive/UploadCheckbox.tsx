@@ -15,7 +15,12 @@ interface UploadCheckboxProps {
  * @param props - See {@link UploadCheckboxProps}
  * @returns The checkbox inside a padded label
  */
-export function UploadCheckbox({ state, ariaLabel, disabledReason, onChange }: UploadCheckboxProps) {
+export function UploadCheckbox({
+  state,
+  ariaLabel,
+  disabledReason,
+  onChange,
+}: UploadCheckboxProps) {
   const ref = useRef<HTMLInputElement>(null);
   const id = useId();
   useEffect(() => {

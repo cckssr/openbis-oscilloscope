@@ -1,6 +1,11 @@
 import type { ReactNode } from "react";
 import { CircleHelp } from "lucide-react";
-import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "../ui/popover";
+import {
+  Popover,
+  PopoverArrow,
+  PopoverContent,
+  PopoverTrigger,
+} from "../ui/popover";
 import { cn } from "../ui/utils";
 import { de } from "../../../i18n/de";
 

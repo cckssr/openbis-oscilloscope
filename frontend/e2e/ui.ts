@@ -1,4 +1,9 @@
-import { expect, type Locator, type Page, type TestInfo } from "@playwright/test";
+import {
+  expect,
+  type Locator,
+  type Page,
+  type TestInfo,
+} from "@playwright/test";
 import { DEVICE, layoutOf } from "./helpers";
 
 /*
@@ -27,7 +32,9 @@ export async function gotoDevice(page: Page, deviceId = DEVICE): Promise<void> {
  * @returns Locator for "Gerät übernehmen" / "Gerät freigeben"
  */
 export function ownerButton(page: Page): Locator {
-  return page.getByRole("button", { name: /^Gerät (übernehmen|freigeben)$/ }).first();
+  return page
+    .getByRole("button", { name: /^Gerät (übernehmen|freigeben)$/ })
+    .first();
 }
 
 /**
@@ -35,8 +42,13 @@ export function ownerButton(page: Page): Locator {
  * @param page - The Playwright page
  */
 export async function takeControl(page: Page): Promise<void> {
-  await page.getByRole("button", { name: /^Gerät übernehmen$/ }).first().click();
-  await expect(page.getByRole("button", { name: /^Gerät freigeben$/ })).toBeVisible();
+  await page
+    .getByRole("button", { name: /^Gerät übernehmen$/ })
+    .first()
+    .click();
+  await expect(
+    page.getByRole("button", { name: /^Gerät freigeben$/ }),
+  ).toBeVisible();
 }
 
 /**
@@ -44,7 +56,10 @@ export async function takeControl(page: Page): Promise<void> {
  * @param page - The Playwright page
  * @param deviceId - Device id
  */
-export async function openAndTake(page: Page, deviceId = DEVICE): Promise<void> {
+export async function openAndTake(
+  page: Page,
+  deviceId = DEVICE,
+): Promise<void> {
   await gotoDevice(page, deviceId);
   await takeControl(page);
 }
@@ -54,7 +69,10 @@ export async function openAndTake(page: Page, deviceId = DEVICE): Promise<void> 
  * @param page - The Playwright page
  * @param level - Target level
  */
-export async function setLevel(page: Page, level: "Einfach" | "Erweitert"): Promise<void> {
+export async function setLevel(
+  page: Page,
+  level: "Einfach" | "Erweitert",
+): Promise<void> {
   const radio = page.getByRole("radio", { name: level });
   await radio.click();
   await expect(radio).toHaveAttribute("aria-checked", "true");
@@ -88,7 +106,9 @@ export async function saveCapture(page: Page): Promise<number> {
  * @returns Locator matching the start and the stop state
  */
 export function liveButtons(page: Page): Locator {
-  return page.getByRole("button", { name: new RegExp(`${LIVE_START.source}|${LIVE_STOP.source}`) });
+  return page.getByRole("button", {
+    name: new RegExp(`${LIVE_START.source}|${LIVE_STOP.source}`),
+  });
 }
 
 /**
@@ -97,8 +117,12 @@ export function liveButtons(page: Page): Locator {
  */
 export async function startLive(page: Page): Promise<void> {
   await page.getByRole("button", { name: LIVE_START }).first().click();
-  await expect(page.getByRole("button", { name: LIVE_STOP }).first()).toBeVisible();
-  await expect(page.getByText(/^LIVE$/).first()).toBeVisible({ timeout: 10_000 });
+  await expect(
+    page.getByRole("button", { name: LIVE_STOP }).first(),
+  ).toBeVisible();
+  await expect(page.getByText(/^LIVE$/).first()).toBeVisible({
+    timeout: 10_000,
+  });
 }
 
 /**
@@ -107,7 +131,9 @@ export async function startLive(page: Page): Promise<void> {
  */
 export async function stopLive(page: Page): Promise<void> {
   await page.getByRole("button", { name: LIVE_STOP }).first().click();
-  await expect(page.getByRole("button", { name: LIVE_START }).first()).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: LIVE_START }).first(),
+  ).toBeVisible();
 }
 
 /**
@@ -147,8 +173,11 @@ export async function openSettings(
     const tab = panel.getByRole("tab", { name: group });
     if ((await tab.count()) > 0) await tab.click();
   } else if (layout === "portrait") {
-    const header = panel.getByRole("button", { name: new RegExp(`^${group}`) }).first();
-    if ((await header.getAttribute("aria-expanded")) !== "true") await header.click();
+    const header = panel
+      .getByRole("button", { name: new RegExp(`^${group}`) })
+      .first();
+    if ((await header.getAttribute("aria-expanded")) !== "true")
+      await header.click();
   }
   return panel;
 }
@@ -158,7 +187,10 @@ export async function openSettings(
  * @param page - The Playwright page
  * @param testInfo - Running test
  */
-export async function closeSettings(page: Page, testInfo: TestInfo): Promise<void> {
+export async function closeSettings(
+  page: Page,
+  testInfo: TestInfo,
+): Promise<void> {
   if (layoutOf(testInfo) === "desktop") return;
   await page.keyboard.press("Escape");
   await expect(inspector(page)).toBeHidden();
@@ -179,10 +211,18 @@ export function control(panel: Locator, path: string): Locator {
  * @param panel - The inspector region
  * @param channel - 1-based channel number
  */
-export async function expandChannel(panel: Locator, channel: number): Promise<void> {
-  const trigger = panel.getByRole("button", { name: new RegExp(`^CH${channel} .*(ein|aus)`) });
+export async function expandChannel(
+  panel: Locator,
+  channel: number,
+): Promise<void> {
+  const trigger = panel.getByRole("button", {
+    name: new RegExp(`^CH${channel} .*(ein|aus)`),
+  });
   const header = trigger.first();
-  if ((await header.count()) > 0 && (await header.getAttribute("aria-expanded")) === "false") {
+  if (
+    (await header.count()) > 0 &&
+    (await header.getAttribute("aria-expanded")) === "false"
+  ) {
     await header.click();
   }
 }
@@ -192,7 +232,10 @@ export async function expandChannel(panel: Locator, channel: number): Promise<vo
  * @param page - The Playwright page
  */
 export async function gotoArchive(page: Page): Promise<void> {
-  await page.getByRole("link", { name: /Messdaten/ }).first().click();
+  await page
+    .getByRole("link", { name: /Messdaten/ })
+    .first()
+    .click();
   await expect(page).toHaveURL(/\/archive\//);
 }
 
@@ -206,7 +249,13 @@ export async function plotTraces(
 ): Promise<{ name: string; color: string; points: number }[]> {
   return page.evaluate(() => {
     const el = document.querySelector(".js-plotly-plot") as
-      | (HTMLElement & { data?: { name?: string; line?: { color?: string }; x?: ArrayLike<number> }[] })
+      | (HTMLElement & {
+          data?: {
+            name?: string;
+            line?: { color?: string };
+            x?: ArrayLike<number>;
+          }[];
+        })
       | null;
     return (el?.data ?? []).map((d) => ({
       name: d.name ?? "",
@@ -240,7 +289,10 @@ export async function toRgb(page: Page, color: string): Promise<string> {
  * @returns The locator
  */
 export function backControl(page: Page, name: string | RegExp): Locator {
-  return page.getByRole("link", { name }).or(page.getByRole("button", { name })).first();
+  return page
+    .getByRole("link", { name })
+    .or(page.getByRole("button", { name }))
+    .first();
 }
 
 /**
@@ -259,12 +311,17 @@ export async function box(locator: Locator) {
  * @param page - The Playwright page
  */
 export async function zoomPlot(page: Page): Promise<void> {
-  await page.getByRole("button", { name: /^Zoom$/ }).first().click();
+  await page
+    .getByRole("button", { name: /^Zoom$/ })
+    .first()
+    .click();
   const drag = page.locator(".js-plotly-plot .nsewdrag").first();
   const b = await box(drag);
   await page.mouse.move(b.x + b.width * 0.3, b.y + b.height * 0.3);
   await page.mouse.down();
-  await page.mouse.move(b.x + b.width * 0.6, b.y + b.height * 0.6, { steps: 6 });
+  await page.mouse.move(b.x + b.width * 0.6, b.y + b.height * 0.6, {
+    steps: 6,
+  });
   await page.mouse.up();
 }
 

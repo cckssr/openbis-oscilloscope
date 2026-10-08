@@ -16,7 +16,8 @@ function resample(t: Trace, xs: Float64Array): Float64Array {
     const x0 = t.x[j];
     const x1 = t.x[j + 1];
     const f = x1 === x0 ? 0 : (xs[i] - x0) / (x1 - x0);
-    out[i] = xs[i] < x0 || xs[i] > x1 ? NaN : t.y[j] + f * (t.y[j + 1] - t.y[j]);
+    out[i] =
+      xs[i] < x0 || xs[i] > x1 ? NaN : t.y[j] + f * (t.y[j + 1] - t.y[j]);
   }
   return out;
 }
@@ -28,7 +29,10 @@ function resample(t: Trace, xs: Float64Array): Float64Array {
  * @param traces - Traces to tabulate (same x unit)
  * @returns Shared axis and columns
  */
-export function alignTraces(traces: Trace[]): { x: Float64Array; columns: Float64Array[] } {
+export function alignTraces(traces: Trace[]): {
+  x: Float64Array;
+  columns: Float64Array[];
+} {
   const ref = traces.reduce((a, b) => (b.x.length > a.x.length ? b : a));
   const same = (t: Trace) =>
     t.x === ref.x ||
@@ -36,7 +40,10 @@ export function alignTraces(traces: Trace[]): { x: Float64Array; columns: Float6
       t.x[0] === ref.x[0] &&
       t.x[t.x.length - 1] === ref.x[ref.x.length - 1] &&
       t.x[t.x.length >> 1] === ref.x[ref.x.length >> 1]);
-  return { x: ref.x, columns: traces.map((t) => (same(t) ? t.y : resample(t, ref.x))) };
+  return {
+    x: ref.x,
+    columns: traces.map((t) => (same(t) ? t.y : resample(t, ref.x))),
+  };
 }
 
 /**
@@ -71,6 +78,8 @@ export const csvExporter: Exporter = {
   appliesTo: "capture",
   isAvailable: (input: ExportInput) => !!input.traces?.length,
   async run(input) {
-    return new Blob(csvParts(input.traces ?? []), { type: "text/csv;charset=utf-8" });
+    return new Blob(csvParts(input.traces ?? []), {
+      type: "text/csv;charset=utf-8",
+    });
   },
 };

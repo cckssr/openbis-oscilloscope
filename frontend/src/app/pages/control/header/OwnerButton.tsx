@@ -20,7 +20,12 @@ const t = de.control.page.header;
 export function takeBlockedReason(m: HeaderModel): string | null {
   const d = m.device;
   if (!d) return de.control.page.loading;
-  if (m.lockStatus === "held" || m.lockStatus === "passive" || m.lockStatus === "lost") return null;
+  if (
+    m.lockStatus === "held" ||
+    m.lockStatus === "passive" ||
+    m.lockStatus === "lost"
+  )
+    return null;
   if (d.state === "OFFLINE" || d.state === "ERROR") return t.takeDisabledBusy;
   if (d.lock && !d.lock.is_mine) return t.lockedBy(d.lock.owner_user);
   return null;
@@ -36,7 +41,13 @@ export function takeBlockedReason(m: HeaderModel): string | null {
  * @param props.model - Header slice
  * @returns The button with its guard dialog
  */
-export function OwnerButton({ deviceId, model }: { deviceId: string; model: HeaderModel }) {
+export function OwnerButton({
+  deviceId,
+  model,
+}: {
+  deviceId: string;
+  model: HeaderModel;
+}) {
   const actions = useDeviceActions(deviceId);
   const navigate = useNavigate();
   const [guardOpen, setGuardOpen] = useState(false);
@@ -45,16 +56,28 @@ export function OwnerButton({ deviceId, model }: { deviceId: string; model: Head
 
   if (lockStatus === "held" || lockStatus === "releasing") {
     const releasing = lockStatus === "releasing";
-    const reason = releasing ? null : model.busy ? de.control.session.lock.releaseBusy : null;
+    const reason = releasing
+      ? null
+      : model.busy
+        ? de.control.session.lock.releaseBusy
+        : null;
     return (
       <>
         <DisabledReason reason={reason}>
           <Button
             variant="secondary"
             disabled={releasing || !!reason}
-            onClick={() => (model.notUploaded > 0 ? setGuardOpen(true) : void actions.release())}
+            onClick={() =>
+              model.notUploaded > 0
+                ? setGuardOpen(true)
+                : void actions.release()
+            }
           >
-            {releasing ? <LoaderCircle className="animate-spin" aria-hidden /> : <LogOut aria-hidden />}
+            {releasing ? (
+              <LoaderCircle className="animate-spin" aria-hidden />
+            ) : (
+              <LogOut aria-hidden />
+            )}
             {releasing ? t.releasing : t.release}
           </Button>
         </DisabledReason>
@@ -78,9 +101,17 @@ export function OwnerButton({ deviceId, model }: { deviceId: string; model: Head
           variant="primary"
           disabled={taking || !!reason}
           // Another tab of this device already holds the lock: nothing new gets locked, so no question.
-          onClick={() => (lockStatus === "passive" ? void actions.takeControl() : take.request())}
+          onClick={() =>
+            lockStatus === "passive"
+              ? void actions.takeControl()
+              : take.request()
+          }
         >
-          {taking ? <LoaderCircle className="animate-spin" aria-hidden /> : <LogIn aria-hidden />}
+          {taking ? (
+            <LoaderCircle className="animate-spin" aria-hidden />
+          ) : (
+            <LogIn aria-hidden />
+          )}
           {taking ? t.taking : lockStatus === "lost" ? t.retake : t.take}
         </Button>
       </DisabledReason>

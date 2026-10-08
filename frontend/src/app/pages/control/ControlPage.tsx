@@ -1,14 +1,23 @@
 import { useMemo } from "react";
 import { Link } from "react-router";
 import { de } from "../../../i18n/de";
-import { EmptyState, PageHeader, RegionBoundary } from "../../components/common";
+import {
+  EmptyState,
+  PageHeader,
+  RegionBoundary,
+} from "../../components/common";
 import { Button } from "../../components/ui/button";
 import { SettingsInspector } from "./settings";
 import { useDeviceSessionSelector } from "../../state/deviceSession";
 import { LiveControls, useControlShortcuts } from "./actions";
 import { useDeviceActions } from "./actions/session";
 import { ControlBanners } from "./banners";
-import { CaptureButton, FullResolutionProvider, LastCaptureCard, useFullResolutionDialog } from "./capture";
+import {
+  CaptureButton,
+  FullResolutionProvider,
+  LastCaptureCard,
+  useFullResolutionDialog,
+} from "./capture";
 import { LeaveGuardDialog } from "./guard";
 import { ControlHeader, LevelToggle } from "./header";
 import { ControlLayout, useBreakpoint, type ControlSlots } from "./layout";
@@ -25,7 +34,11 @@ const t = de.control.page;
 function useInspectorAccess(deviceId: string) {
   const status = useDeviceSessionSelector(deviceId, (s) => s.lock.status);
   const reason =
-    status === "passive" ? t.inspector.passive : status === "lost" ? t.inspector.lost : undefined;
+    status === "passive"
+      ? t.inspector.passive
+      : status === "lost"
+        ? t.inspector.lost
+        : undefined;
   return { canEdit: status === "held", readOnlyReason: reason };
 }
 
@@ -65,13 +78,24 @@ function ControlPageBody({ deviceId }: { deviceId: string }) {
   const slots = useMemo<ControlSlots>(
     () => ({
       // On tablets the header is one compact row; the level toggle moves into the stepper row.
-      header: <ControlHeader deviceId={deviceId} level={level} onLevelChange={setLevel} compact={tablet} />,
+      header: (
+        <ControlHeader
+          deviceId={deviceId}
+          level={level}
+          onLevelChange={setLevel}
+          compact={tablet}
+        />
+      ),
       banners: <ControlBanners deviceId={deviceId} />,
       stepper: (
         <WorkflowStepper
           deviceId={deviceId}
           compact={tablet}
-          trailing={tablet ? <LevelToggle level={level} onChange={setLevel} /> : undefined}
+          trailing={
+            tablet ? (
+              <LevelToggle level={level} onChange={setLevel} />
+            ) : undefined
+          }
         />
       ),
       plot: <PlotRegion deviceId={deviceId} />,
@@ -79,7 +103,9 @@ function ControlPageBody({ deviceId }: { deviceId: string }) {
       statusbar: <StatusBar deviceId={deviceId} />,
       actions: (layout, extras) => (
         <RegionBoundary name={t.plot.actionsRegion} resetKeys={[deviceId]}>
-          <div className={layout === "bar" ? "contents" : "flex flex-col gap-3"}>
+          <div
+            className={layout === "bar" ? "contents" : "flex flex-col gap-3"}
+          >
             <CaptureButton deviceId={deviceId} layout={layout} />
             {extras}
             <LiveControls deviceId={deviceId} level={level} layout={layout} />
@@ -99,9 +125,19 @@ function ControlPageBody({ deviceId }: { deviceId: string }) {
           />
         </RegionBoundary>
       ),
-      lastCapture: (layout) => <LastCaptureCard deviceId={deviceId} layout={layout} />,
+      lastCapture: (layout) => (
+        <LastCaptureCard deviceId={deviceId} layout={layout} />
+      ),
     }),
-    [deviceId, level, setLevel, tablet, access.canEdit, access.readOnlyReason, actions],
+    [
+      deviceId,
+      level,
+      setLevel,
+      tablet,
+      access.canEdit,
+      access.readOnlyReason,
+      actions,
+    ],
   );
 
   if (deviceError && !device) {
@@ -119,7 +155,10 @@ function ControlPageBody({ deviceId }: { deviceId: string }) {
           }
           action={
             <div className="flex gap-2">
-              <Button variant="primary" onClick={() => void actions.refreshDevice()}>
+              <Button
+                variant="primary"
+                onClick={() => void actions.refreshDevice()}
+              >
                 {de.common.actions.retry}
               </Button>
               <Button asChild variant="secondary">
@@ -132,5 +171,7 @@ function ControlPageBody({ deviceId }: { deviceId: string }) {
     );
   }
 
-  return <ControlLayout slots={slots} groups={groups} breakpoint={breakpoint} />;
+  return (
+    <ControlLayout slots={slots} groups={groups} breakpoint={breakpoint} />
+  );
 }

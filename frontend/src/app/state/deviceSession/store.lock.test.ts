@@ -4,7 +4,12 @@ import * as devices from "../../../api/devices";
 import { ApiError } from "../../../api/client";
 import * as config from "../../../api/config";
 import { DeviceSessionStore } from "./store";
-import { FakeChannelHub, FakeScope, installFakeApi, noChannel } from "./testing";
+import {
+  FakeChannelHub,
+  FakeScope,
+  installFakeApi,
+  noChannel,
+} from "./testing";
 
 vi.mock("../../../api/devices");
 vi.mock("../../../api/sessions");
@@ -12,13 +17,23 @@ vi.mock("../../../api/events");
 vi.mock("../../../api/config");
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
-const MINE = { owner_user: "me", acquired_at: 1, is_mine: true, session_id: "sess-old" };
+const MINE = {
+  owner_user: "me",
+  acquired_at: 1,
+  is_mine: true,
+  session_id: "sess-old",
+};
 
 let scope: FakeScope;
 let stores: DeviceSessionStore[];
 
 function makeStore(createChannel = noChannel, tabId?: string) {
-  const store = new DeviceSessionStore({ deviceId: "scope-01", token: "tok", createChannel, tabId });
+  const store = new DeviceSessionStore({
+    deviceId: "scope-01",
+    token: "tok",
+    createChannel,
+    tabId,
+  });
   stores.push(store);
   return store;
 }
@@ -57,7 +72,11 @@ describe("lock: reclaim and take", () => {
     await vi.advanceTimersByTimeAsync(59_000);
     expect(devices.sendHeartbeat).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1_000);
-    expect(devices.sendHeartbeat).toHaveBeenCalledWith("tok", "scope-01", "sess-old");
+    expect(devices.sendHeartbeat).toHaveBeenCalledWith(
+      "tok",
+      "scope-01",
+      "sess-old",
+    );
 
     vi.mocked(config.getConfig).mockResolvedValue({
       ...(await config.getConfig()),
@@ -68,7 +87,11 @@ describe("lock: reclaim and take", () => {
     scope.device.lock = { ...MINE, session_id: "sess-2" };
     await other.start();
     await vi.advanceTimersByTimeAsync(10_000);
-    expect(devices.sendHeartbeat).toHaveBeenCalledWith("tok", "scope-01", "sess-2");
+    expect(devices.sendHeartbeat).toHaveBeenCalledWith(
+      "tok",
+      "scope-01",
+      "sess-2",
+    );
   });
 
   it("takeControl acquires, then loads settings, memory depth and counts", async () => {
@@ -87,7 +110,9 @@ describe("lock: reclaim and take", () => {
   });
 
   it("a failed takeControl reports a toast and leaves the lock at none", async () => {
-    vi.mocked(devices.acquireLock).mockRejectedValue(new ApiError(409, "device_locked", "Gerät gesperrt"));
+    vi.mocked(devices.acquireLock).mockRejectedValue(
+      new ApiError(409, "device_locked", "Gerät gesperrt"),
+    );
     const store = makeStore();
     await store.start();
     await store.actions.takeControl();
@@ -109,7 +134,9 @@ describe("lock: loss and release", () => {
     const frame = store.getState().frame;
     expect(frame?.source).toBe("live");
 
-    vi.mocked(devices.sendHeartbeat).mockRejectedValue(new ApiError(409, "lock_lost", "weg"));
+    vi.mocked(devices.sendHeartbeat).mockRejectedValue(
+      new ApiError(409, "lock_lost", "weg"),
+    );
     await vi.advanceTimersByTimeAsync(60_000);
 
     const s = store.getState();
@@ -128,7 +155,9 @@ describe("lock: loss and release", () => {
     const store = makeStore();
     await store.start();
     await store.actions.takeControl();
-    vi.mocked(devices.sendHeartbeat).mockRejectedValueOnce(new TypeError("offline"));
+    vi.mocked(devices.sendHeartbeat).mockRejectedValueOnce(
+      new TypeError("offline"),
+    );
     await vi.advanceTimersByTimeAsync(60_000);
     expect(store.getState().lock.status).toBe("held");
     await vi.advanceTimersByTimeAsync(3_000);
@@ -145,7 +174,11 @@ describe("lock: loss and release", () => {
 
     await store.actions.release();
     const s = store.getState();
-    expect(devices.releaseLock).toHaveBeenCalledWith("tok", "scope-01", "session-1");
+    expect(devices.releaseLock).toHaveBeenCalledWith(
+      "tok",
+      "scope-01",
+      "session-1",
+    );
     expect(s.lock).toEqual({ status: "none", previousSessionId: "session-1" });
     expect(s.frame).toBe(frame);
     expect(s.lastCapture).toBe(lastCapture);
@@ -177,7 +210,11 @@ describe("lock: page unload", () => {
     await store.start();
     await store.actions.takeControl();
     window.dispatchEvent(new Event("pagehide"));
-    expect(devices.softReleaseLockOnUnload).toHaveBeenCalledWith("tok", "scope-01", "session-1");
+    expect(devices.softReleaseLockOnUnload).toHaveBeenCalledWith(
+      "tok",
+      "scope-01",
+      "session-1",
+    );
     expect(devices.releaseLock).not.toHaveBeenCalled();
   });
 
@@ -219,7 +256,10 @@ describe("lock: second tab", () => {
     await vi.advanceTimersByTimeAsync(400);
     await started;
 
-    expect(b.getState().lock).toMatchObject({ status: "passive", sessionId: "session-1" });
+    expect(b.getState().lock).toMatchObject({
+      status: "passive",
+      sessionId: "session-1",
+    });
     expect(a.getState().lock.status).toBe("held");
 
     // The passive tab sends no heartbeat.
@@ -247,7 +287,10 @@ describe("lock: second tab", () => {
 
     expect(devices.acquireLock).toHaveBeenCalledTimes(1); // no new lock
     expect(b.getState().lock.status).toBe("held");
-    expect(a.getState().lock).toMatchObject({ status: "passive", sessionId: "session-1" });
+    expect(a.getState().lock).toMatchObject({
+      status: "passive",
+      sessionId: "session-1",
+    });
     expect(a.getState().live.status).toBe("off");
 
     vi.mocked(devices.sendHeartbeat).mockClear();
@@ -268,7 +311,10 @@ describe("lock: second tab", () => {
 
     await a.actions.release();
     await vi.advanceTimersByTimeAsync(10);
-    expect(b.getState().lock).toMatchObject({ status: "none", previousSessionId: "session-1" });
+    expect(b.getState().lock).toMatchObject({
+      status: "none",
+      previousSessionId: "session-1",
+    });
   });
 
   it("without BroadcastChannel the tab behaves as a single tab", async () => {
@@ -314,7 +360,9 @@ describe("lock: release with loops", () => {
     const store = makeStore();
     await store.start();
     await store.actions.takeControl();
-    vi.mocked(devices.acquireWaveforms).mockImplementation(() => new Promise(() => undefined));
+    vi.mocked(devices.acquireWaveforms).mockImplementation(
+      () => new Promise(() => undefined),
+    );
     void store.actions.saveFullResolution();
     await vi.advanceTimersByTimeAsync(10);
     await store.actions.release();

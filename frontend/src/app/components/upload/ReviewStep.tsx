@@ -19,14 +19,22 @@ interface ReviewStepProps {
  * @param props - See {@link ReviewStepProps}
  * @returns The list of selected captures
  */
-export function ReviewStep({ captures, includedIds, screenshotUrls, dispatch }: ReviewStepProps) {
+export function ReviewStep({
+  captures,
+  includedIds,
+  screenshotUrls,
+  dispatch,
+}: ReviewStepProps) {
   return (
     <div className="flex flex-col gap-3">
       <div>
         <h3 className="text-base font-semibold">{t.heading}</h3>
         <p className="help-text">{t.intro}</p>
       </div>
-      <p className="text-sm font-medium text-(--lab-text-primary)" aria-live="polite">
+      <p
+        className="text-sm font-medium text-(--lab-text-primary)"
+        aria-live="polite"
+      >
         {t.count(includedIds.length, captures.length)}
       </p>
       {captures.length === 0 ? (
@@ -43,11 +51,15 @@ export function ReviewStep({ captures, includedIds, screenshotUrls, dispatch }: 
                   <input
                     type="checkbox"
                     checked={included}
-                    onChange={() => dispatch({ type: "toggleCapture", id: c.id })}
+                    onChange={() =>
+                      dispatch({ type: "toggleCapture", id: c.id })
+                    }
                     aria-label={t.rowAria(time)}
                     className="size-4.5 shrink-0 accent-(--lab-accent) coarse:size-5"
                   />
-                  <span className="w-20 shrink-0 font-mono text-sm tabular-nums">{time}</span>
+                  <span className="w-20 shrink-0 font-mono text-sm tabular-nums">
+                    {time}
+                  </span>
                   <span className="w-28 shrink-0 sm:w-40">
                     <ChannelChips capture={c} thumbnailUrl={thumb} />
                   </span>
@@ -57,7 +69,10 @@ export function ReviewStep({ captures, includedIds, screenshotUrls, dispatch }: 
                     {c.annotation || t.noNote}
                   </span>
                   {c.kind === "screenshot" && !thumb && (
-                    <ImageIcon className="size-4 shrink-0 text-(--lab-text-secondary)" aria-hidden />
+                    <ImageIcon
+                      className="size-4 shrink-0 text-(--lab-text-secondary)"
+                      aria-hidden
+                    />
                   )}
                 </label>
               </li>

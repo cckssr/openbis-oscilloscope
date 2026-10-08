@@ -33,7 +33,13 @@ export function countsFromArtifacts(artifacts: Artifact[]): CaptureCounts {
     if (!isUploaded && (hasNote || isFlagged)) withNoteOrFlag += 1;
   }
   const total = groups.size;
-  return { total, withNoteOrFlag, flagged, uploaded, notUploaded: total - uploaded };
+  return {
+    total,
+    withNoteOrFlag,
+    flagged,
+    uploaded,
+    notUploaded: total - uploaded,
+  };
 }
 
 /**
@@ -42,5 +48,9 @@ export function countsFromArtifacts(artifacts: Artifact[]): CaptureCounts {
  * @returns Counts with one additional, not yet uploaded capture
  */
 export function countsWithNewCapture(counts: CaptureCounts): CaptureCounts {
-  return { ...counts, total: counts.total + 1, notUploaded: counts.notUploaded + 1 };
+  return {
+    ...counts,
+    total: counts.total + 1,
+    notUploaded: counts.notUploaded + 1,
+  };
 }

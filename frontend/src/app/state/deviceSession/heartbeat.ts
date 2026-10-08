@@ -34,7 +34,10 @@ export class Heartbeat {
   start(intervalMs: number): void {
     this.stop();
     const generation = this.generation;
-    this.timer = setInterval(() => void this.tick(generation, false), intervalMs);
+    this.timer = setInterval(
+      () => void this.tick(generation, false),
+      intervalMs,
+    );
   }
 
   /** Sends one heartbeat right now (e.g. after the page came back from the bfcache). */

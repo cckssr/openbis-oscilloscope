@@ -13,7 +13,8 @@ const cache = new Map<string, Trace[]>();
 function remember(key: string, traces: Trace[]): void {
   cache.delete(key);
   cache.set(key, traces);
-  while (cache.size > MAX_CACHED) cache.delete(cache.keys().next().value as string);
+  while (cache.size > MAX_CACHED)
+    cache.delete(cache.keys().next().value as string);
 }
 
 export interface PreviewData {
@@ -37,7 +38,11 @@ export function usePreviewData(
   capture: Capture | null,
 ): PreviewData {
   // Settled results only; "loading" is derived (no result for the current key yet).
-  const [result, setResult] = useState<{ key: string; status: "ready" | "error"; traces: Trace[] } | null>(null);
+  const [result, setResult] = useState<{
+    key: string;
+    status: "ready" | "error";
+    traces: Trace[];
+  } | null>(null);
   const [attempt, setAttempt] = useState(0);
 
   const key =
@@ -54,7 +59,9 @@ export function usePreviewData(
       return;
     }
     let cancelled = false;
-    Promise.all(artifactIds.map((id) => getArtifactWaveform(token, sessionId, id)))
+    Promise.all(
+      artifactIds.map((id) => getArtifactWaveform(token, sessionId, id)),
+    )
       .then((waveforms) => {
         // Archive data carries no channel settings → traces without scale (volts axis).
         const traces = tracesFromWaveforms(waveforms);
@@ -64,7 +71,11 @@ export function usePreviewData(
       .catch((err) => {
         if (cancelled) return;
         setResult({ key, status: "error", traces: [] });
-        notifyError(err, de.archive.preview.loadError, de.archive.preview.loadError);
+        notifyError(
+          err,
+          de.archive.preview.loadError,
+          de.archive.preview.loadError,
+        );
       });
     return () => {
       cancelled = true;
@@ -79,6 +90,7 @@ export function usePreviewData(
 
   if (!key) return { status: "idle", traces: [], reload };
   if (cached) return { status: "ready", traces: cached, reload };
-  if (result?.key === key) return { status: result.status, traces: result.traces, reload };
+  if (result?.key === key)
+    return { status: result.status, traces: result.traces, reload };
   return { status: "loading", traces: [], reload };
 }

@@ -16,7 +16,9 @@ function sourceChannel(ctx: ControlContext): number | undefined {
 /** V/div of the trigger source; the trigger level is stepped in tenths of it. */
 function sourceVoltPerDiv(ctx: ControlContext): number {
   const n = sourceChannel(ctx);
-  return (n !== undefined ? ctx.settings.channels[n]?.scale_v_div : undefined) ?? 1;
+  return (
+    (n !== undefined ? ctx.settings.channels[n]?.scale_v_div : undefined) ?? 1
+  );
 }
 
 /** The trigger group definition. */

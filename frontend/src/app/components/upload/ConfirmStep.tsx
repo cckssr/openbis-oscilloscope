@@ -16,7 +16,9 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="grid grid-cols-[8rem_1fr] gap-2 py-1.5 sm:grid-cols-[10rem_1fr]">
       <dt className="text-sm text-(--lab-text-secondary)">{label}</dt>
-      <dd className="min-w-0 text-sm break-words text-(--lab-text-primary)">{children || t.none}</dd>
+      <dd className="min-w-0 text-sm break-words text-(--lab-text-primary)">
+        {children || t.none}
+      </dd>
     </div>
   );
 }
@@ -44,7 +46,9 @@ export function ConfirmStep({ state, captures }: ConfirmStepProps) {
         <Row label={t.experiment}>
           {mode === "list" ? selection.collectionLabel : ids.experimentId}
           {ids.experimentId && mode === "list" && (
-            <span className="block font-mono text-xs text-(--lab-text-secondary)">{ids.experimentId}</span>
+            <span className="block font-mono text-xs text-(--lab-text-secondary)">
+              {ids.experimentId}
+            </span>
           )}
         </Row>
         <Row label={t.object}>

@@ -30,13 +30,26 @@ const SIDE_CLASS = {
  * @param props - See {@link ContentSheetProps}
  * @returns The sheet
  */
-export function ContentSheet({ open, onOpenChange, side, title, description, children }: ContentSheetProps) {
+export function ContentSheet({
+  open,
+  onOpenChange,
+  side,
+  title,
+  description,
+  children,
+}: ContentSheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side={side} className={cn("gap-0 p-0", SIDE_CLASS[side])} aria-describedby={undefined}>
+      <SheetContent
+        side={side}
+        className={cn("gap-0 p-0", SIDE_CLASS[side])}
+        aria-describedby={undefined}
+      >
         <SheetHeader className="border-b-2 border-(--lab-border) py-3 pr-14 pl-4">
           <SheetTitle>{title}</SheetTitle>
-          <SheetDescription className="help-text">{description}</SheetDescription>
+          <SheetDescription className="help-text">
+            {description}
+          </SheetDescription>
         </SheetHeader>
         <div className="min-h-0 flex-1 overflow-y-auto p-4">{children}</div>
       </SheetContent>

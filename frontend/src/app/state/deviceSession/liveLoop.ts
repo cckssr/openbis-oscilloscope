@@ -64,7 +64,8 @@ export class LiveLoop {
   }
 
   private async loop(run: number): Promise<void> {
-    const { minPeriodMs = MIN_FRAME_PERIOD_MS, maxFailures = MAX_FAILURES } = this.deps;
+    const { minPeriodMs = MIN_FRAME_PERIOD_MS, maxFailures = MAX_FAILURES } =
+      this.deps;
     let failures = 0;
     while (this.alive(run)) {
       await this.deps.yieldToCommands();

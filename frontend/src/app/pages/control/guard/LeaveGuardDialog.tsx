@@ -32,7 +32,9 @@ export function LeaveGuardDialog({ deviceId }: { deviceId: string }) {
   const leaving = useRef(false);
 
   return (
-    <AlertDialog open={blocked} onOpenChange={(open) => {
+    <AlertDialog
+      open={blocked}
+      onOpenChange={(open) => {
         if (open || !blocked) return;
         if (leaving.current) leaving.current = false;
         else blocker.reset();

@@ -1,4 +1,11 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { FullResolutionDialog } from "./FullResolutionDialog";
 
 /** What components get to control the one full-resolution dialog. */
@@ -18,14 +25,24 @@ const FullResolutionContext = createContext<FullResolutionControl | null>(null);
  * @param props.children - The page; descendants call {@link useFullResolutionDialog}
  * @returns The provider with the dialog mounted next to the children
  */
-export function FullResolutionProvider({ deviceId, children }: { deviceId: string; children: ReactNode }) {
+export function FullResolutionProvider({
+  deviceId,
+  children,
+}: {
+  deviceId: string;
+  children: ReactNode;
+}) {
   const [isOpen, setOpen] = useState(false);
   const open = useCallback(() => setOpen(true), []);
   const control = useMemo(() => ({ open }), [open]);
   return (
     <FullResolutionContext.Provider value={control}>
       {children}
-      <FullResolutionDialog deviceId={deviceId} open={isOpen} onOpenChange={setOpen} />
+      <FullResolutionDialog
+        deviceId={deviceId}
+        open={isOpen}
+        onOpenChange={setOpen}
+      />
     </FullResolutionContext.Provider>
   );
 }
@@ -38,6 +55,7 @@ export function FullResolutionProvider({ deviceId, children }: { deviceId: strin
  */
 export function useFullResolutionDialog(): FullResolutionControl {
   const control = useContext(FullResolutionContext);
-  if (!control) throw new Error("useFullResolutionDialog needs a <FullResolutionProvider>");
+  if (!control)
+    throw new Error("useFullResolutionDialog needs a <FullResolutionProvider>");
   return control;
 }

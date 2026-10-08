@@ -50,7 +50,9 @@ describe("decimateMinMax", () => {
   });
 
   it("handles empty input and NaN-only buckets", () => {
-    expect(decimateMinMax(new Float64Array(0), new Float64Array(0), 100).x.length).toBe(0);
+    expect(
+      decimateMinMax(new Float64Array(0), new Float64Array(0), 100).x.length,
+    ).toBe(0);
     const x = Float64Array.from({ length: 1000 }, (_, i) => i);
     const y = new Float64Array(1000).fill(NaN);
     const out = decimateMinMax(x, y, 100);

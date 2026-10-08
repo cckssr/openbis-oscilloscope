@@ -22,14 +22,27 @@ interface CardAction {
 
 function actionFor(device: Device): CardAction {
   if (device.state === "OFFLINE") {
-    return { label: t.offline, disabledReason: t.offlineReason, variant: "outline" };
+    return {
+      label: t.offline,
+      disabledReason: t.offlineReason,
+      variant: "outline",
+    };
   }
   if (device.state === "ERROR") {
-    return { label: t.unavailable, disabledReason: t.errorHint, variant: "outline" };
+    return {
+      label: t.unavailable,
+      disabledReason: t.errorHint,
+      variant: "outline",
+    };
   }
-  if (device.lock?.is_mine) return { label: t.resume, disabledReason: null, variant: "primary" };
+  if (device.lock?.is_mine)
+    return { label: t.resume, disabledReason: null, variant: "primary" };
   if (device.lock) {
-    return { label: t.busy, disabledReason: lockedByText(device), variant: "outline" };
+    return {
+      label: t.busy,
+      disabledReason: lockedByText(device),
+      variant: "outline",
+    };
   }
   return { label: t.open, disabledReason: null, variant: "outline" };
 }
@@ -56,10 +69,15 @@ export function DeviceCard({ device, onOpen }: DeviceCardProps) {
   const locked = device.lock !== null;
 
   return (
-    <div className="flex flex-col gap-3 rounded border-2 border-(--lab-border) bg-white p-4" data-device-id={device.id}>
+    <div
+      className="flex flex-col gap-3 rounded border-2 border-(--lab-border) bg-white p-4"
+      data-device-id={device.id}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="break-words text-base font-medium text-(--lab-text-primary)">{device.label}</h2>
+          <h2 className="break-words text-base font-medium text-(--lab-text-primary)">
+            {device.label}
+          </h2>
           <p className="help-text mt-0.5">ID: {device.id}</p>
         </div>
         <StatusBadge
@@ -68,7 +86,9 @@ export function DeviceCard({ device, onOpen }: DeviceCardProps) {
         />
       </div>
 
-      <p className="font-mono text-xs text-(--lab-text-secondary)">{device.ip}</p>
+      <p className="font-mono text-xs text-(--lab-text-secondary)">
+        {device.ip}
+      </p>
 
       {device.state === "ERROR" && (
         <div className="rounded border border-(--lab-danger) bg-white p-2 text-xs">
@@ -78,9 +98,13 @@ export function DeviceCard({ device, onOpen }: DeviceCardProps) {
           <p className="mt-1 text-(--lab-text-secondary)">{t.errorHint}</p>
         </div>
       )}
-      {device.state === "OFFLINE" && <p className="help-text">{t.offlineReason}</p>}
+      {device.state === "OFFLINE" && (
+        <p className="help-text">{t.offlineReason}</p>
+      )}
       {device.state !== "ERROR" && device.state !== "OFFLINE" && locked && (
-        <p className="help-text">{mine ? t.lockedByMe : lockedByText(device)}</p>
+        <p className="help-text">
+          {mine ? t.lockedByMe : lockedByText(device)}
+        </p>
       )}
 
       <Button

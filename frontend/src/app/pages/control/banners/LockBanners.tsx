@@ -17,7 +17,9 @@ const t = de.control.page.banners;
 export function LockLostBanner({ deviceId }: { deviceId: string }) {
   const actions = useDeviceActions(deviceId);
   // null = not lost; the string is the store's message ("" when it gave none).
-  const message = useDeviceSessionSelector(deviceId, (s) => (s.lock.status === "lost" ? (s.lock.error ?? "") : null));
+  const message = useDeviceSessionSelector(deviceId, (s) =>
+    s.lock.status === "lost" ? (s.lock.error ?? "") : null,
+  );
   if (message === null) return null;
   return (
     <Banner
@@ -26,7 +28,11 @@ export function LockLostBanner({ deviceId }: { deviceId: string }) {
       icon={CircleAlert}
       testId="lock-lost-banner"
       title={t.lostTitle}
-      action={<Button variant="primary" onClick={() => void actions.takeControl()}>{t.retake}</Button>}
+      action={
+        <Button variant="primary" onClick={() => void actions.takeControl()}>
+          {t.retake}
+        </Button>
+      }
     >
       {message || t.lostText}
     </Banner>
@@ -42,14 +48,21 @@ export function LockLostBanner({ deviceId }: { deviceId: string }) {
  */
 export function PassiveTabBanner({ deviceId }: { deviceId: string }) {
   const actions = useDeviceActions(deviceId);
-  const passive = useDeviceSessionSelector(deviceId, (s) => s.lock.status === "passive");
+  const passive = useDeviceSessionSelector(
+    deviceId,
+    (s) => s.lock.status === "passive",
+  );
   if (!passive) return null;
   return (
     <Banner
       tone="info"
       icon={MonitorSmartphone}
       testId="passive-banner"
-      action={<Button variant="primary" onClick={() => void actions.takeControl()}>{t.passiveAction}</Button>}
+      action={
+        <Button variant="primary" onClick={() => void actions.takeControl()}>
+          {t.passiveAction}
+        </Button>
+      }
     >
       {t.passiveText}
     </Banner>

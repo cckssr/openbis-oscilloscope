@@ -21,14 +21,21 @@ export interface DisabledReasonProps {
  * @param props - See {@link DisabledReasonProps}
  * @returns The control, wrapped with its explanation when `reason` is set
  */
-export function DisabledReason({ reason, children, className }: DisabledReasonProps) {
+export function DisabledReason({
+  reason,
+  children,
+  className,
+}: DisabledReasonProps) {
   if (!reason) return <div className={className}>{children}</div>;
   return (
     <div className={cn("flex flex-col gap-1", className)}>
       <Tooltip>
         <TooltipTrigger asChild>
           {/* Disabled buttons swallow pointer events; the span receives them instead. */}
-          <span tabIndex={0} className="block outline-none [&>*]:pointer-events-none">
+          <span
+            tabIndex={0}
+            className="block outline-none [&>*]:pointer-events-none"
+          >
             {children}
           </span>
         </TooltipTrigger>

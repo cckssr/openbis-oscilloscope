@@ -51,7 +51,13 @@ export function percentiles(y: Float64Array, fractions: number[]): number[] {
   if (sample.length === 0) return fractions.map(() => NaN);
   sample.sort((a, b) => a - b);
   return fractions.map(
-    (f) => sample[Math.min(sample.length - 1, Math.max(0, Math.round(f * (sample.length - 1))))],
+    (f) =>
+      sample[
+        Math.min(
+          sample.length - 1,
+          Math.max(0, Math.round(f * (sample.length - 1))),
+        )
+      ],
   );
 }
 

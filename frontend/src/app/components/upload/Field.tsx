@@ -27,11 +27,23 @@ interface FieldProps {
  * @param props - See {@link FieldProps}
  * @returns The labelled field
  */
-export function Field({ htmlFor, label, required, optional, help, remember, error, children }: FieldProps) {
+export function Field({
+  htmlFor,
+  label,
+  required,
+  optional,
+  help,
+  remember,
+  error,
+  children,
+}: FieldProps) {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex min-h-6 items-center gap-1">
-        <label htmlFor={htmlFor} className="text-sm font-medium text-(--lab-text-primary)">
+        <label
+          htmlFor={htmlFor}
+          className="text-sm font-medium text-(--lab-text-primary)"
+        >
           {label}
           {required && (
             <span className="ml-0.5 text-(--lab-danger)" aria-hidden>
@@ -40,11 +52,19 @@ export function Field({ htmlFor, label, required, optional, help, remember, erro
           )}
         </label>
         {optional && (
-          <span className="text-xs text-(--lab-text-secondary)">({de.archive.wizard.target.optional})</span>
+          <span className="text-xs text-(--lab-text-secondary)">
+            ({de.archive.wizard.target.optional})
+          </span>
         )}
         {help && <HelpPopover label={`Hilfe: ${label}`}>{help}</HelpPopover>}
         <span className="flex-1" />
-        {remember && <RememberToggle pinned={remember.pinned} fieldLabel={label} onToggle={remember.onToggle} />}
+        {remember && (
+          <RememberToggle
+            pinned={remember.pinned}
+            fieldLabel={label}
+            onToggle={remember.onToggle}
+          />
+        )}
       </div>
       {children}
       {error && <p className="text-xs text-(--lab-danger)">{error}</p>}

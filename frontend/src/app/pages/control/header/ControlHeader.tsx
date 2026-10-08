@@ -32,13 +32,23 @@ export interface ControlHeaderProps {
  * @param props - See {@link ControlHeaderProps}
  * @returns The page header
  */
-export function ControlHeader({ deviceId, level, onLevelChange, compact = false }: ControlHeaderProps) {
+export function ControlHeader({
+  deviceId,
+  level,
+  onLevelChange,
+  compact = false,
+}: ControlHeaderProps) {
   const model = useHeaderModel(deviceId);
   const { device, lockStatus } = model;
-  const mine = lockStatus === "held" || lockStatus === "passive" || lockStatus === "releasing" || !!device?.lock?.is_mine;
+  const mine =
+    lockStatus === "held" ||
+    lockStatus === "passive" ||
+    lockStatus === "releasing" ||
+    !!device?.lock?.is_mine;
   const line = statusLine(model);
   // device.state is fetched before the lock is taken, so derive LOCKED from our own lock.
-  const badgeState = mine && device?.state === "ONLINE" ? "LOCKED" : device?.state;
+  const badgeState =
+    mine && device?.state === "ONLINE" ? "LOCKED" : device?.state;
 
   const title = device?.label ?? deviceId;
 
@@ -50,21 +60,40 @@ export function ControlHeader({ deviceId, level, onLevelChange, compact = false 
       )}
     >
       <div className="flex min-w-0 flex-1 items-center gap-3">
-        <Button asChild variant="secondary" size="icon" aria-label={de.control.page.header.back} title={de.control.page.header.back}>
+        <Button
+          asChild
+          variant="secondary"
+          size="icon"
+          aria-label={de.control.page.header.back}
+          title={de.control.page.header.back}
+        >
           <Link to="/">
             <ArrowLeft />
           </Link>
         </Button>
         <div className="min-w-0">
-          <h1 className={cn("truncate font-semibold text-(--lab-text-primary)", compact ? "text-lg leading-tight" : "text-xl")} title={String(title)}>
+          <h1
+            className={cn(
+              "truncate font-semibold text-(--lab-text-primary)",
+              compact ? "text-lg leading-tight" : "text-xl",
+            )}
+            title={String(title)}
+          >
             {title}
           </h1>
           <p className="help-text truncate">
             <span className="font-mono">{deviceId}</span>
-            {line && <> · <span aria-live="polite">{line}</span></>}
+            {line && (
+              <>
+                {" "}
+                · <span aria-live="polite">{line}</span>
+              </>
+            )}
           </p>
         </div>
-        {device && badgeState && <StatusBadge status={badgeState} isMine={mine} />}
+        {device && badgeState && (
+          <StatusBadge status={badgeState} isMine={mine} />
+        )}
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {!compact && <LevelToggle level={level} onChange={onLevelChange} />}

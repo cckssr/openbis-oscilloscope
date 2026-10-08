@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { makeSnapshot } from "../../../controls/testing";
 import type { InspectorModel } from "../../../controls/store";
 import type { SettingPath } from "../../../state/deviceSession/types";
@@ -15,16 +21,27 @@ vi.mock("../../../controls/store", () => ({
   useSetting: (_deviceId: string, path: SettingPath) => {
     const model = fake.model as InspectorModel;
     const [group, a, b] = path.split(".");
-    const settings = model.settings as unknown as Record<string, Record<string, unknown>>;
+    const settings = model.settings as unknown as Record<
+      string,
+      Record<string, unknown>
+    >;
     const value =
       group === "channels"
-        ? (model.settings!.channels[Number(a)] as unknown as Record<string, unknown>)[b]
+        ? (
+            model.settings!.channels[Number(a)] as unknown as Record<
+              string,
+              unknown
+            >
+          )[b]
         : settings[group][a];
     return { value, applied: value, status: undefined, set: fake.set };
   },
 }));
 
-const model = (channelCount = 4, overrides: Partial<InspectorModel> = {}): InspectorModel => ({
+const model = (
+  channelCount = 4,
+  overrides: Partial<InspectorModel> = {},
+): InspectorModel => ({
   capabilities: [],
   channelCount,
   settings: makeSnapshot(channelCount),
@@ -32,8 +49,12 @@ const model = (channelCount = 4, overrides: Partial<InspectorModel> = {}): Inspe
   ...overrides,
 });
 
-const renderInspector = (props: Partial<React.ComponentProps<typeof SettingsInspector>> = {}) =>
-  render(<SettingsInspector deviceId="scope-01" level="expert" canEdit {...props} />);
+const renderInspector = (
+  props: Partial<React.ComponentProps<typeof SettingsInspector>> = {},
+) =>
+  render(
+    <SettingsInspector deviceId="scope-01" level="expert" canEdit {...props} />,
+  );
 
 beforeEach(() => {
   fake.model = model();
@@ -57,7 +78,9 @@ describe("SettingsInspector", () => {
     const ch2 = document.querySelector('[data-channel="2"]')!;
     expect(ch1.getAttribute("data-state")).toBe("open");
     expect(ch2.getAttribute("data-state")).toBe("closed");
-    expect(within(ch1 as HTMLElement).getByText("CH1 · 200 mV/div · DC · 1×")).toBeTruthy();
+    expect(
+      within(ch1 as HTMLElement).getByText("CH1 · 200 mV/div · DC · 1×"),
+    ).toBeTruthy();
     expect(within(ch2 as HTMLElement).getByText("CH2 · aus")).toBeTruthy();
   });
 
@@ -96,9 +119,15 @@ describe("SettingsInspector", () => {
   describe("without control of the device", () => {
     it("disables all controls and explains why", () => {
       renderInspector({ canEdit: false });
-      expect(screen.getByText("Gerät übernehmen, um Einstellungen zu ändern")).toBeTruthy();
-      screen.getAllByRole("switch").forEach((s) => expect((s as HTMLButtonElement).disabled).toBe(true));
-      screen.getAllByRole("textbox").forEach((i) => expect((i as HTMLInputElement).disabled).toBe(true));
+      expect(
+        screen.getByText("Gerät übernehmen, um Einstellungen zu ändern"),
+      ).toBeTruthy();
+      screen
+        .getAllByRole("switch")
+        .forEach((s) => expect((s as HTMLButtonElement).disabled).toBe(true));
+      screen
+        .getAllByRole("textbox")
+        .forEach((i) => expect((i as HTMLInputElement).disabled).toBe(true));
     });
 
     it("offers to take the device", () => {
@@ -109,14 +138,23 @@ describe("SettingsInspector", () => {
     });
 
     it("shows a custom reason and no button without onTakeControl", () => {
-      renderInspector({ canEdit: false, readOnlyReason: "Gerät ist in einem anderen Tab geöffnet." });
-      expect(screen.getByText("Gerät ist in einem anderen Tab geöffnet.")).toBeTruthy();
-      expect(screen.queryByRole("button", { name: "Gerät übernehmen" })).toBeNull();
+      renderInspector({
+        canEdit: false,
+        readOnlyReason: "Gerät ist in einem anderen Tab geöffnet.",
+      });
+      expect(
+        screen.getByText("Gerät ist in einem anderen Tab geöffnet."),
+      ).toBeTruthy();
+      expect(
+        screen.queryByRole("button", { name: "Gerät übernehmen" }),
+      ).toBeNull();
     });
 
     it("shows no banner when editing is allowed", () => {
       renderInspector();
-      expect(screen.queryByText("Gerät übernehmen, um Einstellungen zu ändern")).toBeNull();
+      expect(
+        screen.queryByText("Gerät übernehmen, um Einstellungen zu ändern"),
+      ).toBeNull();
     });
   });
 });

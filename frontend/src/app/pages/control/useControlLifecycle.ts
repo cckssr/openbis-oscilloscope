@@ -10,7 +10,10 @@ import { useDeviceActions } from "./actions/session";
  * @param deviceId - The device
  * @param label - Device label for the title, if loaded
  */
-export function useControlLifecycle(deviceId: string, label: string | undefined): void {
+export function useControlLifecycle(
+  deviceId: string,
+  label: string | undefined,
+): void {
   const actions = useDeviceActions(deviceId);
 
   useEffect(() => {

@@ -16,7 +16,11 @@ let scope: FakeScope;
 let store: DeviceSessionStore;
 
 async function controlled(): Promise<DeviceSessionStore> {
-  store = new DeviceSessionStore({ deviceId: "scope-01", token: "tok", createChannel: noChannel });
+  store = new DeviceSessionStore({
+    deviceId: "scope-01",
+    token: "tok",
+    createChannel: noChannel,
+  });
   await store.start();
   await store.actions.takeControl();
   return store;
@@ -57,11 +61,14 @@ describe("live preview", () => {
   it("does not start a second request before the first one finished", async () => {
     await controlled();
     let resolveFrame: (() => void) | undefined;
-    const original = vi.mocked(devices.previewWaveforms).getMockImplementation()!;
-    vi.mocked(devices.previewWaveforms).mockImplementation((...args) =>
-      new Promise((resolve) => {
-        resolveFrame = () => resolve(original(...args));
-      }),
+    const original = vi
+      .mocked(devices.previewWaveforms)
+      .getMockImplementation()!;
+    vi.mocked(devices.previewWaveforms).mockImplementation(
+      (...args) =>
+        new Promise((resolve) => {
+          resolveFrame = () => resolve(original(...args));
+        }),
     );
     await store.actions.startLive();
     await vi.advanceTimersByTimeAsync(5_000);
@@ -75,14 +82,29 @@ describe("live preview", () => {
     await controlled();
     await store.actions.startLive();
     await vi.advanceTimersByTimeAsync(10);
-    expect(devices.previewWaveforms).toHaveBeenLastCalledWith("tok", "scope-01", "session-1", [1, 2]);
+    expect(devices.previewWaveforms).toHaveBeenLastCalledWith(
+      "tok",
+      "scope-01",
+      "session-1",
+      [1, 2],
+    );
 
     // Unticking CH2 is only pending until the debounce fires.
     store.actions.setSetting("channels.2.enabled", false);
     await vi.advanceTimersByTimeAsync(300);
-    expect(devices.previewWaveforms).toHaveBeenLastCalledWith("tok", "scope-01", "session-1", [1, 2]);
+    expect(devices.previewWaveforms).toHaveBeenLastCalledWith(
+      "tok",
+      "scope-01",
+      "session-1",
+      [1, 2],
+    );
     await vi.advanceTimersByTimeAsync(1_000);
-    expect(devices.previewWaveforms).toHaveBeenLastCalledWith("tok", "scope-01", "session-1", [1]);
+    expect(devices.previewWaveforms).toHaveBeenLastCalledWith(
+      "tok",
+      "scope-01",
+      "session-1",
+      [1],
+    );
   });
 
   it("frames update applied settings but never pending ones", async () => {
@@ -102,7 +124,9 @@ describe("live preview", () => {
 
   it("stops after three consecutive failures with a toast", async () => {
     await controlled();
-    vi.mocked(devices.previewWaveforms).mockRejectedValue(new ApiError(500, "boom", "kaputt"));
+    vi.mocked(devices.previewWaveforms).mockRejectedValue(
+      new ApiError(500, "boom", "kaputt"),
+    );
     await store.actions.startLive();
     await vi.advanceTimersByTimeAsync(5_000);
     expect(devices.previewWaveforms).toHaveBeenCalledTimes(3);
@@ -113,7 +137,9 @@ describe("live preview", () => {
   it("a single failure is tolerated", async () => {
     await controlled();
     const ok = vi.mocked(devices.previewWaveforms).getMockImplementation()!;
-    vi.mocked(devices.previewWaveforms).mockRejectedValueOnce(new Error("blip"));
+    vi.mocked(devices.previewWaveforms).mockRejectedValueOnce(
+      new Error("blip"),
+    );
     vi.mocked(devices.previewWaveforms).mockImplementation(ok);
     await store.actions.startLive();
     await vi.advanceTimersByTimeAsync(1_200);
@@ -191,25 +217,43 @@ describe("saveCapture", () => {
     const capture = await store.actions.saveCapture();
     expect(capture).not.toBeNull();
     expect(store.getState().live.status).toBe("off");
-    expect(devices.acquireWaveforms).toHaveBeenCalledWith("tok", "scope-01", "session-1", {
-      channels: [1, 2],
-      maxSamples: false,
-      runId: undefined,
-      includeData: true,
-    });
+    expect(devices.acquireWaveforms).toHaveBeenCalledWith(
+      "tok",
+      "scope-01",
+      "session-1",
+      {
+        channels: [1, 2],
+        maxSamples: false,
+        runId: undefined,
+        includeData: true,
+      },
+    );
     const s = store.getState();
     expect(s.frame?.source).toBe("capture");
-    expect(s.lastCapture).toMatchObject({ number: 1, note: "", flagged: false, fullResolution: false });
+    expect(s.lastCapture).toMatchObject({
+      number: 1,
+      note: "",
+      flagged: false,
+      fullResolution: false,
+    });
     expect(s.counts.total).toBe(1);
-    expect(toast.success).toHaveBeenCalledWith("Aufnahme #1 gespeichert", undefined);
+    expect(toast.success).toHaveBeenCalledWith(
+      "Aufnahme #1 gespeichert",
+      undefined,
+    );
   });
 
   it("discards an in-flight live frame so it cannot overwrite the capture", async () => {
     await controlled();
-    const original = vi.mocked(devices.previewWaveforms).getMockImplementation()!;
+    const original = vi
+      .mocked(devices.previewWaveforms)
+      .getMockImplementation()!;
     let releaseFrame!: () => void;
     vi.mocked(devices.previewWaveforms).mockImplementation(
-      (...args) => new Promise((resolve) => (releaseFrame = () => resolve(original(...args)))),
+      (...args) =>
+        new Promise(
+          (resolve) => (releaseFrame = () => resolve(original(...args))),
+        ),
     );
     await store.actions.startLive();
     await vi.advanceTimersByTimeAsync(10);
@@ -229,7 +273,12 @@ describe("saveCapture", () => {
     await store.actions.saveNote("Messung RC-Glied", true);
     const note = store.getState().lastCapture;
     expect(note).toMatchObject({ note: "Messung RC-Glied", flagged: true });
-    expect(sessions.setAnnotation).toHaveBeenCalledWith("tok", "session-1", "acq-1", "Messung RC-Glied");
+    expect(sessions.setAnnotation).toHaveBeenCalledWith(
+      "tok",
+      "session-1",
+      "acq-1",
+      "Messung RC-Glied",
+    );
     expect(sessions.flagArtifact).toHaveBeenCalledTimes(2);
 
     await store.actions.startLive();
@@ -253,10 +302,14 @@ describe("saveCapture", () => {
     await controlled();
     await store.actions.saveCapture();
     const before = store.getState().frame;
-    vi.mocked(devices.acquireWaveforms).mockRejectedValue(new ApiError(500, "x", "Lesefehler"));
+    vi.mocked(devices.acquireWaveforms).mockRejectedValue(
+      new ApiError(500, "x", "Lesefehler"),
+    );
     expect(await store.actions.saveCapture()).toBeNull();
     expect(store.getState().frame).toBe(before);
-    expect(toast.error).toHaveBeenCalledWith("Aufnahme fehlgeschlagen", { description: "Lesefehler" });
+    expect(toast.error).toHaveBeenCalledWith("Aufnahme fehlgeschlagen", {
+      description: "Lesefehler",
+    });
     expect(store.getState().jobs[0].status).toBe("error");
   });
 
@@ -264,8 +317,18 @@ describe("saveCapture", () => {
     await controlled();
     await store.actions.saveCapture();
     await store.actions.setCaptureFlag(true);
-    expect(sessions.flagArtifact).toHaveBeenCalledWith("tok", "session-1", "acq-1-ch1", true);
-    expect(sessions.flagArtifact).toHaveBeenCalledWith("tok", "session-1", "acq-1-ch2", true);
+    expect(sessions.flagArtifact).toHaveBeenCalledWith(
+      "tok",
+      "session-1",
+      "acq-1-ch1",
+      true,
+    );
+    expect(sessions.flagArtifact).toHaveBeenCalledWith(
+      "tok",
+      "session-1",
+      "acq-1-ch2",
+      true,
+    );
     expect(store.getState().lastCapture?.flagged).toBe(true);
   });
 
@@ -274,6 +337,9 @@ describe("saveCapture", () => {
     const res = await store.actions.saveScreenshot();
     expect(res).toEqual({ artifactId: "shot-1" });
     expect(store.getState().counts.total).toBe(1);
-    expect(store.getState().jobs[0]).toMatchObject({ kind: "screenshot", status: "done" });
+    expect(store.getState().jobs[0]).toMatchObject({
+      kind: "screenshot",
+      status: "done",
+    });
   });
 });

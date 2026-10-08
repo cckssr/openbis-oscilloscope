@@ -105,7 +105,9 @@ export function parseSI(input: string, unit = ""): number | null {
     }
   }
   text = text.replace(",", ".");
-  const match = text.match(/^([+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)([a-zA-Zµμ]?)$/);
+  const match = text.match(
+    /^([+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)([a-zA-Zµμ]?)$/,
+  );
   if (!match) return null;
   const base = Number(match[1]);
   if (!Number.isFinite(base)) return null;
@@ -149,7 +151,9 @@ export function stepInSequence(
   if (sequence.length === 0) return value;
   const eps = Math.abs(value) * 1e-6;
   if (direction > 0) {
-    return sequence.find((v) => v > value + eps) ?? sequence[sequence.length - 1];
+    return (
+      sequence.find((v) => v > value + eps) ?? sequence[sequence.length - 1]
+    );
   }
   for (let i = sequence.length - 1; i >= 0; i--) {
     if (sequence[i] < value - eps) return sequence[i];

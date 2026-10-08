@@ -34,8 +34,8 @@ export function listArtifacts(
   token: string,
   sessionId: string,
 ): Promise<Artifact[]> {
-  return apiFetch<unknown>(`/sessions/${sessionId}/artifacts`, token).then((raw) =>
-    parseList(ArtifactSchema, raw, "GET /sessions/{id}/artifacts"),
+  return apiFetch<unknown>(`/sessions/${sessionId}/artifacts`, token).then(
+    (raw) => parseList(ArtifactSchema, raw, "GET /sessions/{id}/artifacts"),
   );
 }
 
@@ -101,7 +101,11 @@ export function getArtifactWaveform(
     `/sessions/${sessionId}/artifacts/${artifactId}/data`,
     token,
   ).then((raw) =>
-    parseOrThrow(WaveformDataSchema, raw, "GET /sessions/{id}/artifacts/{id}/data"),
+    parseOrThrow(
+      WaveformDataSchema,
+      raw,
+      "GET /sessions/{id}/artifacts/{id}/data",
+    ),
   );
 }
 
@@ -192,5 +196,7 @@ export function commitSession(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-  }).then((raw) => parseOrThrow(CommitResponseSchema, raw, "POST /sessions/{id}/commit"));
+  }).then((raw) =>
+    parseOrThrow(CommitResponseSchema, raw, "POST /sessions/{id}/commit"),
+  );
 }

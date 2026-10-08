@@ -10,7 +10,10 @@ export class DeviceSessionRegistry {
    */
   constructor(
     readonly token: string,
-    private readonly storeOptions: Omit<DeviceSessionStoreOptions, "deviceId" | "token"> = {},
+    private readonly storeOptions: Omit<
+      DeviceSessionStoreOptions,
+      "deviceId" | "token"
+    > = {},
   ) {}
 
   /**
@@ -22,7 +25,11 @@ export class DeviceSessionRegistry {
   get(deviceId: string): DeviceSessionStore {
     let store = this.stores.get(deviceId);
     if (!store) {
-      store = new DeviceSessionStore({ ...this.storeOptions, deviceId, token: this.token });
+      store = new DeviceSessionStore({
+        ...this.storeOptions,
+        deviceId,
+        token: this.token,
+      });
       this.stores.set(deviceId, store);
     }
     return store;

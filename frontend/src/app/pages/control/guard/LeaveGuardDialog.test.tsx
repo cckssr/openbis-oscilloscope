@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { createMemoryRouter, RouterProvider, useNavigate } from "react-router";
 import { LeaveGuardDialog } from "./LeaveGuardDialog";
 import { FakeSession, heldState, makeJob } from "../actions/testing";
@@ -32,10 +38,15 @@ const renderPage = () => {
 };
 
 const running = () =>
-  h.fake.set({ jobs: [makeJob({ kind: "full-resolution" })], busy: "Volle Auflösung wird gelesen…" });
+  h.fake.set({
+    jobs: [makeJob({ kind: "full-resolution" })],
+    busy: "Volle Auflösung wird gelesen…",
+  });
 
 const beforeUnload = () => {
-  const event = new Event("beforeunload", { cancelable: true }) as BeforeUnloadEvent;
+  const event = new Event("beforeunload", {
+    cancelable: true,
+  }) as BeforeUnloadEvent;
   window.dispatchEvent(event);
   return event;
 };
@@ -58,18 +69,26 @@ describe("LeaveGuardDialog", () => {
     h.fake = new FakeSession(heldState({ jobs: [makeJob()] }));
     const router = renderPage();
     await act(async () => fireEvent.click(screen.getByText("zum Archiv")));
-    expect(screen.getByText("Eine Aufnahme läuft noch. Seite trotzdem verlassen?")).toBeTruthy();
+    expect(
+      screen.getByText("Eine Aufnahme läuft noch. Seite trotzdem verlassen?"),
+    ).toBeTruthy();
     expect(router.state.location.pathname).toBe("/device");
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Bleiben" })));
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: "Bleiben" })),
+    );
     expect(router.state.location.pathname).toBe("/device");
     expect(screen.queryByRole("alertdialog")).toBeNull();
   });
 
   it("leaves with 'Verlassen' while a series runs", async () => {
-    h.fake = new FakeSession(heldState({ series: { status: "on", runId: "r", count: 2 } }));
+    h.fake = new FakeSession(
+      heldState({ series: { status: "on", runId: "r", count: 2 } }),
+    );
     const router = renderPage();
     await act(async () => fireEvent.click(screen.getByText("zum Archiv")));
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Verlassen" })));
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: "Verlassen" })),
+    );
     expect(router.state.location.pathname).toBe("/archive");
     expect(screen.getByText("Archiv-Seite")).toBeTruthy();
   });

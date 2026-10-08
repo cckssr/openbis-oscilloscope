@@ -30,7 +30,10 @@ const sameSlice = (a: LiveSlice, b: LiveSlice) =>
 export function LiveStatusBadge({ deviceId }: LiveStatusBadgeProps) {
   const live = useDeviceSessionSelector(
     deviceId,
-    (s): LiveSlice => ({ status: s.live.status, lastFrameAt: s.live.lastFrameAt }),
+    (s): LiveSlice => ({
+      status: s.live.status,
+      lastFrameAt: s.live.lastFrameAt,
+    }),
     sameSlice,
   );
   const now = useNow(250, live.status === "on");
@@ -43,7 +46,10 @@ export function LiveStatusBadge({ deviceId }: LiveStatusBadgeProps) {
         data-testid="live-badge"
         data-state={live.status}
       >
-        <span className="size-2 rounded-full bg-(--lab-text-secondary)" aria-hidden />
+        <span
+          className="size-2 rounded-full bg-(--lab-text-secondary)"
+          aria-hidden
+        />
         {live.status === "paused" ? t.paused : `${t.live} ${t.starting}`}
       </span>
     );
@@ -70,9 +76,15 @@ export function LiveStatusBadge({ deviceId }: LiveStatusBadgeProps) {
         )}
         aria-hidden
       />
-      <span className="font-semibold tracking-wide">{stale ? t.stale : t.live}</span>
+      <span className="font-semibold tracking-wide">
+        {stale ? t.stale : t.live}
+      </span>
       <span className="font-normal tabular-nums">
-        {age === null ? t.waiting : stale ? t.staleAge(formatAge(age)) : t.age(formatAge(age))}
+        {age === null
+          ? t.waiting
+          : stale
+            ? t.staleAge(formatAge(age))
+            : t.age(formatAge(age))}
       </span>
     </span>
   );

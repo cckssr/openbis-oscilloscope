@@ -19,7 +19,8 @@ export const devices = {
     unavailable: "Nicht verfügbar",
     offline: "Offline",
     lockedByMe: "Du steuerst dieses Gerät.",
-    lockedBy: (owner: string, since: string) => `Belegt von ${owner} seit ${since}`,
+    lockedBy: (owner: string, since: string) =>
+      `Belegt von ${owner} seit ${since}`,
     lockedByUnknown: (since: string) => `Belegt seit ${since}`,
     offlineReason: "Gerät ist nicht erreichbar.",
     errorHint: "Bitte Betreuer:in informieren.",

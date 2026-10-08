@@ -1,6 +1,13 @@
 /** Row components of the archive table: day header, series header, capture row. */
 import { useRef, useState } from "react";
-import { ChevronDown, ChevronRight, Ellipsis, Eye, RotateCcw, Pencil } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Ellipsis,
+  Eye,
+  RotateCcw,
+  Pencil,
+} from "lucide-react";
 import { Button } from "../../components/ui/button";
 import {
   DropdownMenu,
@@ -58,7 +65,12 @@ interface SeriesRowProps {
  * @param props - See {@link SeriesRowProps}
  * @returns A table row
  */
-export function SeriesRow({ series, expanded, onToggleExpanded, onToggleUpload }: SeriesRowProps) {
+export function SeriesRow({
+  series,
+  expanded,
+  onToggleExpanded,
+  onToggleUpload,
+}: SeriesRowProps) {
   const counts = countByStatus(series.captures);
   const oldest = series.captures[series.captures.length - 1];
   const Chevron = expanded ? ChevronDown : ChevronRight;
@@ -72,7 +84,9 @@ export function SeriesRow({ series, expanded, onToggleExpanded, onToggleUpload }
           state={selectionState(series.captures)}
           ariaLabel={t.table.seriesUploadAria(series.number)}
           disabledReason={t.table.uploadedReason}
-          onChange={(wanted) => onToggleUpload(selectableCaptures(series.captures), wanted)}
+          onChange={(wanted) =>
+            onToggleUpload(selectableCaptures(series.captures), wanted)
+          }
         />
       </TableCell>
       <TableCell colSpan={COLUMN_COUNT - 1} className="py-1">
@@ -131,20 +145,33 @@ export function CaptureRow({
       data-capture-id={capture.id}
       data-state={isActive ? "selected" : undefined}
       onClick={(e) => {
-        if ((e.target as HTMLElement).closest("button,input,label,a,[role=menuitem]")) return;
+        if (
+          (e.target as HTMLElement).closest(
+            "button,input,label,a,[role=menuitem]",
+          )
+        )
+          return;
         onPreview(capture.id);
       }}
       className="cursor-pointer data-[state=selected]:bg-(--lab-accent)/10"
     >
       <TableCell className="text-center">
         <UploadCheckbox
-          state={uploaded ? "disabled" : capture.status === "selected" ? "all" : "none"}
+          state={
+            uploaded
+              ? "disabled"
+              : capture.status === "selected"
+                ? "all"
+                : "none"
+          }
           ariaLabel={t.table.rowUploadAria(time)}
           disabledReason={t.table.uploadedReason}
           onChange={(wanted) => onToggleUpload([capture], wanted)}
         />
       </TableCell>
-      <TableCell className={`font-mono text-sm tabular-nums ${nested ? "pl-6" : ""}`}>
+      <TableCell
+        className={`font-mono text-sm tabular-nums ${nested ? "pl-6" : ""}`}
+      >
         {time}
       </TableCell>
       <TableCell className="whitespace-normal">
@@ -175,7 +202,12 @@ export function CaptureRow({
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label={t.actions.more} title={t.actions.more}>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t.actions.more}
+                title={t.actions.more}
+              >
                 <Ellipsis />
               </Button>
             </DropdownMenuTrigger>
@@ -201,7 +233,9 @@ export function CaptureRow({
                 </DropdownMenuItem>
               )}
               {uploaded && (
-                <DropdownMenuItem onSelect={() => onToggleUpload([capture], true)}>
+                <DropdownMenuItem
+                  onSelect={() => onToggleUpload([capture], true)}
+                >
                   <RotateCcw /> {t.actions.reupload}
                 </DropdownMenuItem>
               )}

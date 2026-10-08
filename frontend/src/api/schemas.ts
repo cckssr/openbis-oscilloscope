@@ -29,7 +29,11 @@ import type {
   UserInfo,
   WaveformData,
 } from "./types";
-import type { CollectionOption, ObjectOption, ProjectOption } from "./openbis_structure";
+import type {
+  CollectionOption,
+  ObjectOption,
+  ProjectOption,
+} from "./openbis_structure";
 import { describeIssues, lenientArray, sampleArray } from "./validate";
 
 // ---------------------------------------------------------------------------
@@ -48,7 +52,11 @@ const LabCourseSchema = z.object({ value: z.string(), label: z.string() });
 export const AppConfigSchema = z.object({
   debug: z.boolean().default(false),
   version: z.string().default("dev"),
-  openbis_url: z.string().nullable().transform((v) => v ?? "").default(""),
+  openbis_url: z
+    .string()
+    .nullable()
+    .transform((v) => v ?? "")
+    .default(""),
   lab_courses: lenientArray(LabCourseSchema, "config.lab_courses").default([]),
   lock_ttl_seconds: z.number().default(300),
   lock_soft_release_seconds: z.number().default(60),
@@ -60,13 +68,22 @@ export const AppConfigSchema = z.object({
 // Devices
 // ---------------------------------------------------------------------------
 
-export const DeviceStateSchema = z.enum(["OFFLINE", "ONLINE", "LOCKED", "BUSY", "ERROR"]);
+export const DeviceStateSchema = z.enum([
+  "OFFLINE",
+  "ONLINE",
+  "LOCKED",
+  "BUSY",
+  "ERROR",
+]);
 
 export const LockInfoSchema = z.object({
   owner_user: z.string(),
   acquired_at: z.number(),
   is_mine: z.boolean(),
-  session_id: z.string().nullish().transform((v) => v ?? undefined),
+  session_id: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? undefined),
 });
 
 export const DeviceSchema = z.object({
@@ -97,7 +114,9 @@ const knownCapabilities: ReadonlySet<unknown> = new Set(KNOWN_CAPABILITIES);
 /** Keeps the known capability names (new backend capabilities are ignored). */
 export const CapabilitiesSchema = z
   .array(z.unknown())
-  .transform((items) => items.filter((c): c is Capability => knownCapabilities.has(c)));
+  .transform((items) =>
+    items.filter((c): c is Capability => knownCapabilities.has(c)),
+  );
 
 export const DeviceDetailSchema = DeviceSchema.extend({
   capabilities: CapabilitiesSchema.default([]),
@@ -110,7 +129,9 @@ export const LockResponseSchema = z.object({
 });
 
 export const CancelAcquireResponseSchema = z.object({ cancelled: z.boolean() });
-export const SaveScreenshotResponseSchema = z.object({ artifact_id: z.string() });
+export const SaveScreenshotResponseSchema = z.object({
+  artifact_id: z.string(),
+});
 export const KeyboardLockResponseSchema = z.object({
   device_id: z.string(),
   keyboard_locked: z.boolean(),
@@ -147,21 +168,27 @@ export const TriggerConfigSchema = z.object({
  * Channels arrive as a JSON object keyed by channel number. A malformed entry
  * (or a non-numeric key) is logged and dropped; the rest of the settings stay usable.
  */
-const ChannelMapSchema = z.record(z.string(), z.unknown()).transform((entries) => {
-  const out: Record<number, ChannelConfig> = {};
-  for (const [key, value] of Object.entries(entries)) {
-    const channel = Number(key);
-    const parsed = ChannelConfigSchema.safeParse(value);
-    if (!Number.isInteger(channel) || channel < 1) {
-      console.warn(`[api] Skipped settings.channels["${key}"]: not a channel number`);
-    } else if (!parsed.success) {
-      console.warn(`[api] Skipped settings.channels[${key}]: ${describeIssues(parsed.error)}`);
-    } else {
-      out[channel] = parsed.data;
+const ChannelMapSchema = z
+  .record(z.string(), z.unknown())
+  .transform((entries) => {
+    const out: Record<number, ChannelConfig> = {};
+    for (const [key, value] of Object.entries(entries)) {
+      const channel = Number(key);
+      const parsed = ChannelConfigSchema.safeParse(value);
+      if (!Number.isInteger(channel) || channel < 1) {
+        console.warn(
+          `[api] Skipped settings.channels["${key}"]: not a channel number`,
+        );
+      } else if (!parsed.success) {
+        console.warn(
+          `[api] Skipped settings.channels[${key}]: ${describeIssues(parsed.error)}`,
+        );
+      } else {
+        out[channel] = parsed.data;
+      }
     }
-  }
-  return out;
-});
+    return out;
+  });
 
 export const DeviceSettingsSchema = z.object({
   channels: ChannelMapSchema,
@@ -178,7 +205,9 @@ export const MemoryDepthResponseSchema = z.object({
 // Acquisition
 // ---------------------------------------------------------------------------
 
-export const AcquiredChannelSchema = ChannelConfigSchema.extend({ channel: z.number() });
+export const AcquiredChannelSchema = ChannelConfigSchema.extend({
+  channel: z.number(),
+});
 
 /**
  * Sample arrays are only spot-checked (first/last element) — see
@@ -195,7 +224,8 @@ export const WaveformDataSchema = z
     error: "time_s and voltage_V differ in length",
   });
 
-const channelsOf = (label: string) => lenientArray(AcquiredChannelSchema, label);
+const channelsOf = (label: string) =>
+  lenientArray(AcquiredChannelSchema, label);
 const waveformsOf = (label: string) => lenientArray(WaveformDataSchema, label);
 
 export const PreviewResponseSchema = z.object({
@@ -260,14 +290,20 @@ export const CommitResponseSchema = z.object({
   artifact_count: z.number(),
   artifact_ids: z.array(z.string()).default([]),
   openbis_url: z.string().nullable().default(null),
-  dropbox_file: z.string().nullish().transform((v) => v ?? undefined),
+  dropbox_file: z
+    .string()
+    .nullish()
+    .transform((v) => v ?? undefined),
 });
 
 // ---------------------------------------------------------------------------
 // openBIS structure
 // ---------------------------------------------------------------------------
 
-const optionalString = z.string().nullish().transform((v) => v ?? undefined);
+const optionalString = z
+  .string()
+  .nullish()
+  .transform((v) => v ?? undefined);
 
 export const ProjectOptionSchema = z.object({
   code: z.string(),
@@ -321,7 +357,11 @@ export const DeviceEventSchema = z.discriminatedUnion("type", [
   ProgressEventSchema,
 ]);
 
-const KNOWN_EVENT_TYPES: ReadonlySet<unknown> = new Set(["device_state", "lock", "progress"]);
+const KNOWN_EVENT_TYPES: ReadonlySet<unknown> = new Set([
+  "device_state",
+  "lock",
+  "progress",
+]);
 
 /**
  * Validates one decoded SSE payload.
@@ -335,7 +375,9 @@ export function parseDeviceEvent(raw: unknown): DeviceEvent | null {
   if (!KNOWN_EVENT_TYPES.has(type)) return null;
   const result = DeviceEventSchema.safeParse(raw);
   if (result.success) return result.data;
-  console.warn(`[api] Ignored invalid "${String(type)}" event: ${describeIssues(result.error)}`);
+  console.warn(
+    `[api] Ignored invalid "${String(type)}" event: ${describeIssues(result.error)}`,
+  );
   return null;
 }
 
@@ -359,7 +401,9 @@ export type SchemaChecks = [
   Assert<Extends<z.output<typeof TimebaseConfigSchema>, TimebaseConfig>>,
   Assert<Extends<z.output<typeof TriggerConfigSchema>, TriggerConfig>>,
   Assert<Extends<z.output<typeof DeviceSettingsSchema>, DeviceSettings>>,
-  Assert<Extends<z.output<typeof MemoryDepthResponseSchema>, MemoryDepthResponse>>,
+  Assert<
+    Extends<z.output<typeof MemoryDepthResponseSchema>, MemoryDepthResponse>
+  >,
   Assert<Extends<z.output<typeof AcquiredChannelSchema>, AcquiredChannel>>,
   Assert<Extends<z.output<typeof WaveformDataSchema>, WaveformData>>,
   Assert<Extends<z.output<typeof PreviewResponseSchema>, PreviewResponse>>,

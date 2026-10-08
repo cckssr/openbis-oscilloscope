@@ -26,7 +26,9 @@ export function GroupAccordion({ groups, ...body }: GroupLayoutProps) {
                 {g.label}
               </span>
               {g.summary && (
-                <span className="help-text break-words font-normal">{g.summary(body.ctx)}</span>
+                <span className="help-text break-words font-normal">
+                  {g.summary(body.ctx)}
+                </span>
               )}
             </span>
           </AccordionTrigger>

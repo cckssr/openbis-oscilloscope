@@ -20,7 +20,10 @@ export type SettingGroup = `channels.${number}` | "timebase" | "trigger";
  * @param path - e.g. `channels.2.scale_v_div`
  * @returns `{ group: "channels.2", key: "scale_v_div" }`
  */
-export function parsePath(path: SettingPath): { group: SettingGroup; key: string } {
+export function parsePath(path: SettingPath): {
+  group: SettingGroup;
+  key: string;
+} {
   const parts = path.split(".");
   if (parts[0] === "channels") {
     return { group: `channels.${Number(parts[1])}`, key: parts[2] };
@@ -48,7 +51,8 @@ export function readValue(
   path: SettingPath,
 ): SettingValue | undefined {
   const { group, key } = parsePath(path);
-  const obj = groupObject(snapshot, group) as Record<string, SettingValue> | undefined;
+  const obj = groupObject(snapshot, group) as
+    Record<string, SettingValue> | undefined;
   return obj?.[key];
 }
 
@@ -73,10 +77,15 @@ export function withGroup(
   group: SettingGroup,
   config: ChannelConfig | TimebaseConfig | TriggerConfig,
 ): SettingsSnapshot {
-  if (group === "timebase") return { ...snapshot, timebase: config as TimebaseConfig };
-  if (group === "trigger") return { ...snapshot, trigger: config as TriggerConfig };
+  if (group === "timebase")
+    return { ...snapshot, timebase: config as TimebaseConfig };
+  if (group === "trigger")
+    return { ...snapshot, trigger: config as TriggerConfig };
   const n = Number(group.split(".")[1]);
-  return { ...snapshot, channels: { ...snapshot.channels, [n]: config as ChannelConfig } };
+  return {
+    ...snapshot,
+    channels: { ...snapshot.channels, [n]: config as ChannelConfig },
+  };
 }
 
 /**
@@ -91,7 +100,10 @@ export function mergeGroup(
   group: SettingGroup,
   values: Array<[SettingPath, SettingValue]>,
 ): ChannelConfig | TimebaseConfig | TriggerConfig {
-  const base = { ...groupObject(snapshot, group) } as Record<string, SettingValue>;
+  const base = { ...groupObject(snapshot, group) } as Record<
+    string,
+    SettingValue
+  >;
   for (const [path, value] of values) base[parsePath(path).key] = value;
   return base as unknown as ChannelConfig | TimebaseConfig | TriggerConfig;
 }
@@ -102,8 +114,13 @@ export function mergeGroup(
  * @param path - Setting path
  * @returns True when pending or applying
  */
-export function isBusyPath(settings: SettingsState, path: SettingPath): boolean {
-  return path in settings.pending || settings.status[path]?.state === "applying";
+export function isBusyPath(
+  settings: SettingsState,
+  path: SettingPath,
+): boolean {
+  return (
+    path in settings.pending || settings.status[path]?.state === "applying"
+  );
 }
 
 /**
@@ -130,7 +147,8 @@ export function mergeFrameIntoApplied(
     reported: object,
     pathOf: (key: string) => SettingPath,
   ) => {
-    const current = groupObject(next, group) as Record<string, SettingValue> | undefined;
+    const current = groupObject(next, group) as
+      Record<string, SettingValue> | undefined;
     if (!current) return;
     const merged: Record<string, SettingValue> = { ...current };
     let changed = false;
@@ -149,7 +167,11 @@ export function mergeFrameIntoApplied(
 
   for (const ch of channels) {
     if (!applied.channels[ch.channel]) continue;
-    apply(`channels.${ch.channel}`, ch, (key) => `channels.${ch.channel}.${key}` as SettingPath);
+    apply(
+      `channels.${ch.channel}`,
+      ch,
+      (key) => `channels.${ch.channel}.${key}` as SettingPath,
+    );
   }
   apply("timebase", timebase, (key) => `timebase.${key}` as SettingPath);
   apply("trigger", trigger, (key) => `trigger.${key}` as SettingPath);

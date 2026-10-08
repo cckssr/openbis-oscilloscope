@@ -1,4 +1,9 @@
-import { expect, type APIRequestContext, type Page, type TestInfo } from "@playwright/test";
+import {
+  expect,
+  type APIRequestContext,
+  type Page,
+  type TestInfo,
+} from "@playwright/test";
 
 export const DEBUG_TOKEN = "debug-token";
 export const API = "http://localhost:8000";
@@ -37,7 +42,10 @@ export function isTablet(testInfo: TestInfo): boolean {
  */
 export async function loginAsDebugUser(page: Page): Promise<void> {
   await page.goto("login");
-  await page.evaluate((t) => localStorage.setItem("osc_auth_token", t), DEBUG_TOKEN);
+  await page.evaluate(
+    (t) => localStorage.setItem("osc_auth_token", t),
+    DEBUG_TOKEN,
+  );
   await page.goto("./");
   await expect(page).not.toHaveURL(/login/);
 }
@@ -47,7 +55,10 @@ export async function loginAsDebugUser(page: Page): Promise<void> {
  * Uses the admin endpoint (the DEBUG user is admin).
  */
 export async function resetLocks(): Promise<void> {
-  await fetch(`${API}/admin/locks/reset`, { method: "POST", headers: AUTH }).catch(() => {});
+  await fetch(`${API}/admin/locks/reset`, {
+    method: "POST",
+    headers: AUTH,
+  }).catch(() => {});
 }
 
 /** One artifact as returned by `GET /sessions/{id}/artifacts`. */
@@ -67,8 +78,13 @@ export interface ApiArtifact {
  * @param deviceId - Device id
  * @returns The control session id
  */
-export async function apiLock(request: APIRequestContext, deviceId = DEVICE): Promise<string> {
-  const res = await request.post(`${API}/devices/${deviceId}/lock`, { headers: AUTH });
+export async function apiLock(
+  request: APIRequestContext,
+  deviceId = DEVICE,
+): Promise<string> {
+  const res = await request.post(`${API}/devices/${deviceId}/lock`, {
+    headers: AUTH,
+  });
   expect(res.ok(), `lock ${deviceId}: ${res.status()}`).toBe(true);
   return (await res.json()).control_session_id as string;
 }
@@ -84,7 +100,10 @@ export async function apiUnlock(
   sessionId: string,
   deviceId = DEVICE,
 ): Promise<void> {
-  await request.post(`${API}/devices/${deviceId}/unlock?session_id=${sessionId}`, { headers: AUTH });
+  await request.post(
+    `${API}/devices/${deviceId}/unlock?session_id=${sessionId}`,
+    { headers: AUTH },
+  );
 }
 
 /**
@@ -99,9 +118,12 @@ export async function apiCapture(
   sessionId: string,
   deviceId = DEVICE,
 ): Promise<string> {
-  const res = await request.post(`${API}/devices/${deviceId}/acquire?session_id=${sessionId}`, {
-    headers: AUTH,
-  });
+  const res = await request.post(
+    `${API}/devices/${deviceId}/acquire?session_id=${sessionId}`,
+    {
+      headers: AUTH,
+    },
+  );
   expect(res.ok(), `acquire: ${res.status()}`).toBe(true);
   return (await res.json()).acquisition_id as string;
 }
@@ -116,7 +138,9 @@ export async function apiArtifacts(
   request: APIRequestContext,
   sessionId: string,
 ): Promise<ApiArtifact[]> {
-  const res = await request.get(`${API}/sessions/${sessionId}/artifacts`, { headers: AUTH });
+  const res = await request.get(`${API}/sessions/${sessionId}/artifacts`, {
+    headers: AUTH,
+  });
   if (!res.ok()) return [];
   return (await res.json()) as ApiArtifact[];
 }
@@ -141,16 +165,31 @@ export function captureCount(artifacts: ApiArtifact[]): number {
 export async function apiDeviceLock(
   request: APIRequestContext,
   deviceId = DEVICE,
-): Promise<{ owner_user: string; session_id?: string; is_mine?: boolean } | null> {
-  const res = await request.get(`${API}/devices/${deviceId}`, { headers: AUTH });
-  return ((await res.json()).lock ?? null) as { owner_user: string; session_id?: string } | null;
+): Promise<{
+  owner_user: string;
+  session_id?: string;
+  is_mine?: boolean;
+} | null> {
+  const res = await request.get(`${API}/devices/${deviceId}`, {
+    headers: AUTH,
+  });
+  return ((await res.json()).lock ?? null) as {
+    owner_user: string;
+    session_id?: string;
+  } | null;
 }
 
 /** Scope state as returned by `GET /devices/{id}/settings`. */
 export interface ApiSettings {
   channels: Record<
     string,
-    { enabled: boolean; scale_v_div: number; offset_v: number; coupling: string; probe_attenuation: number }
+    {
+      enabled: boolean;
+      scale_v_div: number;
+      offset_v: number;
+      coupling: string;
+      probe_attenuation: number;
+    }
   >;
   timebase: { scale_s_div: number; offset_s: number };
   trigger: { source: string; level_v: number; slope: string; mode: string };
@@ -166,7 +205,9 @@ export async function apiSettings(
   request: APIRequestContext,
   deviceId = DEVICE,
 ): Promise<ApiSettings> {
-  const res = await request.get(`${API}/devices/${deviceId}/settings`, { headers: AUTH });
+  const res = await request.get(`${API}/devices/${deviceId}/settings`, {
+    headers: AUTH,
+  });
   return (await res.json()) as ApiSettings;
 }
 
@@ -186,7 +227,10 @@ export async function resetScope(
   const sid = await apiLock(request, deviceId);
   const q = `session_id=${sid}`;
   const put = (path: string, data: object) =>
-    request.put(`${API}/devices/${deviceId}/${path}?${q}`, { headers: AUTH, data });
+    request.put(`${API}/devices/${deviceId}/${path}?${q}`, {
+      headers: AUTH,
+      data,
+    });
   await Promise.all([
     ...[1, 2, 3, 4].map((ch) =>
       put(`channels/${ch}/config`, {

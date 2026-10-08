@@ -37,11 +37,16 @@ export class RegionBoundary extends Component<RegionBoundaryProps, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error(`[RegionBoundary:${this.props.name ?? "?"}]`, error, info.componentStack);
+    console.error(
+      `[RegionBoundary:${this.props.name ?? "?"}]`,
+      error,
+      info.componentStack,
+    );
   }
 
   componentDidUpdate(prev: RegionBoundaryProps) {
-    if (this.state.error && keysChanged(prev.resetKeys, this.props.resetKeys)) this.reset();
+    if (this.state.error && keysChanged(prev.resetKeys, this.props.resetKeys))
+      this.reset();
   }
 
   reset = () => this.setState({ error: null });
@@ -62,7 +67,9 @@ export class RegionBoundary extends Component<RegionBoundaryProps, State> {
           <TriangleAlert className="size-4 shrink-0" aria-hidden />
           {t.title}
         </div>
-        {this.props.name && <p className="help-text">{t.named(this.props.name)}</p>}
+        {this.props.name && (
+          <p className="help-text">{t.named(this.props.name)}</p>
+        )}
         <p className="help-text break-all font-mono">{error.message}</p>
         <Button size="sm" variant="secondary" onClick={this.reset}>
           {t.retry}

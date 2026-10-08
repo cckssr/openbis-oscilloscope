@@ -52,8 +52,7 @@ export function cleanValue(value: number): number {
 
 /** Result of validating typed text. */
 export type Evaluation =
-  | { ok: true; value: number }
-  | { ok: false; message: string };
+  { ok: true; value: number } | { ok: false; message: string };
 
 /**
  * Parses and range-checks typed text.

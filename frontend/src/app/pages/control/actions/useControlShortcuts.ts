@@ -12,8 +12,10 @@ export interface ControlShortcutOptions {
 
 const TYPING_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT"]);
 /** Elements that handle Space themselves (native click or ARIA widget). */
-const SPACE_HANDLERS = "button, a[href], summary, [role='button'], [role='switch'], [role='checkbox'], [role='tab'], [role='menuitem'], [role='option'], [role='radio']";
-const OPEN_OVERLAY = "[role='dialog'], [role='alertdialog'], [role='menu'], [role='listbox']";
+const SPACE_HANDLERS =
+  "button, a[href], summary, [role='button'], [role='switch'], [role='checkbox'], [role='tab'], [role='menuitem'], [role='option'], [role='radio']";
+const OPEN_OVERLAY =
+  "[role='dialog'], [role='alertdialog'], [role='menu'], [role='listbox']";
 
 function isTyping(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -30,7 +32,10 @@ function isTyping(target: EventTarget | null): boolean {
  * @param deviceId - The device
  * @param options - Optional handlers, see {@link ControlShortcutOptions}
  */
-export function useControlShortcuts(deviceId: string, options: ControlShortcutOptions = {}): void {
+export function useControlShortcuts(
+  deviceId: string,
+  options: ControlShortcutOptions = {},
+): void {
   const model = useActionModel(deviceId);
   const actions = useDeviceActions(deviceId);
   const latest = useRef({ model, actions, options });
@@ -48,10 +53,15 @@ export function useControlShortcuts(deviceId: string, options: ControlShortcutOp
       const key = e.key.toLowerCase();
 
       if (e.key === " " || e.code === "Space") {
-        if (e.repeat || (e.target instanceof Element && e.target.closest(SPACE_HANDLERS))) return;
+        if (
+          e.repeat ||
+          (e.target instanceof Element && e.target.closest(SPACE_HANDLERS))
+        )
+          return;
         if (!av.liveToggle.visible || av.liveToggle.reason) return;
         e.preventDefault();
-        if (model.liveStatus === "on" || model.liveStatus === "paused") actions.stopLive();
+        if (model.liveStatus === "on" || model.liveStatus === "paused")
+          actions.stopLive();
         else void actions.startLive();
       } else if (key === "s") {
         if (e.repeat || !av.capture.visible || av.capture.reason) return;

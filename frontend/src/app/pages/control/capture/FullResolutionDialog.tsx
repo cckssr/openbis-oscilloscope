@@ -12,7 +12,11 @@ import {
 } from "../../../components/ui/dialog";
 import type { Job } from "../../../state/deviceSession/types";
 import { availability } from "../actions/availability";
-import { useActionModel, useDeviceActions, useDeviceSessionSelector } from "../actions/session";
+import {
+  useActionModel,
+  useDeviceActions,
+  useDeviceSessionSelector,
+} from "../actions/session";
 import { formatPoints } from "../../../../lib/units";
 import {
   CheckBody,
@@ -61,33 +65,54 @@ function useSlice(deviceId: string): Slice {
         .sort((a, b) => a - b),
       job: s.jobs.find((j) => j.kind === "full-resolution") ?? null,
       last: s.lastCapture?.fullResolution
-        ? { number: s.lastCapture.number, points: s.lastCapture.frame.memoryDepth }
+        ? {
+            number: s.lastCapture.number,
+            points: s.lastCapture.frame.memoryDepth,
+          }
         : null,
     }),
     sameSlice,
   );
 }
 
-function outcomeOf(job: Job | null, slice: Slice, settled: boolean): Outcome | null {
+function outcomeOf(
+  job: Job | null,
+  slice: Slice,
+  settled: boolean,
+): Outcome | null {
   if (job && job.status !== "running") {
     if (job.status === "cancelled") return { kind: "cancelled" };
     if (job.status === "error") return { kind: "error", message: job.error };
-    return { kind: "done", points: slice.last?.points ?? null, number: slice.last?.number ?? null };
+    return {
+      kind: "done",
+      points: slice.last?.points ?? null,
+      number: slice.last?.number ?? null,
+    };
   }
   // The call returned without ever creating a job (e.g. no channel active): a toast already explained.
   if (!job && settled) return { kind: "error" };
   return null;
 }
 
-function FullResolutionContent({ deviceId, onClose }: { deviceId: string; onClose: () => void }) {
+function FullResolutionContent({
+  deviceId,
+  onClose,
+}: {
+  deviceId: string;
+  onClose: () => void;
+}) {
   const actions = useDeviceActions(deviceId);
   const model = useActionModel(deviceId);
   const slice = useSlice(deviceId);
   const reopenedWhileReading = slice.job?.status === "running";
-  const [phase, setPhase] = useState<Phase>(reopenedWhileReading ? "run" : "explain");
+  const [phase, setPhase] = useState<Phase>(
+    reopenedWhileReading ? "run" : "explain",
+  );
   const [settled, setSettled] = useState(false);
   // Ignore jobs from before this run (e.g. an old finished one still in the status bar).
-  const [runSince, setRunSince] = useState(reopenedWhileReading ? 0 : Number.POSITIVE_INFINITY);
+  const [runSince, setRunSince] = useState(
+    reopenedWhileReading ? 0 : Number.POSITIVE_INFINITY,
+  );
 
   const job = slice.job && slice.job.startedAt >= runSince ? slice.job : null;
   const outcome = phase === "run" ? outcomeOf(job, slice, settled) : null;
@@ -101,8 +126,11 @@ function FullResolutionContent({ deviceId, onClose }: { deviceId: string; onClos
     void actions.saveFullResolution().finally(() => setSettled(true));
   };
 
-  const state = (n: number) => (n < step ? "done" : n === step ? "active" : "todo");
-  const depthText = slice.memoryDepth ? formatPoints(slice.memoryDepth) : t.check.depthUnknown;
+  const state = (n: number) =>
+    n < step ? "done" : n === step ? "active" : "todo";
+  const depthText = slice.memoryDepth
+    ? formatPoints(slice.memoryDepth)
+    : t.check.depthUnknown;
 
   return (
     <>
@@ -127,7 +155,10 @@ function FullResolutionContent({ deviceId, onClose }: { deviceId: string; onClos
             </span>
           }
         >
-          <CheckBody memoryDepth={slice.memoryDepth} channels={slice.channels} />
+          <CheckBody
+            memoryDepth={slice.memoryDepth}
+            channels={slice.channels}
+          />
         </StepCard>
         <StepCard n={3} title={t.steps.read} state={state(3)}>
           <ReadBody job={job} />
@@ -143,18 +174,31 @@ function FullResolutionContent({ deviceId, onClose }: { deviceId: string; onClos
             <Button type="button" variant="secondary" onClick={onClose}>
               {t.buttons.close}
             </Button>
-            <Button type="button" variant="primary" onClick={() => setPhase("check")}>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => setPhase("check")}
+            >
               {t.buttons.next}
             </Button>
           </>
         )}
         {step === 2 && (
           <>
-            <Button type="button" variant="secondary" onClick={() => setPhase("explain")}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setPhase("explain")}
+            >
               {t.buttons.back}
             </Button>
             <DisabledReason reason={startReason}>
-              <Button type="button" variant="primary" disabled={!!startReason} onClick={start}>
+              <Button
+                type="button"
+                variant="primary"
+                disabled={!!startReason}
+                onClick={start}
+              >
                 {t.buttons.start}
               </Button>
             </DisabledReason>
@@ -166,7 +210,11 @@ function FullResolutionContent({ deviceId, onClose }: { deviceId: string; onClos
               {t.buttons.close}
             </Button>
             {job?.cancellable && (
-              <Button type="button" variant="danger" onClick={() => void actions.cancelFullResolution()}>
+              <Button
+                type="button"
+                variant="danger"
+                onClick={() => void actions.cancelFullResolution()}
+              >
                 {t.buttons.cancel}
               </Button>
             )}
@@ -184,7 +232,12 @@ function FullResolutionContent({ deviceId, onClose }: { deviceId: string; onClos
                   {t.buttons.close}
                 </Button>
                 <DisabledReason reason={startReason}>
-                  <Button type="button" variant="primary" disabled={!!startReason} onClick={start}>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    disabled={!!startReason}
+                    onClick={start}
+                  >
                     {t.buttons.retry}
                   </Button>
                 </DisabledReason>
@@ -207,12 +260,22 @@ function FullResolutionContent({ deviceId, onClose }: { deviceId: string; onClos
  * @param props - See {@link FullResolutionDialogProps}
  * @returns The dialog
  */
-export function FullResolutionDialog({ deviceId, open, onOpenChange }: FullResolutionDialogProps) {
+export function FullResolutionDialog({
+  deviceId,
+  open,
+  onOpenChange,
+}: FullResolutionDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl" data-testid="full-resolution-dialog">
+      <DialogContent
+        className="max-h-[90vh] overflow-y-auto sm:max-w-xl"
+        data-testid="full-resolution-dialog"
+      >
         {/* Radix unmounts the content after the exit animation, which resets the wizard for the next opening. */}
-        <FullResolutionContent deviceId={deviceId} onClose={() => onOpenChange(false)} />
+        <FullResolutionContent
+          deviceId={deviceId}
+          onClose={() => onOpenChange(false)}
+        />
       </DialogContent>
     </Dialog>
   );

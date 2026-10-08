@@ -19,7 +19,11 @@ export function errorMessage(err: unknown, fallback: string): string {
  * @param fallback - German message used when the error carries none
  * @param title - Optional headline, e.g. "Markierung fehlgeschlagen"
  */
-export function notifyError(err: unknown, fallback: string, title?: string): void {
+export function notifyError(
+  err: unknown,
+  fallback: string,
+  title?: string,
+): void {
   const message = errorMessage(err, fallback);
   if (title) toast.error(title, { description: message });
   else toast.error(message);

@@ -17,7 +17,8 @@ export class SelectorCache<S, T> {
    * @returns A referentially stable slice
    */
   select(state: S, selector: (s: S) => T, isEqual: (a: T, b: T) => boolean): T {
-    if (this.hasValue && this.lastState === state) return this.lastSelected as T;
+    if (this.hasValue && this.lastState === state)
+      return this.lastSelected as T;
     const next = selector(state);
     if (this.hasValue && isEqual(this.lastSelected as T, next)) {
       this.lastState = state;

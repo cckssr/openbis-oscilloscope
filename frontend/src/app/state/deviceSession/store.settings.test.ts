@@ -18,7 +18,11 @@ beforeEach(async () => {
   vi.useFakeTimers();
   vi.clearAllMocks();
   scope = installFakeApi();
-  store = new DeviceSessionStore({ deviceId: "scope-01", token: "tok", createChannel: noChannel });
+  store = new DeviceSessionStore({
+    deviceId: "scope-01",
+    token: "tok",
+    createChannel: noChannel,
+  });
   await store.start();
   await store.actions.takeControl();
 });
@@ -41,13 +45,19 @@ describe("settings: apply immediately", () => {
     expect(devices.setChannelConfig).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(10);
 
-    expect(devices.setChannelConfig).toHaveBeenCalledWith("tok", "scope-01", 1, "session-1", {
-      enabled: true,
-      scale_v_div: 0.5,
-      offset_v: 0,
-      coupling: "DC",
-      probe_attenuation: 1,
-    });
+    expect(devices.setChannelConfig).toHaveBeenCalledWith(
+      "tok",
+      "scope-01",
+      1,
+      "session-1",
+      {
+        enabled: true,
+        scale_v_div: 0.5,
+        offset_v: 0,
+        coupling: "DC",
+        probe_attenuation: 1,
+      },
+    );
     s = store.getState().settings;
     expect(s.applied?.channels[1].scale_v_div).toBe(0.5);
     expect(s.pending).toEqual({});
@@ -78,24 +88,37 @@ describe("settings: apply immediately", () => {
     await vi.advanceTimersByTimeAsync(500);
     expect(devices.setChannelConfig).toHaveBeenCalledTimes(1);
     expect(devices.setTrigger).toHaveBeenCalledWith(
-      "tok", "scope-01", "session-1", expect.objectContaining({ level_v: 0.3, source: "CH1" }),
+      "tok",
+      "scope-01",
+      "session-1",
+      expect.objectContaining({ level_v: 0.3, source: "CH1" }),
     );
-    expect(devices.setTimebase).toHaveBeenCalledWith("tok", "scope-01", "session-1", {
-      scale_s_div: 2e-3,
-      offset_s: 0,
-    });
+    expect(devices.setTimebase).toHaveBeenCalledWith(
+      "tok",
+      "scope-01",
+      "session-1",
+      {
+        scale_s_div: 2e-3,
+        offset_s: 0,
+      },
+    );
     expect(devices.getMemoryDepth).toHaveBeenCalledTimes(2); // load + after the timebase change
   });
 
   it("reverts to the applied value and toasts when the scope refuses", async () => {
-    vi.mocked(devices.setTrigger).mockRejectedValue(new ApiError(400, "bad", "Pegel außerhalb"));
+    vi.mocked(devices.setTrigger).mockRejectedValue(
+      new ApiError(400, "bad", "Pegel außerhalb"),
+    );
     store.actions.setSetting("trigger.level_v", 99);
     await vi.advanceTimersByTimeAsync(500);
 
     const s = store.getState().settings;
     expect(s.pending).toEqual({});
     expect(s.applied?.trigger.level_v).toBe(0);
-    expect(s.status["trigger.level_v"]).toMatchObject({ state: "error", error: "Pegel außerhalb" });
+    expect(s.status["trigger.level_v"]).toMatchObject({
+      state: "error",
+      error: "Pegel außerhalb",
+    });
     expect(toast.error).toHaveBeenCalledWith("Einstellung nicht übernommen", {
       description: "Pegel außerhalb",
     });
@@ -109,7 +132,9 @@ describe("settings: apply immediately", () => {
     );
     store.actions.setSetting("trigger.level_v", 0.1);
     await vi.advanceTimersByTimeAsync(450);
-    expect(store.getState().settings.status["trigger.level_v"]?.state).toBe("applying");
+    expect(store.getState().settings.status["trigger.level_v"]?.state).toBe(
+      "applying",
+    );
     expect(store.getState().busy).toMatch(/Einstellung/);
 
     store.actions.setSetting("trigger.level_v", 0.2);
@@ -132,12 +157,22 @@ describe("settings: apply immediately", () => {
   });
 
   it("shows values the scope rounded after the write", async () => {
-    vi.mocked(devices.setTimebase).mockImplementation(async (_t, _i, _s, cfg) => {
-      scope.settings.timebase = { ...scope.settings.timebase, ...cfg, scale_s_div: 1e-3, sample_rate: 5e5 };
-    });
+    vi.mocked(devices.setTimebase).mockImplementation(
+      async (_t, _i, _s, cfg) => {
+        scope.settings.timebase = {
+          ...scope.settings.timebase,
+          ...cfg,
+          scale_s_div: 1e-3,
+          sample_rate: 5e5,
+        };
+      },
+    );
     store.actions.setSetting("timebase.scale_s_div", 1.3e-3);
     await vi.advanceTimersByTimeAsync(500);
-    expect(store.getState().settings.applied?.timebase).toMatchObject({ scale_s_div: 1e-3, sample_rate: 5e5 });
+    expect(store.getState().settings.applied?.timebase).toMatchObject({
+      scale_s_div: 1e-3,
+      sample_rate: 5e5,
+    });
   });
 
   it("reloadSettings re-reads the scope and drops pending edits", async () => {
@@ -152,9 +187,17 @@ describe("settings: apply immediately", () => {
   });
 
   it("autoscale reloads the settings and marks step 2 as touched", async () => {
-    scope.settings.channels[1] = { ...scope.settings.channels[1], scale_v_div: 0.2 };
+    scope.settings.channels[1] = {
+      ...scope.settings.channels[1],
+      scale_v_div: 0.2,
+    };
     await store.actions.autoscale();
-    expect(devices.sendScopeCommand).toHaveBeenCalledWith("tok", "scope-01", "session-1", "autoscale");
+    expect(devices.sendScopeCommand).toHaveBeenCalledWith(
+      "tok",
+      "scope-01",
+      "session-1",
+      "autoscale",
+    );
     const s = store.getState();
     expect(s.settings.touched).toBe(true);
     expect(s.settings.applied?.channels[1].scale_v_div).toBe(0.2);

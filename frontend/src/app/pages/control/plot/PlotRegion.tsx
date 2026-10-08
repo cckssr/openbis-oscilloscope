@@ -36,7 +36,11 @@ export function PlotRegion({ deviceId }: { deviceId: string }) {
           plotElement,
           baseName: t.exportName(deviceId, shownCapture?.number ?? null),
           ...(shownCapture && token && model.sessionId
-            ? { token, sessionId: model.sessionId, artifactIds: shownCapture.artifactIds }
+            ? {
+                token,
+                sessionId: model.sessionId,
+                artifactIds: shownCapture.artifactIds,
+              }
             : {}),
         }}
       />

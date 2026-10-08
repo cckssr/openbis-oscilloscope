@@ -22,7 +22,10 @@ export interface ArchiveLinkProps {
 export function ArchiveLink({ sessionId, count }: ArchiveLinkProps) {
   return (
     <Button asChild variant="secondary">
-      <Link to={archivePath(sessionId)} title={sessionId ? t.dataTitle : t.dataTitleNone}>
+      <Link
+        to={archivePath(sessionId)}
+        title={sessionId ? t.dataTitle : t.dataTitleNone}
+      >
         <Database aria-hidden />
         {t.data(count)}
       </Link>

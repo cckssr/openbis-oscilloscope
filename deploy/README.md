@@ -4,12 +4,12 @@ Systemd units and nginx config for running the service on a Linux host with jour
 
 ## Files
 
-| File                                   | Purpose                                                                                                                                                  |
-| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `install.sh`                           | One-shot install script: syncs files, builds frontend, installs systemd units, configures nginx.                                                         |
-| `openbis-oscilloscope.service`         | Main uvicorn service. Binds to `127.0.0.1:8000`; nginx is the public face. Logs go to journald via `SyslogIdentifier=openbis-oscilloscope`.              |
-| `openbis-oscilloscope-restart.service` | Oneshot unit that restarts the main service. Called by the timer.                                                                                        |
-| `openbis-oscilloscope-restart.timer`   | Fires at 00:05 daily, 10 minutes after the 23:55 nightly sync job writes the updated `oscilloscopes.yaml`.                                               |
+| File                                   | Purpose                                                                                                                                                                                                                                                                                                     |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `install.sh`                           | One-shot install script: syncs files, builds frontend, installs systemd units, configures nginx.                                                                                                                                                                                                            |
+| `openbis-oscilloscope.service`         | Main uvicorn service. Binds to `127.0.0.1:8000`; nginx is the public face. Logs go to journald via `SyslogIdentifier=openbis-oscilloscope`.                                                                                                                                                                 |
+| `openbis-oscilloscope-restart.service` | Oneshot unit that restarts the main service. Called by the timer.                                                                                                                                                                                                                                           |
+| `openbis-oscilloscope-restart.timer`   | Fires at 00:05 daily, 10 minutes after the 23:55 nightly sync job writes the updated `oscilloscopes.yaml`.                                                                                                                                                                                                  |
 | `nginx.conf`                           | Nginx site config. Serves the Vite SPA at `/oscilloscope/` and proxies `/oscilloscope/api/` to FastAPI. SSE buffering is disabled for `/devices/events` (also carries the acquisition `progress` events); other API requests have a 180 s read timeout for full-memory acquisitions and ZIP/HDF5 downloads. |
 
 ## Quick install

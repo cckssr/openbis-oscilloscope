@@ -9,10 +9,20 @@ const t = de.devices.card;
  * @param now - Reference time (injectable for tests)
  * @returns The German time text
  */
-export function formatLockSince(acquiredAt: number, now: Date = new Date()): string {
+export function formatLockSince(
+  acquiredAt: number,
+  now: Date = new Date(),
+): string {
   const d = new Date(acquiredAt * 1000);
-  const time = d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  const time = d.toLocaleTimeString("de-DE", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
   if (d.toDateString() === now.toDateString()) return t.since(time);
-  const date = d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const date = d.toLocaleDateString("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
   return t.sinceDate(date, time);
 }

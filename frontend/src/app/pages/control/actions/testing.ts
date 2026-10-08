@@ -26,7 +26,9 @@ export const ALL_CAPABILITIES: Capability[] = [
 ];
 
 /** State of a controlled device (lock held) with all capabilities. */
-export function heldState(overrides: Partial<DeviceSessionState> = {}): DeviceSessionState {
+export function heldState(
+  overrides: Partial<DeviceSessionState> = {},
+): DeviceSessionState {
   return {
     ...createInitialState("scope-01"),
     capabilities: ALL_CAPABILITIES,
@@ -84,16 +86,37 @@ export function makeCapture(overrides: Partial<Capture> = {}): Capture {
 export class FakeSession {
   state: DeviceSessionState;
   private listeners = new Set<() => void>();
-  readonly actions: Record<keyof DeviceSessionActions, ReturnType<typeof vi.fn>>;
+  readonly actions: Record<
+    keyof DeviceSessionActions,
+    ReturnType<typeof vi.fn>
+  >;
 
   constructor(state: DeviceSessionState = heldState()) {
     this.state = state;
     const names: Array<keyof DeviceSessionActions> = [
-      "refreshDevice", "takeControl", "release", "startLive", "stopLive", "pauseLive",
-      "resumeLive", "stopScope", "single", "forceTrigger", "autoscale", "saveCapture",
-      "saveFullResolution", "cancelFullResolution", "saveScreenshot", "startSeries",
-      "stopSeries", "setSetting", "reloadSettings", "saveNote", "setCaptureFlag",
-      "refreshCounts", "dismissJob",
+      "refreshDevice",
+      "takeControl",
+      "release",
+      "startLive",
+      "stopLive",
+      "pauseLive",
+      "resumeLive",
+      "stopScope",
+      "single",
+      "forceTrigger",
+      "autoscale",
+      "saveCapture",
+      "saveFullResolution",
+      "cancelFullResolution",
+      "saveScreenshot",
+      "startSeries",
+      "stopSeries",
+      "setSetting",
+      "reloadSettings",
+      "saveNote",
+      "setCaptureFlag",
+      "refreshCounts",
+      "dismissJob",
     ];
     this.actions = Object.fromEntries(
       names.map((n) => [n, vi.fn(() => Promise.resolve(null))]),
@@ -153,8 +176,18 @@ export async function sessionMock(
   return {
     ...actual,
     useDeviceSessionSelector: ((_id: string, selector: never, isEqual: never) =>
-      useFakeSelector(getFake(), selector, isEqual)) as typeof actual.useDeviceSessionSelector,
-    useActionModel: () => useFakeSelector(getFake(), actual.selectActionModel, actual.sameActionModel),
-    useDeviceActions: () => getFake().actions as unknown as DeviceSessionActions,
+      useFakeSelector(
+        getFake(),
+        selector,
+        isEqual,
+      )) as typeof actual.useDeviceSessionSelector,
+    useActionModel: () =>
+      useFakeSelector(
+        getFake(),
+        actual.selectActionModel,
+        actual.sameActionModel,
+      ),
+    useDeviceActions: () =>
+      getFake().actions as unknown as DeviceSessionActions,
   };
 }

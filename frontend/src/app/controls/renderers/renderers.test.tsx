@@ -1,9 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { getControlGroups } from "../index";
 import { makeContext } from "../testing";
-import type { EnumControlDef, NumberControlDef, ToggleControlDef } from "../types";
-import type { SettingStatus, SettingValue } from "../../state/deviceSession/types";
+import type {
+  EnumControlDef,
+  NumberControlDef,
+  ToggleControlDef,
+} from "../types";
+import type {
+  SettingStatus,
+  SettingValue,
+} from "../../state/deviceSession/types";
 import { ControlStatus } from "./ControlStatus";
 import { EnumControl } from "./EnumControl";
 import { NumberControl } from "./NumberControl";
@@ -15,10 +28,19 @@ const fake = vi.hoisted(() => ({
   set: vi.fn(),
 }));
 vi.mock("../store", () => ({
-  useSetting: () => ({ value: fake.value, applied: fake.value, status: fake.status, set: fake.set }),
+  useSetting: () => ({
+    value: fake.value,
+    applied: fake.value,
+    status: fake.status,
+    set: fake.set,
+  }),
 }));
 
-const groups = getControlGroups({ level: "expert", capabilities: [], channelCount: 4 });
+const groups = getControlGroups({
+  level: "expert",
+  capabilities: [],
+  channelCount: 4,
+});
 const find = <T,>(group: string, key: string) =>
   groups.find((g) => g.id === group)!.controls.find((c) => c.key === key) as T;
 
@@ -45,7 +67,9 @@ describe("NumberControl", () => {
   it("shows the value with SI units", () => {
     fake.value = 0.2;
     renderScale();
-    expect((screen.getByRole("textbox") as HTMLInputElement).value).toBe("200 mV/div");
+    expect((screen.getByRole("textbox") as HTMLInputElement).value).toBe(
+      "200 mV/div",
+    );
   });
 
   it("commits typed values through set()", () => {
@@ -77,7 +101,9 @@ describe("NumberControl", () => {
   it("is read-only when disabled", () => {
     fake.value = 0.2;
     renderScale(true);
-    expect((screen.getByRole("textbox") as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByRole("textbox") as HTMLInputElement).disabled).toBe(
+      true,
+    );
   });
 
   it("uses a step of V/div / 10 for the offset", () => {
@@ -110,7 +136,10 @@ describe("EnumControl", () => {
   it("offers trigger sources for each channel of a 2-channel scope", () => {
     fake.value = "CH1";
     renderSource(2);
-    expect(screen.getAllByRole("radio").map((r) => r.textContent)).toEqual(["CH1", "CH2"]);
+    expect(screen.getAllByRole("radio").map((r) => r.textContent)).toEqual([
+      "CH1",
+      "CH2",
+    ]);
   });
 
   it("offers three sources for a 3-channel scope and sets the clicked one", () => {
@@ -176,8 +205,14 @@ describe("ControlStatus", () => {
   });
 
   it("shows the error message", () => {
-    render(<ControlStatus status={{ state: "error", error: "Gerät antwortet nicht", at: 1 }} />);
-    expect(screen.getByRole("alert").textContent).toContain("Gerät antwortet nicht");
+    render(
+      <ControlStatus
+        status={{ state: "error", error: "Gerät antwortet nicht", at: 1 }}
+      />,
+    );
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Gerät antwortet nicht",
+    );
   });
 
   it("fades out the applied hint after about two seconds", () => {
