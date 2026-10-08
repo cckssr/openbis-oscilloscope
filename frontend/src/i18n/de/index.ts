@@ -9,5 +9,14 @@ import { control } from "./control";
 import { devices } from "./devices";
 import { login } from "./login";
 import { plot } from "./plot";
+import { settings } from "./settings";
 
-export const de = { common, devices, login, control, plot, archive } as const;
+export const de = {
+  common,
+  devices,
+  login,
+  control,
+  settings,
+  plot,
+  archive,
+} as const;
