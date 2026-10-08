@@ -6,6 +6,21 @@ export interface UserInfo {
   is_admin: boolean;
 }
 
+/** Public, unauthenticated runtime configuration (`GET /config`). */
+export interface AppConfig {
+  debug: boolean;
+  version: string;
+  /** Base URL of the openBIS server, empty when not configured. */
+  openbis_url: string;
+  lab_courses: { value: string; label: string }[];
+  lock_ttl_seconds: number;
+  /** Seconds a lock stays reclaimable after a soft release (page unload). */
+  lock_soft_release_seconds: number;
+  /** Local time of the end-of-day lock reset, "HH:MM". */
+  eod_reset_time: string;
+  eod_timezone: string;
+}
+
 export interface LockInfo {
   owner_user: string;
   acquired_at: number;
@@ -27,9 +42,26 @@ export interface Device {
   lock: LockInfo | null;
 }
 
+/**
+ * Driver capability names reported by `GET /devices/{id}`. A control is only
+ * rendered when its capability is present.
+ */
+export type Capability =
+  | "run"
+  | "stop"
+  | "acquire"
+  | "preview"
+  | "screenshot"
+  | "single"
+  | "force_trigger"
+  | "autoscale"
+  | "cancel_acquire";
+
 export interface DeviceDetail extends Device {
   /** Non-empty only when the device driver is connected */
-  capabilities: string[];
+  capabilities: Capability[];
+  /** Number of analog input channels on the scope (default 4). */
+  channel_count: number;
 }
 
 export interface LockResponse {
@@ -46,19 +78,59 @@ export interface AcquiredChannel {
   probe_attenuation: number;
 }
 
-export interface AcquireResponse {
-  artifact_ids: string[];
-  acquisition_id: string;
-  session_id: string;
-  channels: AcquiredChannel[];
-}
-
+/** Raw samples of one channel. `artifact_id` is null for unsaved preview frames. */
 export interface WaveformData {
-  artifact_id: string;
+  artifact_id: string | null;
   channel: number;
   time_s: number[];
   voltage_V: number[];
 }
+
+/** Response of `POST /devices/{id}/preview` — a live frame that is NOT stored. */
+export interface PreviewResponse {
+  channels: AcquiredChannel[];
+  waveforms: WaveformData[];
+  timebase: TimebaseConfig;
+  trigger: TriggerConfig;
+}
+
+/** Response of `POST /devices/{id}/acquire` — a saved capture ("Aufnahme"). */
+export interface AcquireResponse {
+  artifact_ids: string[];
+  acquisition_id: string;
+  session_id: string;
+  created_at: string;
+  channels: AcquiredChannel[];
+  timebase: TimebaseConfig;
+  trigger: TriggerConfig;
+  /** Only present when requested with `include_data=true`. */
+  waveforms?: WaveformData[];
+}
+
+/** SSE events from `GET /devices/events`. */
+export type DeviceEvent =
+  | {
+      type: "device_state";
+      device_id: string;
+      state: DeviceState;
+      last_error: string | null;
+    }
+  | {
+      type: "lock";
+      device_id: string;
+      owner_user: string | null;
+      session_id: string | null;
+    }
+  | {
+      type: "progress";
+      device_id: string;
+      session_id: string;
+      job: "acquire";
+      /** Overall fraction 0..1 across all channels. */
+      done: number;
+      /** Human-readable step, e.g. "CH2: 1,2 / 6 MPkt". */
+      detail: string;
+    };
 
 export type ArtifactType = "trace" | "screenshot";
 
@@ -67,17 +139,44 @@ export interface Artifact {
   artifact_type: ArtifactType;
   channel: number | null;
   seq: number;
+  /** Selected ("markiert") for the next upload. */
   persist: boolean;
   created_at: string;
   files: string[];
   acquisition_id: string | null;
   annotation: string | null;
   run_id: string | null;
+  uploaded: boolean;
+  uploaded_at: string | null;
+  perm_id: string | null;
+}
+
+/** One row of `GET /sessions?mine=true` ("Meine Messdaten"). */
+export interface SessionSummary {
+  session_id: string;
+  device_id: string;
+  device_label: string;
+  owner_user: string;
+  created_at: string;
+  last_activity: string;
+  /** True while this session still holds the device lock. */
+  is_active: boolean;
+  counts: {
+    acquisitions: number;
+    screenshots: number;
+    flagged: number;
+    uploaded: number;
+  };
 }
 
 export interface CommitResponse {
-  permId: string;
+  /** null when committed via the dropbox (registration happens asynchronously). */
+  permId: string | null;
   artifact_count: number;
+  artifact_ids: string[];
+  /** Deep link to the dataset in the openBIS ELN, null if unknown. */
+  openbis_url: string | null;
+  dropbox_file?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -107,7 +206,7 @@ export interface TriggerConfig {
 }
 
 export interface DeviceSettings {
-  /** Keyed by channel number (1–4) */
+  /** Keyed by channel number (1..channel_count) */
   channels: Record<number, ChannelConfig>;
   timebase: TimebaseConfig;
   trigger: TriggerConfig;

@@ -557,14 +557,11 @@ export function OscilloscopeControl() {
         const enabledNums = Object.entries(channelSettings)
           .filter(([, cfg]) => cfg.enabled)
           .map(([k]) => Number(k));
-        const acquireResp = await acquireWaveforms(
-          token,
-          deviceId,
-          sessionId,
-          enabledNums.length > 0 ? enabledNums : undefined,
+        const acquireResp = await acquireWaveforms(token, deviceId, sessionId, {
+          channels: enabledNums.length > 0 ? enabledNums : undefined,
           maxSamples,
-          runIdRef.current,
-        );
+          runId: runIdRef.current,
+        });
         setAcquiredChannels(acquireResp.channels);
         setLastAcquisitionId(acquireResp.acquisition_id);
         setLastArtifactIds(acquireResp.artifact_ids);

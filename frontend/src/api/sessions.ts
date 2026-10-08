@@ -1,6 +1,26 @@
 import { apiFetch } from "./client";
-import type { Artifact, CommitResponse, WaveformData } from "./types";
+import type {
+  Artifact,
+  CommitResponse,
+  SessionSummary,
+  WaveformData,
+} from "./types";
 
+/**
+ * Lists the control sessions of the current user, newest first ("Meine Messdaten").
+ * @param token - The authentication bearer token
+ * @returns A promise resolving to one summary per session still on disk
+ */
+export function listMySessions(token: string): Promise<SessionSummary[]> {
+  return apiFetch<SessionSummary[]>("/sessions?mine=true", token);
+}
+
+/**
+ * Lists every artifact stored in a session.
+ * @param token - The authentication bearer token
+ * @param sessionId - The control session UUID
+ * @returns A promise resolving to the artifacts in storage order
+ */
 export function listArtifacts(
   token: string,
   sessionId: string,
@@ -8,6 +28,14 @@ export function listArtifacts(
   return apiFetch<Artifact[]>(`/sessions/${sessionId}/artifacts`, token);
 }
 
+/**
+ * Marks or unmarks an artifact for the next upload.
+ * @param token - The authentication bearer token
+ * @param sessionId - The control session UUID
+ * @param artifactId - The artifact to update
+ * @param persist - true to select it for upload
+ * @returns A promise that resolves when the flag is stored
+ */
 export function flagArtifact(
   token: string,
   sessionId: string,
@@ -21,6 +49,14 @@ export function flagArtifact(
   );
 }
 
+/**
+ * Stores a free-text note on every channel trace of one capture.
+ * @param token - The authentication bearer token
+ * @param sessionId - The control session UUID
+ * @param acquisitionId - The capture ("Aufnahme") identifier
+ * @param annotation - The note text
+ * @returns A promise that resolves when the note is stored
+ */
 export function setAnnotation(
   token: string,
   sessionId: string,
@@ -38,6 +74,13 @@ export function setAnnotation(
   );
 }
 
+/**
+ * Loads the full-resolution samples of one stored trace.
+ * @param token - The authentication bearer token
+ * @param sessionId - The control session UUID
+ * @param artifactId - The trace artifact
+ * @returns A promise resolving to the time and voltage arrays
+ */
 export function getArtifactWaveform(
   token: string,
   sessionId: string,
@@ -49,6 +92,13 @@ export function getArtifactWaveform(
   );
 }
 
+/**
+ * Loads a stored screenshot as PNG.
+ * @param token - The authentication bearer token
+ * @param sessionId - The control session UUID
+ * @param artifactId - The screenshot artifact
+ * @returns A promise resolving to the PNG blob
+ */
 export function fetchArtifactScreenshot(
   token: string,
   sessionId: string,
@@ -60,9 +110,45 @@ export function fetchArtifactScreenshot(
   );
 }
 
+/**
+ * Builds a ZIP of the given artifacts on the server (all artifacts when empty).
+ * @param token - The authentication bearer token
+ * @param sessionId - The control session UUID
+ * @param artifactIds - Artifacts to include; empty means the whole session
+ * @returns A promise resolving to the ZIP blob
+ */
+export function downloadArtifactsZip(
+  token: string,
+  sessionId: string,
+  artifactIds: string[] = [],
+): Promise<Blob> {
+  const params = new URLSearchParams();
+  artifactIds.forEach((id) => params.append("artifact_ids", id));
+  return apiFetch<Blob>(`/sessions/${sessionId}/download?${params}`, token);
+}
+
+/**
+ * Exports the given trace artifacts as one HDF5 file built on the server.
+ * @param token - The authentication bearer token
+ * @param sessionId - The control session UUID
+ * @param artifactIds - Trace artifacts to include
+ * @returns A promise resolving to the `.h5` blob
+ */
+export function exportArtifactsHdf5(
+  token: string,
+  sessionId: string,
+  artifactIds: string[],
+): Promise<Blob> {
+  const params = new URLSearchParams();
+  artifactIds.forEach((id) => params.append("artifact_ids", id));
+  return apiFetch<Blob>(`/sessions/${sessionId}/export.h5?${params}`, token);
+}
+
 export interface CommitRequest {
   experiment_id: string;
   object_id?: string;
+  /** Upload exactly these artifacts; when omitted all flagged artifacts are used. */
+  artifact_ids?: string[];
   lab_course?: string;
   exp_title?: string;
   group_name?: string;
@@ -76,6 +162,14 @@ export interface CommitRequest {
   notes?: string;
 }
 
+/**
+ * Uploads artifacts to openBIS as one dataset. On success the backend marks
+ * them as uploaded and clears their upload selection.
+ * @param token - The authentication bearer token
+ * @param sessionId - The control session UUID
+ * @param body - Upload target, artifact selection and dataset metadata
+ * @returns A promise resolving to the permId and ELN link
+ */
 export function commitSession(
   token: string,
   sessionId: string,

@@ -196,15 +196,24 @@
   --lab-panel: #fafafa;
   --lab-border: #d1d5db;
   --lab-accent: #2563eb;
+  --lab-accent-hover: #1d4ed8;
   --lab-success: #059669;
   --lab-danger: #dc2626;
   --lab-warning: #d97706;
   --lab-text-primary: #111827;
   --lab-text-secondary: #6b7280;
+  /* Explicit disabled colours keep >= 3:1 contrast (no opacity fades). */
+  --lab-disabled-bg: #f3f4f6;
+  --lab-disabled-text: #6b7280;
 
-  /* Oscilloscope channel colors */
-  --ch1-color: #dc2626;
-  --ch2-color: #2563eb;
-  --ch3-color: #059669;
-  --ch4-color: #d97706;
+  /* Channel colours match the Rigol DS1000Z front panel
+     (CH1 yellow, CH2 cyan, CH3 magenta, CH4 blue), darkened for white
+     backgrounds. Read via channelColor() in src/lib/channels.ts. */
+  --ch1-color: #d4a500;
+  --ch2-color: #00a3c4;
+  --ch3-color: #c026d3;
+  --ch4-color: #2563eb;
 }
+
+/* Touch devices: `coarse:` variant for >= 40 px tap targets. */
+@custom-variant coarse (@media (pointer: coarse));

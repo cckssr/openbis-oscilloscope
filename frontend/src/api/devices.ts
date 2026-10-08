@@ -1,10 +1,11 @@
-import { apiFetch } from "./client";
+import { apiBaseUrl, apiFetch } from "./client";
 import type {
   Device,
   DeviceDetail,
   LockResponse,
   AcquireResponse,
   WaveformData,
+  PreviewResponse,
   DeviceSettings,
   MemoryDepthResponse,
   ChannelConfig,
@@ -69,6 +70,29 @@ export function releaseLock(
 }
 
 /**
+ * Soft-releases the lock when the page unloads: the lock stays reclaimable by
+ * the same user for `lock_soft_release_seconds` (so F5 does not drop control).
+ * Uses `fetch(keepalive)` because `sendBeacon` cannot send the auth header.
+ * @param token - The authentication bearer token
+ * @param deviceId - The unique identifier of the device
+ * @param sessionId - The session ID associated with the lock
+ */
+export function softReleaseLockOnUnload(
+  token: string,
+  deviceId: string,
+  sessionId: string,
+): void {
+  fetch(
+    `${apiBaseUrl}api/devices/${deviceId}/unlock?session_id=${encodeURIComponent(sessionId)}&soft=true`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      keepalive: true,
+    },
+  ).catch(() => {});
+}
+
+/**
  * Sends a heartbeat to keep a device lock active.
  * @param token - The authentication bearer token
  * @param deviceId - The unique identifier of the device
@@ -125,32 +149,109 @@ export function stopDevice(
   );
 }
 
+/** Options for {@link acquireWaveforms}. */
+export interface AcquireOptions {
+  /** Channel numbers to acquire; defaults to the channels enabled on the scope. */
+  channels?: number[];
+  /** Read the full acquisition memory ("Volle Auflösung") instead of the screen buffer. */
+  maxSamples?: boolean;
+  /** Optional UUID grouping captures of one series ("Serie"). */
+  runId?: string | null;
+  /** Return the sample arrays inline (saves one request per channel). */
+  includeData?: boolean;
+}
+
 /**
- * Acquires waveforms from the device.
+ * Saves a capture ("Aufnahme") of all requested channels to the session archive.
  * @param token - The authentication bearer token
  * @param deviceId - The unique identifier of the device
  * @param sessionId - The session ID associated with the lock
- * @param channels - Optional list of channel numbers to acquire
- * @param max_samples - Whether to acquire the maximum number of samples available on the device. If false, the driver may apply a default decimation to fit the waveform into memory.
- * @param runId - Optional UUID grouping acquisitions from one RUN press
- * @returns A promise resolving to the acquisition response with waveform metadata
+ * @param options - Channel selection, depth, series grouping and inline data
+ * @returns A promise resolving to the stored acquisition with applied settings
  */
 export function acquireWaveforms(
   token: string,
   deviceId: string,
   sessionId: string,
-  channels?: number[],
-  max_samples: boolean = false,
-  runId?: string | null,
+  options: AcquireOptions = {},
 ): Promise<AcquireResponse> {
   const params = new URLSearchParams({
     session_id: sessionId,
-    max_samples: String(max_samples),
+    max_samples: String(options.maxSamples ?? false),
+    include_data: String(options.includeData ?? false),
   });
-  channels?.forEach((ch) => params.append("channels", String(ch)));
-  if (runId) params.set("run_id", runId);
+  options.channels?.forEach((ch) => params.append("channels", String(ch)));
+  if (options.runId) params.set("run_id", options.runId);
   return apiFetch<AcquireResponse>(
     `/devices/${deviceId}/acquire?${params}`,
+    token,
+    { method: "POST" },
+  );
+}
+
+/**
+ * Reads one live frame for display only — nothing is written to the archive.
+ * @param token - The authentication bearer token
+ * @param deviceId - The unique identifier of the device
+ * @param sessionId - The session ID associated with the lock
+ * @param channels - Optional channel numbers; defaults to the enabled channels
+ * @returns A promise resolving to the frame data plus the applied settings
+ */
+export function previewWaveforms(
+  token: string,
+  deviceId: string,
+  sessionId: string,
+  channels?: number[],
+): Promise<PreviewResponse> {
+  const params = new URLSearchParams({ session_id: sessionId });
+  channels?.forEach((ch) => params.append("channels", String(ch)));
+  return apiFetch<PreviewResponse>(
+    `/devices/${deviceId}/preview?${params}`,
+    token,
+    { method: "POST" },
+  );
+}
+
+/**
+ * Asks the backend to abort the running full-memory acquisition. The pending
+ * acquire request then fails with error code `acquisition_cancelled`.
+ * @param token - The authentication bearer token
+ * @param deviceId - The unique identifier of the device
+ * @param sessionId - The session ID associated with the lock
+ * @returns A promise resolving to whether an acquisition was running
+ */
+export function cancelAcquire(
+  token: string,
+  deviceId: string,
+  sessionId: string,
+): Promise<{ cancelled: boolean }> {
+  return apiFetch<{ cancelled: boolean }>(
+    `/devices/${deviceId}/acquire/cancel?session_id=${encodeURIComponent(sessionId)}`,
+    token,
+    { method: "POST" },
+  );
+}
+
+/** Scope commands without payload, gated by the matching capability. */
+export type ScopeCommand = "single" | "force-trigger" | "autoscale";
+
+/**
+ * Sends a payload-free command to the scope: `single` (arm one trigger),
+ * `force-trigger` (trigger now) or `autoscale` (scope Auto-Setup).
+ * @param token - The authentication bearer token
+ * @param deviceId - The unique identifier of the device
+ * @param sessionId - The session ID associated with the lock
+ * @param command - The command path segment
+ * @returns A promise that resolves when the scope accepted the command
+ */
+export function sendScopeCommand(
+  token: string,
+  deviceId: string,
+  sessionId: string,
+  command: ScopeCommand,
+): Promise<void> {
+  return apiFetch<void>(
+    `/devices/${deviceId}/${command}?session_id=${encodeURIComponent(sessionId)}`,
     token,
     { method: "POST" },
   );
