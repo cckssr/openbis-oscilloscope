@@ -4,6 +4,7 @@
  * the scope-screen frame and data extents.
  */
 import type { Timebase, Trace } from "../../../lib/trace";
+import { SEC_PER_DIV_STEPS } from "../../../lib/units";
 
 /** Plot margins in px; fixed so HTML overlays line up with the plot area. */
 export const MARGIN = { l: 64, r: 14, t: 10, b: 50 } as const;
@@ -34,21 +35,44 @@ export function dataExtent(traces: Trace[]): Range | null {
  * Default x range of the plot. With a timebase it is the scope screen
  * (10 divisions centred on the trigger offset); if the record starts later than
  * the screen's left edge (records starting at t = 0, e.g. the mock scope) the
- * screen starts at the record start instead. Without a timebase it is the data extent.
+ * screen starts at the record start instead. Without a timebase (archive
+ * captures) the s/div is inferred from the record length and snapped to the
+ * 1-2-5 sequence, so the grid lands on round divisions; records that don't
+ * match a scope screen fall back to the data extent.
  * @param traces - Traces to display
  * @param timebase - Scope horizontal frame, if known
  * @returns `[min, max]` in x units
  */
 export function scopeFrame(traces: Trace[], timebase?: Timebase): Range {
   const extent = dataExtent(traces);
-  if (!timebase || !(timebase.scaleSDiv > 0) || traces.some((t) => t.xUnit !== "s")) {
+  const timeDomain = traces.every((t) => t.xUnit === "s");
+  if (!timebase || !(timebase.scaleSDiv > 0) || !timeDomain) {
     if (!extent) return [0, 1];
-    return extent[1] > extent[0] ? extent : [extent[0] - 0.5, extent[1] + 0.5];
+    if (extent[1] <= extent[0]) return [extent[0] - 0.5, extent[1] + 0.5];
+    const inferred = timeDomain ? inferScreenFrame(extent) : null;
+    return inferred ?? extent;
   }
   const width = timebase.scaleSDiv * X_DIVISIONS;
   let left = timebase.offsetS - width / 2;
   if (extent && extent[0] > left + width * 0.01) left = extent[0];
   return [left, left + width];
+}
+
+/**
+ * Snaps a record's span to a scope screen of 10 divisions with a 1-2-5 s/div.
+ * A record of N samples spans (N−1)·dt, slightly less than the screen, so the
+ * snapped s/div is accepted when it is within ±10 % of span/10.
+ * @param extent - Data extent in seconds
+ * @returns The screen frame starting at the record start, or null when no step fits
+ */
+export function inferScreenFrame(extent: Range): Range | null {
+  const raw = (extent[1] - extent[0]) / X_DIVISIONS;
+  let best = SEC_PER_DIV_STEPS[0];
+  for (const v of SEC_PER_DIV_STEPS) {
+    if (Math.abs(Math.log(v / raw)) < Math.abs(Math.log(best / raw))) best = v;
+  }
+  if (Math.abs(best / raw - 1) > 0.1) return null;
+  return [extent[0], extent[0] + best * X_DIVISIONS];
 }
 
 /**
