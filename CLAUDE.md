@@ -37,6 +37,7 @@ Tests use `fakeredis` and `MockOscilloscopeDriver` — no Redis or real hardware
 ```bash
 npm run dev     # Vite dev server on :5173, proxies /api to :8000
 npm run build   # outputs to dist/
+npm run test:e2e  # Playwright specs against the DEBUG backend at 4 viewports (npx playwright install chromium once)
 ```
 
 ## Repo layout
