@@ -1,60 +1,97 @@
+import type { Device } from "../../api/types";
+import { de } from "../../i18n/de";
 import { StatusBadge } from "./StatusBadge";
-import type { DeviceState } from "../../api/types";
+import { Button } from "./ui/button";
+import { formatLockSince } from "../pages/devices/lockSince";
 
-interface DeviceCardProps {
-  label: string;
-  id: string;
-  status: DeviceState;
-  ipAddress: string;
-  lockOwner?: string;
-  isMyLock?: boolean;
-  onOpen: () => void;
+const t = de.devices.card;
+
+export interface DeviceCardProps {
+  device: Device;
+  /** Navigates to the control page; only called when the device can be opened/resumed. */
+  onOpen: (device: Device) => void;
 }
 
-export function DeviceCard({
-  label,
-  id,
-  status,
-  ipAddress,
-  lockOwner,
-  isMyLock,
-  onOpen,
-}: DeviceCardProps) {
+/** What the card's button does and why, derived from state and lock. */
+interface CardAction {
+  label: string;
+  /** Null when enabled. */
+  disabledReason: string | null;
+  variant: "primary" | "outline";
+}
+
+function actionFor(device: Device): CardAction {
+  if (device.state === "OFFLINE") {
+    return { label: t.offline, disabledReason: t.offlineReason, variant: "outline" };
+  }
+  if (device.state === "ERROR") {
+    return { label: t.unavailable, disabledReason: t.errorHint, variant: "outline" };
+  }
+  if (device.lock?.is_mine) return { label: t.resume, disabledReason: null, variant: "primary" };
+  if (device.lock) {
+    return { label: t.busy, disabledReason: lockedByText(device), variant: "outline" };
+  }
+  return { label: t.open, disabledReason: null, variant: "outline" };
+}
+
+function lockedByText(device: Device): string {
+  const since = device.lock ? formatLockSince(device.lock.acquired_at) : "";
+  return device.lock?.owner_user
+    ? t.lockedBy(device.lock.owner_user, since)
+    : t.lockedByUnknown(since);
+}
+
+/**
+ * Card for one oscilloscope: label, status chip, address and one action button
+ * ("Öffnen" / "Fortsetzen" / disabled "Belegt" / "Offline" / "Nicht verfügbar").
+ * Every reason a device cannot be opened is printed on the card, so it also
+ * works on touch screens.
+ *
+ * @param props - See {@link DeviceCardProps}
+ * @returns The card
+ */
+export function DeviceCard({ device, onOpen }: DeviceCardProps) {
+  const action = actionFor(device);
+  const mine = device.lock?.is_mine ?? false;
+  const locked = device.lock !== null;
+
   return (
-    <div className="bg-white border-2 border-(--lab-border) rounded p-4 flex flex-col gap-3">
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="font-medium text-(--lab-text-primary)">{label}</h3>
-          <p className="text-xs text-(--lab-text-secondary) mt-0.5">ID: {id}</p>
+    <div className="flex flex-col gap-3 rounded border-2 border-(--lab-border) bg-white p-4" data-device-id={device.id}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h2 className="break-words text-base font-medium text-(--lab-text-primary)">{device.label}</h2>
+          <p className="help-text mt-0.5">ID: {device.id}</p>
         </div>
-        <StatusBadge status={status} />
+        <StatusBadge
+          status={device.state === "ONLINE" && locked ? "LOCKED" : device.state}
+          isMine={mine}
+        />
       </div>
 
-      <p className="font-mono text-xs text-(--lab-text-secondary)">
-        {ipAddress}
-      </p>
-      {lockOwner && (
-        <p className="text-xs text-(--lab-text-secondary)">
-          Gesperrt von{" "}
-          <span
-            className={isMyLock ? "text-(--lab-accent) font-medium" : undefined}
-          >
-            {isMyLock ? "dir" : lockOwner}
-          </span>
-        </p>
+      <p className="font-mono text-xs text-(--lab-text-secondary)">{device.ip}</p>
+
+      {device.state === "ERROR" && (
+        <div className="rounded border border-(--lab-danger) bg-white p-2 text-xs">
+          <p className="break-words font-medium text-(--lab-danger)">
+            {device.last_error || t.errorUnknown}
+          </p>
+          <p className="mt-1 text-(--lab-text-secondary)">{t.errorHint}</p>
+        </div>
+      )}
+      {device.state === "OFFLINE" && <p className="help-text">{t.offlineReason}</p>}
+      {device.state !== "ERROR" && device.state !== "OFFLINE" && locked && (
+        <p className="help-text">{mine ? t.lockedByMe : lockedByText(device)}</p>
       )}
 
-      <button
-        onClick={onOpen}
-        disabled={status === "OFFLINE" || status === "ERROR"}
-        className={`w-full py-2 px-4 border-2 rounded font-medium text-sm transition-colors ${
-          status === "OFFLINE"
-            ? "border-[var(--lab-border)] bg-[var(--lab-panel)] text-[var(--lab-text-secondary)] cursor-not-allowed"
-            : "border-[var(--lab-accent)] bg-white text-[var(--lab-accent)] hover:bg-[var(--lab-accent)] hover:text-white"
-        }`}
+      <Button
+        className="mt-auto w-full"
+        variant={action.variant}
+        disabled={action.disabledReason !== null}
+        title={action.disabledReason ?? undefined}
+        onClick={() => onOpen(device)}
       >
-        Öffnen
-      </button>
+        {action.label}
+      </Button>
     </div>
   );
 }

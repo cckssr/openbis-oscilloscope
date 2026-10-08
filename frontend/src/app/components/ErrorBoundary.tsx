@@ -1,4 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { Button } from "./ui/button";
+import { de } from "../../i18n/de";
 
 interface Props {
   children: ReactNode;
@@ -8,6 +10,13 @@ interface State {
   error: Error | null;
 }
 
+const t = de.common.errorBoundary;
+
+/**
+ * Root error boundary: replaces the whole app with a German "Etwas ist
+ * schiefgelaufen" screen and a reload button. Use `RegionBoundary` for
+ * individual panels so one broken control cannot take the page down.
+ */
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { error: null };
 
@@ -22,20 +31,16 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.error) {
       return (
-        <div className="min-h-screen bg-(--lab-bg) flex items-center justify-center p-8">
-          <div className="max-w-md w-full border-2 border-(--lab-danger) rounded bg-white p-6 space-y-4">
-            <h1 className="text-lg font-semibold text-(--lab-danger)">
-              Something went wrong
-            </h1>
-            <p className="text-sm text-(--lab-text-secondary) font-mono break-all">
+        <div className="flex min-h-screen items-center justify-center bg-(--lab-bg) p-8">
+          <div role="alert" className="w-full max-w-md space-y-4 rounded border-2 border-(--lab-danger) bg-white p-6">
+            <h1 className="text-lg font-semibold text-(--lab-danger)">{t.title}</h1>
+            <p className="text-sm text-(--lab-text-secondary)">{t.hint}</p>
+            <p className="break-all font-mono text-xs text-(--lab-text-secondary)">
               {this.state.error.message}
             </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="w-full py-2 px-4 border-2 border-(--lab-accent) text-(--lab-accent) text-sm font-medium rounded hover:bg-(--lab-accent) hover:text-white transition-colors"
-            >
-              Reload page
-            </button>
+            <Button variant="primary" className="w-full" onClick={() => window.location.reload()}>
+              {t.reload}
+            </Button>
           </div>
         </div>
       );

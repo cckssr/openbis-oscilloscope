@@ -8,6 +8,11 @@ import {
 import { getMe } from "../../api/auth";
 import { ApiError } from "../../api/client";
 import type { UserInfo } from "../../api/types";
+import {
+  NoOpenBISSessionError,
+  readOpenBISCookie,
+  readOpenBISTokenFragment,
+} from "./openbisSession";
 
 interface AuthContextValue {
   token: string | null;
@@ -16,6 +21,11 @@ interface AuthContextValue {
   isLoading: boolean;
   /** Validate token against /auth/me and persist it. Throws ApiError on failure. */
   login: (token: string) => Promise<void>;
+  /**
+   * Re-reads the `openbis` cookie (or URL fragment) and logs in with it.
+   * Throws {@link NoOpenBISSessionError} when there is none, ApiError when it is rejected.
+   */
+  loginFromOpenBISCookie: () => Promise<void>;
   logout: () => void;
 }
 
@@ -23,45 +33,28 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 const STORAGE_KEY = "osc_auth_token";
 
-function getOpenBISCookie(): string | null {
-  return document.cookie.match(/(?:^|;\s*)openbis=([^;]+)/)?.[1] ?? null;
-}
-
-function getOpenBISTokenFragment(): string | null {
-  const hash = window.location.hash;
-  const match = hash.match(/token=([^&]+)/);
-  if (match) {
-    const token = decodeURIComponent(match[1]);
-    window.location.hash = ""; // cleanup
-    return token;
-  }
-  return null;
-}
-
+/**
+ * Provides the session token and user. On startup the token comes from
+ * localStorage, the `openbis` cookie or a `#token=` fragment (in that order)
+ * and is validated once against `/auth/me`; a 401 clears it silently.
+ * @param props - `children` to render inside the provider
+ * @returns The provider element
+ */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(
+  // Resolve the initial token exactly once: reading the URL fragment clears it.
+  const [initialToken] = useState<string | null>(
     () =>
       localStorage.getItem(STORAGE_KEY) ??
-      getOpenBISCookie() ??
-      getOpenBISTokenFragment(),
+      readOpenBISCookie() ??
+      readOpenBISTokenFragment(),
   );
+  const [token, setToken] = useState<string | null>(initialToken);
   const [user, setUser] = useState<UserInfo | null>(null);
-  const [isLoading, setIsLoading] = useState(
-    () =>
-      !!(
-        localStorage.getItem(STORAGE_KEY) ??
-        getOpenBISCookie() ??
-        getOpenBISTokenFragment()
-      ),
-  );
+  const [isLoading, setIsLoading] = useState(initialToken !== null);
 
   // Validate the stored token once on mount.
   useEffect(() => {
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
+    if (!token) return; // isLoading starts false when there is no stored token
     getMe(token)
       .then((userInfo) => {
         setUser(userInfo);
@@ -89,6 +82,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userInfo);
   };
 
+  const loginFromOpenBISCookie = async () => {
+    const found = readOpenBISCookie() ?? readOpenBISTokenFragment();
+    if (!found) throw new NoOpenBISSessionError();
+    await login(found);
+  };
+
   const logout = () => {
     localStorage.removeItem(STORAGE_KEY);
     setToken(null);
@@ -96,12 +95,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ token, user, isLoading, login, loginFromOpenBISCookie, logout }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
+/**
+ * Reads the auth context.
+ * @returns Token, user and the login/logout actions
+ * @throws Error when used outside {@link AuthProvider}
+ */
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used within <AuthProvider>");

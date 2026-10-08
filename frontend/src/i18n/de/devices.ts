@@ -1,2 +1,30 @@
-/** German UI strings: devices. */
-export const devices = {} as const;
+/** German UI strings: device list page and device card. */
+export const devices = {
+  title: "Geräte",
+  pageTitle: "Oszilloskop-Steuerung",
+  mySessions: "Meine Messdaten",
+  admin: "Admin",
+  loadError: "Geräte konnten nicht geladen werden",
+  refreshError: "Aktualisieren fehlgeschlagen",
+  liveHint: "Live-Aktualisierung aktiv",
+  pollingHint: "Aktualisierung alle 5 Sekunden",
+  empty: {
+    title: "Keine Geräte verfügbar",
+    description: "Serverkonfiguration oder Netzwerkverbindung prüfen.",
+  },
+  card: {
+    open: "Öffnen",
+    resume: "Fortsetzen",
+    busy: "Belegt",
+    unavailable: "Nicht verfügbar",
+    offline: "Offline",
+    lockedByMe: "Du steuerst dieses Gerät.",
+    lockedBy: (owner: string, since: string) => `Belegt von ${owner} seit ${since}`,
+    lockedByUnknown: (since: string) => `Belegt seit ${since}`,
+    offlineReason: "Gerät ist nicht erreichbar.",
+    errorHint: "Bitte Betreuer:in informieren.",
+    errorUnknown: "Unbekannter Fehler",
+    since: (time: string) => `${time} Uhr`,
+    sinceDate: (date: string, time: string) => `${date}, ${time} Uhr`,
+  },
+} as const;
