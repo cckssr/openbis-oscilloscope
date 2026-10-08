@@ -23,7 +23,6 @@
 #
 
 import numpy as np
-import time
 from pymeasure.instruments import Instrument, Channel, SCPIMixin
 from pymeasure.instruments.validators import (
     truncated_discrete_set,
@@ -781,7 +780,9 @@ class RigolDS1000ZSeries(SCPIMixin, Instrument):
             "yreference": float(values[9]),
         }
 
-    def get_waveform_data(self, raw=False, return_preamble=False):
+    def get_waveform_data(
+        self, raw=False, return_preamble=False, progress_callback=None
+    ):
         """Retrieve waveform data from the oscilloscope in batches if necessary.
 
         The Rigol DS1000Z can only transfer a maximum of 250,000 points per request.
@@ -792,6 +793,9 @@ class RigolDS1000ZSeries(SCPIMixin, Instrument):
             raw: If True, returns raw binary data. If False (default), converts to voltage values
                  using the preamble parameters.
             return_preamble: If True, returns both the waveform data and the preamble parameters.
+            progress_callback: Optional ``callback(points_done, points_total)`` invoked
+                before the first batch (``points_done=0``) and after every batch. It may
+                raise (e.g. to cancel a long read); the exception propagates unchanged.
 
         Returns:
             If raw=True: bytes object containing raw waveform data
@@ -803,12 +807,18 @@ class RigolDS1000ZSeries(SCPIMixin, Instrument):
         total_points = preamble["points"]
         max_points_per_batch = 250_000
 
+        if progress_callback is not None:
+            progress_callback(0, total_points)
+
         if total_points <= max_points_per_batch:
             # Single batch — fetch directly
             self.waveform_start = 1
+            self.waveform_stop = total_points
             self.write(":WAVeform:DATA?")
             raw_response: bytes = self.adapter.connection.read_raw()
             all_data_bytes = self._parse_tmc_response(raw_response)
+            if progress_callback is not None:
+                progress_callback(total_points, total_points)
         else:
             # Multiple batches: fetch sequentially without buffering
             # This is more reliable than pipelining with some VISA implementations
@@ -835,6 +845,8 @@ class RigolDS1000ZSeries(SCPIMixin, Instrument):
                 raw_response: bytes = self.adapter.connection.read_raw()
                 batch_data = self._parse_tmc_response(raw_response)
                 chunks.append(batch_data)
+                if progress_callback is not None:
+                    progress_callback(end_point, total_points)
 
                 print(
                     f"  Batch {batch_idx + 1}/{num_batches}: "

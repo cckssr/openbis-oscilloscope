@@ -7,6 +7,7 @@ import logging
 import re
 import shutil
 import threading
+import uuid
 import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -62,6 +63,13 @@ class ArtifactInfo:
         created_at: ISO-8601 UTC timestamp string of when the artifact was stored.
         files: List of filenames (relative to the session directory) that belong
             to this artifact (e.g. ``["trace_0001_ch1.csv", "trace_0001_meta.json"]``).
+        acquisition_id: UUID shared by all channels captured in one acquire call.
+        annotation: User-supplied label for the acquisition group.
+        run_id: UUID shared by all acquisitions of one series (RUN press).
+        uploaded: ``True`` once the artifact was committed to OpenBIS (or the dropbox).
+        uploaded_at: ISO-8601 UTC timestamp of that commit, else ``None``.
+        perm_id: OpenBIS permId of the dataset it was uploaded in; ``None`` before
+            the upload and for dropbox commits.
     """
 
     artifact_id: str
@@ -74,6 +82,41 @@ class ArtifactInfo:
     acquisition_id: str | None = None  # groups channels acquired in one call
     annotation: str | None = None  # user-supplied label for the acquisition
     run_id: str | None = None  # groups acquisitions from one RUN press
+    uploaded: bool = False
+    uploaded_at: str | None = None
+    perm_id: str | None = None
+
+
+@dataclass
+class SessionInfo:
+    """Ownership record of a control session, stored in ``index.json["session"]``.
+
+    Attributes:
+        session_id: Control session UUID.
+        device_id: Device the session controlled.
+        owner_user: User who locked the device, or ``None`` for legacy sessions
+            created before ownership was recorded (those stay accessible to everyone).
+        created_at: ISO-8601 UTC timestamp when the lock was acquired, or ``None``
+            for legacy sessions.
+    """
+
+    session_id: str
+    device_id: str
+    owner_user: str | None = None
+    created_at: str | None = None
+
+
+@dataclass
+class SessionRecord:
+    """A session together with its artifacts, as returned by :meth:`BufferService.list_sessions`.
+
+    Attributes:
+        info: Ownership record of the session.
+        artifacts: All artifacts registered for it, in storage order.
+    """
+
+    info: SessionInfo
+    artifacts: list[ArtifactInfo]
 
 
 class BufferService:
@@ -91,6 +134,10 @@ class BufferService:
 
     ``index.json`` acts as the per-session registry of all artifacts and their
     persist flags. It is the authoritative source of truth for artifact metadata.
+    Besides the ``"artifacts"`` list it may hold a ``"session"`` block
+    (``session_id``, ``device_id``, ``owner_user``, ``created_at``) written by
+    :meth:`register_session` when the device lock is acquired; sessions without
+    that block are *legacy* sessions without an owner.
     """
 
     def __init__(self, buffer_dir: str | None = None) -> None:
@@ -226,6 +273,7 @@ class BufferService:
         meta: dict,
         acquisition_id: str | None = None,
         run_id: str | None = None,
+        created_at: str | None = None,
     ) -> str:
         """Persist a waveform acquisition as a CSV file plus a JSON metadata sidecar.
 
@@ -240,13 +288,18 @@ class BufferService:
             waveform: The :class:`~app.instruments.base_driver.WaveformData` to store.
             meta: Full instrument settings dict from
                 :meth:`~app.instruments.base_driver.BaseOscilloscopeDriver.get_all_settings`.
+            acquisition_id: UUID linking the channels of one acquire call.
+            run_id: UUID grouping the acquisitions of one series.
+            created_at: ISO-8601 UTC timestamp to record instead of "now". The
+                acquire endpoint passes one shared value so all channels of a
+                capture carry the same time.
 
         Returns:
             The ``artifact_id`` string for the new artifact
             (e.g. ``"trace_0001_ch1"``).
         """
         d = self._session_dir(device_id, session_id)
-        now_iso = datetime.now(timezone.utc).isoformat()
+        now_iso = created_at or datetime.now(timezone.utc).isoformat()
 
         # Reserve a sequence number and register in the index atomically.
         with self._get_session_lock(device_id, session_id):
@@ -267,6 +320,9 @@ class BufferService:
                     "acquisition_id": acquisition_id,
                     "annotation": None,
                     "run_id": run_id,
+                    "uploaded": False,
+                    "uploaded_at": None,
+                    "perm_id": None,
                 }
             )
             self._save_index(device_id, session_id, index)
@@ -342,6 +398,10 @@ class BufferService:
                     "files": [png_name],
                     "acquisition_id": None,
                     "annotation": None,
+                    "run_id": None,
+                    "uploaded": False,
+                    "uploaded_at": None,
+                    "perm_id": None,
                 }
             )
             self._save_index(device_id, session_id, index)
@@ -382,26 +442,220 @@ class BufferService:
             return []
         _, device_id = result
         index = self._load_index(device_id, session_id)
-        return [
-            ArtifactInfo(
-                acquisition_id=a.get("acquisition_id"),
-                annotation=a.get("annotation"),
-                run_id=a.get("run_id"),
-                **{
-                    k: a[k]
-                    for k in (
-                        "artifact_id",
-                        "artifact_type",
-                        "channel",
-                        "seq",
-                        "persist",
-                        "created_at",
-                        "files",
+        return [self._artifact_from_entry(a) for a in index["artifacts"]]
+
+    @staticmethod
+    def _artifact_from_entry(entry: dict) -> ArtifactInfo:
+        """Build an :class:`ArtifactInfo` from an ``index.json`` entry.
+
+        Optional fields missing from legacy entries get their defaults.
+
+        Args:
+            entry: One element of ``index["artifacts"]``.
+
+        Returns:
+            The corresponding :class:`ArtifactInfo`.
+        """
+        return ArtifactInfo(
+            artifact_id=entry["artifact_id"],
+            artifact_type=entry["artifact_type"],
+            channel=entry["channel"],
+            seq=entry["seq"],
+            persist=entry["persist"],
+            created_at=entry["created_at"],
+            files=entry["files"],
+            acquisition_id=entry.get("acquisition_id"),
+            annotation=entry.get("annotation"),
+            run_id=entry.get("run_id"),
+            uploaded=bool(entry.get("uploaded", False)),
+            uploaded_at=entry.get("uploaded_at"),
+            perm_id=entry.get("perm_id"),
+        )
+
+    # ------------------------------------------------------------------
+    # Session ownership
+    # ------------------------------------------------------------------
+
+    def register_session(
+        self, device_id: str, session_id: str, owner_user: str
+    ) -> SessionInfo:
+        """Record who owns a session (called when the device lock is acquired).
+
+        Creates the session directory and writes the ``"session"`` block of
+        ``index.json``. An already registered session keeps its original owner.
+
+        Args:
+            device_id: Device the session controls.
+            session_id: Control session UUID returned by the lock endpoint.
+            owner_user: User ID of the lock holder.
+
+        Returns:
+            The stored :class:`SessionInfo`.
+        """
+        with self._get_session_lock(device_id, session_id):
+            index = self._load_index(device_id, session_id)
+            block = index.get("session")
+            if block is None:
+                block = {
+                    "session_id": session_id,
+                    "device_id": device_id,
+                    "owner_user": owner_user,
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                }
+                index["session"] = block
+                self._save_index(device_id, session_id, index)
+        return self._session_info_from_index(device_id, session_id, index)
+
+    @staticmethod
+    def _session_info_from_index(
+        device_id: str, session_id: str, index: dict
+    ) -> SessionInfo:
+        """Build a :class:`SessionInfo` from an index, tolerating legacy sessions.
+
+        Args:
+            device_id: Device directory the index was read from.
+            session_id: Control session UUID.
+            index: Parsed ``index.json``.
+
+        Returns:
+            The session record; ``owner_user`` / ``created_at`` are ``None`` when
+            the index has no ``"session"`` block.
+        """
+        block = index.get("session") or {}
+        return SessionInfo(
+            session_id=session_id,
+            device_id=block.get("device_id", device_id),
+            owner_user=block.get("owner_user"),
+            created_at=block.get("created_at"),
+        )
+
+    def get_session_info(self, session_id: str) -> SessionInfo | None:
+        """Return the ownership record of a session.
+
+        Args:
+            session_id: Control session UUID to look up.
+
+        Returns:
+            The :class:`SessionInfo`, or ``None`` if no directory exists for the
+            session. Legacy sessions come back with ``owner_user=None``.
+        """
+        result = self._find_session_dir(session_id)
+        if result is None:
+            return None
+        _, device_id = result
+        index = self._load_index(device_id, session_id)
+        return self._session_info_from_index(device_id, session_id, index)
+
+    def list_sessions(self) -> list[SessionRecord]:
+        """Return every session on disk together with its artifacts.
+
+        Scans ``{root}/{device_id}/{session_id}/index.json``. Directories without
+        an index are skipped.
+
+        Returns:
+            One :class:`SessionRecord` per session, in no particular order.
+        """
+        records: list[SessionRecord] = []
+        if not self._root.exists():
+            return records
+        for device_dir in self._root.iterdir():
+            if not device_dir.is_dir():
+                continue
+            for session_dir in device_dir.iterdir():
+                if not (session_dir / "index.json").is_file():
+                    continue
+                index = self._load_index(device_dir.name, session_dir.name)
+                records.append(
+                    SessionRecord(
+                        info=self._session_info_from_index(
+                            device_dir.name, session_dir.name, index
+                        ),
+                        artifacts=[
+                            self._artifact_from_entry(a) for a in index["artifacts"]
+                        ],
                     )
-                },
-            )
-            for a in index["artifacts"]
-        ]
+                )
+        return records
+
+    def get_artifacts(
+        self, session_id: str, artifact_ids: list[str]
+    ) -> list[ArtifactInfo]:
+        """Return the named artifacts of a session, in the requested order.
+
+        Args:
+            session_id: Control session UUID.
+            artifact_ids: Artifact identifiers to look up.
+
+        Returns:
+            The matching :class:`ArtifactInfo` entries.
+
+        Raises:
+            SessionNotFoundError: If the session directory does not exist.
+            ArtifactNotFoundError: If any identifier is not in the session index.
+        """
+        if self._find_session_dir(session_id) is None:
+            raise SessionNotFoundError(session_id)
+        by_id = {a.artifact_id: a for a in self.list_artifacts(session_id)}
+        missing = [i for i in artifact_ids if i not in by_id]
+        if missing:
+            raise ArtifactNotFoundError(", ".join(missing))
+        return [by_id[i] for i in artifact_ids]
+
+    def new_temp_path(self, session_id: str, prefix: str, suffix: str) -> Path:
+        """Return a unique, not yet existing file path inside a session directory.
+
+        Used for on-demand downloads (ZIP / HDF5) so parallel requests never
+        overwrite each other; the caller deletes the file after sending it.
+
+        Args:
+            session_id: Control session UUID.
+            prefix: File name prefix (e.g. ``"download"``).
+            suffix: File name suffix including the dot (e.g. ``".zip"``).
+
+        Returns:
+            ``{session_dir}/{prefix}_{random}{suffix}``.
+
+        Raises:
+            SessionNotFoundError: If the session directory does not exist.
+        """
+        result = self._find_session_dir(session_id)
+        if result is None:
+            raise SessionNotFoundError(session_id)
+        session_dir, _ = result
+        return session_dir / f"{prefix}_{uuid.uuid4().hex[:12]}{suffix}"
+
+    def mark_uploaded(
+        self, session_id: str, artifact_ids: list[str], perm_id: str | None
+    ) -> None:
+        """Mark artifacts as uploaded and clear their upload selection.
+
+        Sets ``uploaded=True``, ``uploaded_at`` (now, UTC) and ``perm_id`` and
+        resets ``persist`` to ``False`` for each listed artifact.
+
+        Args:
+            session_id: Control session UUID.
+            artifact_ids: Artifacts that were just committed.
+            perm_id: OpenBIS permId of the created dataset, or ``None`` for
+                dropbox commits (the permId is only known after ingestion).
+
+        Raises:
+            SessionNotFoundError: If the session directory does not exist.
+        """
+        result = self._find_session_dir(session_id)
+        if result is None:
+            raise SessionNotFoundError(session_id)
+        _, device_id = result
+        wanted = set(artifact_ids)
+        now_iso = datetime.now(timezone.utc).isoformat()
+        with self._get_session_lock(device_id, session_id):
+            index = self._load_index(device_id, session_id)
+            for entry in index["artifacts"]:
+                if entry["artifact_id"] in wanted:
+                    entry["uploaded"] = True
+                    entry["uploaded_at"] = now_iso
+                    entry["perm_id"] = perm_id
+                    entry["persist"] = False
+            self._save_index(device_id, session_id, index)
 
     def set_flag(self, session_id: str, artifact_id: str, persist: bool) -> None:
         """Set or clear the persist flag on an artifact.
@@ -625,7 +879,9 @@ class BufferService:
             if isinstance(value, (str, int, float, bool)):
                 group.attrs[key] = value
 
-    def export_hdf5(self, session_id: str, artifact_ids: list[str]) -> Path:
+    def export_hdf5(
+        self, session_id: str, artifact_ids: list[str], dest: Path | None = None
+    ) -> Path:
         """Bundle selected trace artifacts into a single HDF5 file.
 
         Each selected artifact is stored as an HDF5 group containing
@@ -639,6 +895,9 @@ class BufferService:
             artifact_ids: List of artifact IDs to include. Only ``"trace"``-type
                 artifacts are processed; screenshots and unknown IDs are silently
                 skipped.
+            dest: Optional target path for the ``.h5`` file. Defaults to
+                ``export_{session_id}.h5`` in the session directory; the download
+                endpoint passes a unique name so parallel requests do not clash.
 
         Returns:
             The :class:`~pathlib.Path` to the created ``.h5`` file.
@@ -653,7 +912,7 @@ class BufferService:
         index = self._load_index(device_id, session_id)
         artifacts = {a["artifact_id"]: a for a in index["artifacts"]}
 
-        h5_path = session_dir / f"export_{session_id}.h5"
+        h5_path = dest or session_dir / f"export_{session_id}.h5"
 
         with h5py.File(h5_path, "w") as h5f:
             h5f.attrs["session_id"] = session_id
@@ -718,6 +977,7 @@ class BufferService:
         session_id: str,
         flagged: list[ArtifactInfo],
         extra_content: dict[str, str] | None = None,
+        dest: Path | None = None,
     ) -> Path:
         """Bundle flagged artifacts into a compressed ZIP ready for OpenBIS upload.
 
@@ -732,9 +992,12 @@ class BufferService:
             flagged: List of :class:`ArtifactInfo` entries to include.
             extra_content: Optional mapping of ``filename → text`` for extra
                 entries to write verbatim into the ZIP (e.g. a metadata JSON).
+            dest: Optional target path for the ZIP. Defaults to
+                ``commit_{session_id}.zip`` in the session directory; the
+                download endpoint passes a unique name.
 
         Returns:
-            Path to the created ``.zip`` file inside the session directory.
+            Path to the created ``.zip`` file.
 
         Raises:
             SessionNotFoundError: If the session directory does not exist.
@@ -744,7 +1007,7 @@ class BufferService:
             raise SessionNotFoundError(session_id)
         session_dir, _ = result
 
-        zip_path = session_dir / f"commit_{session_id}.zip"
+        zip_path = dest or session_dir / f"commit_{session_id}.zip"
         used_names: set[str] = set()
 
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:

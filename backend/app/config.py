@@ -19,7 +19,13 @@ class Settings(BaseSettings):
         OPENBIS_URL: Base URL of the OpenBIS server (required in production).
         BUFFER_DIR: Root directory where artifact files (CSV, PNG, HDF5) are stored.
         OSCILLOSCOPES_CONFIG: Path to the YAML file listing registered oscilloscopes.
-        LOCK_TTL_SECONDS: Seconds after which an unrenewed device lock expires.
+        LOCK_TTL_SECONDS: Seconds after which an unrenewed device lock expires. The
+            frontend sends a heartbeat every 60 s.
+        LOCK_SOFT_RELEASE_SECONDS: Remaining lifetime of a lock after a *soft* release
+            (``POST /devices/{id}/unlock?soft=true``, sent on page unload). During this
+            window the same user can reclaim the lock; a heartbeat restores the full TTL.
+        LAB_COURSES: Lab-course choices offered by the upload form, as a JSON list of
+            ``{"value": ..., "label": ...}`` objects. Exposed via ``GET /config``.
         HEALTH_CHECK_INTERVAL_SECONDS: Interval in seconds between TCP reachability checks.
         HEALTH_CHECK_TCP_TIMEOUT_SECONDS: Seconds to wait for a TCP connection during a health check.
         HEALTH_CHECK_IDLE_TIMEOUT_SECONDS: Seconds of API inactivity after which health-check cycles
@@ -57,7 +63,14 @@ class Settings(BaseSettings):
     OPENBIS_URL: str = ""
     BUFFER_DIR: str = "./buffer"
     OSCILLOSCOPES_CONFIG: str = "./config/oscilloscopes.yaml"
-    LOCK_TTL_SECONDS: int = 1800
+    LOCK_TTL_SECONDS: int = 300
+    LOCK_SOFT_RELEASE_SECONDS: int = 60
+    LAB_COURSES: list[dict[str, str]] = [
+        {"value": "GP1", "label": "GP1 – Grundpraktikum 1"},
+        {"value": "GP2", "label": "GP2 – Grundpraktikum 2"},
+        {"value": "GP3", "label": "GP3 – Grundpraktikum 3"},
+        {"value": "Projektlabor", "label": "Projektlabor"},
+    ]
     HEALTH_CHECK_INTERVAL_SECONDS: int = 20
     HEALTH_CHECK_TCP_TIMEOUT_SECONDS: float = 2.0
     HEALTH_CHECK_IDLE_TIMEOUT_SECONDS: int = 600

@@ -1,13 +1,21 @@
-"""Abstract base driver class and built-in mock implementation for oscilloscope drivers."""
+"""Abstract base class, data classes and optional-capability hooks for oscilloscope drivers.
 
-import math
-import struct
-import time
-import zlib
+The built-in :class:`MockOscilloscopeDriver` lives in
+:mod:`app.instruments.mock_driver`; it is still importable from this module for
+backwards compatibility (lazy re-export, see :func:`__getattr__`).
+"""
+
+import threading
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Callable
 
 import numpy as np
+
+from app.core.exceptions import AcquisitionCancelledError
+
+# Signature of the progress hook: ``(points_done, points_total)`` of one read.
+ProgressCallback = Callable[[int, int], None]
 
 
 @dataclass
@@ -110,10 +118,28 @@ class BaseOscilloscopeDriver(ABC):
     The :class:`~app.instruments.manager.InstrumentManager` instantiates drivers
     dynamically based on the ``driver`` field in ``oscilloscopes.yaml``.
 
+    Beyond the abstract interface a driver may opt in to *optional
+    capabilities* by overriding :meth:`single`, :meth:`force_trigger` and/or
+    :meth:`autoscale`, and by calling :meth:`report_progress` /
+    :meth:`raise_if_cancelled` inside long reads (and then setting
+    ``supports_cancel_acquire = True``). :attr:`capabilities` derives the list
+    reported by ``GET /devices/{id}`` from exactly that, so no router code has
+    to know which driver supports what.
+
     Attributes:
         ip: IP address of the instrument.
         port: TCP port number (default ``5025`` for LXI/SCPI instruments).
+        channel_count: Number of analog input channels (default ``4``).
+        supports_cancel_acquire: Set to ``True`` by drivers that call
+            :meth:`raise_if_cancelled` between the blocks of a long read.
     """
+
+    channel_count: int = 4
+    supports_cancel_acquire: bool = False
+
+    # Per-job hooks, wired by the acquire endpoint just before a read.
+    _progress_cb: ProgressCallback | None = None
+    _cancel_event: threading.Event | None = None
 
     def __init__(self, ip: str, port: int = 5025) -> None:
         """Initialize the driver with the instrument's network address.
@@ -124,6 +150,112 @@ class BaseOscilloscopeDriver(ABC):
         """
         self.ip = ip
         self.port = port
+
+    # ------------------------------------------------------------------
+    # Optional capabilities
+    # ------------------------------------------------------------------
+
+    @property
+    def capabilities(self) -> list[str]:
+        """Return the capability names this driver supports.
+
+        ``run``, ``stop``, ``acquire``, ``preview`` and ``screenshot`` are
+        always present (they are abstract or built on abstract methods). The
+        optional ones are added when the subclass overrides the matching
+        method (``single``, ``force_trigger``, ``autoscale``) or sets
+        ``supports_cancel_acquire`` (``cancel_acquire``).
+
+        Returns:
+            Capability names in a stable order.
+        """
+        caps = ["run", "stop", "acquire", "preview", "screenshot"]
+        for name in ("single", "force_trigger", "autoscale"):
+            if getattr(type(self), name) is not getattr(BaseOscilloscopeDriver, name):
+                caps.append(name)
+        if self.supports_cancel_acquire:
+            caps.append("cancel_acquire")
+        return caps
+
+    def single(self) -> None:
+        """Arm a single acquisition (optional capability ``"single"``).
+
+        Override in drivers whose instrument has a single-shot mode.
+
+        Raises:
+            NotImplementedError: Always, unless overridden.
+        """
+        raise NotImplementedError("single() is not supported by this driver")
+
+    def force_trigger(self) -> None:
+        """Force a trigger event now (optional capability ``"force_trigger"``).
+
+        Raises:
+            NotImplementedError: Always, unless overridden.
+        """
+        raise NotImplementedError("force_trigger() is not supported by this driver")
+
+    def autoscale(self) -> None:
+        """Run the instrument's Auto-Setup (optional capability ``"autoscale"``).
+
+        Implementations should block until the instrument has settled so the
+        next read sees the new scales.
+
+        Raises:
+            NotImplementedError: Always, unless overridden.
+        """
+        raise NotImplementedError("autoscale() is not supported by this driver")
+
+    # ------------------------------------------------------------------
+    # Progress / cancel hooks for long reads
+    # ------------------------------------------------------------------
+
+    def bind_job_hooks(
+        self,
+        on_progress: ProgressCallback | None = None,
+        cancel_event: threading.Event | None = None,
+    ) -> None:
+        """Attach progress and cancel hooks for the read that is about to start.
+
+        Called by the acquire endpoint (from the worker thread) before reading
+        a channel. Drivers never call this themselves.
+
+        Args:
+            on_progress: Called as ``on_progress(points_done, points_total)``
+                by :meth:`report_progress`.
+            cancel_event: When set, :meth:`raise_if_cancelled` raises.
+        """
+        self._progress_cb = on_progress
+        self._cancel_event = cancel_event
+
+    def unbind_job_hooks(self) -> None:
+        """Detach the hooks attached by :meth:`bind_job_hooks`."""
+        self._progress_cb = None
+        self._cancel_event = None
+
+    def report_progress(self, done: int, total: int) -> None:
+        """Report read progress; no-op when no hook is attached.
+
+        Call after every block of a long read (e.g. each 250 k-point SCPI
+        transfer). Safe to call from the worker thread.
+
+        Args:
+            done: Points transferred so far for the current channel.
+            total: Points the current channel read will transfer in total.
+        """
+        if self._progress_cb is not None:
+            self._progress_cb(done, total)
+
+    def raise_if_cancelled(self) -> None:
+        """Abort the current read if the user cancelled the acquisition.
+
+        Call between blocks of a long read. The caller is responsible for
+        restoring the instrument state (e.g. ``RUN``) in a ``finally`` block.
+
+        Raises:
+            AcquisitionCancelledError: If the bound cancel event is set.
+        """
+        if self._cancel_event is not None and self._cancel_event.is_set():
+            raise AcquisitionCancelledError()
 
     @abstractmethod
     def connect(self) -> None:
@@ -198,13 +330,17 @@ class BaseOscilloscopeDriver(ABC):
         """Return channel numbers that are currently enabled on the instrument.
 
         Default implementation calls :meth:`get_channel_enabled` for channels
-        1–4 and returns those that are active.  Override in hardware drivers
+        1–:attr:`channel_count` and returns those that are active.  Override in hardware drivers
         if the instrument provides a faster batch query for all channel states.
 
         Returns:
             Sorted list of 1-based channel numbers that are currently enabled.
         """
-        return sorted(ch for ch in range(1, 5) if self.get_channel_enabled(ch))
+        return sorted(
+            ch
+            for ch in range(1, self.channel_count + 1)
+            if self.get_channel_enabled(ch)
+        )
 
     def get_channel_enabled(self, channel: int) -> bool:
         """Return whether the specified channel is currently active/visible.
@@ -304,7 +440,7 @@ class BaseOscilloscopeDriver(ABC):
         """Collect a complete snapshot of all instrument settings for metadata storage.
 
         Calls :meth:`identify`, :meth:`get_timebase`, :meth:`get_trigger`, and
-        :meth:`get_channel_config` for channels 1–4, assembling the results into
+        :meth:`get_channel_config` for every channel, assembling the results into
         a nested dictionary. Channels that raise an exception (e.g. not present on
         the instrument) are silently skipped. Only enabled channels are included.
 
@@ -336,7 +472,7 @@ class BaseOscilloscopeDriver(ABC):
             "channels": {},
         }
 
-        for ch in range(1, 5):
+        for ch in range(1, self.channel_count + 1):
             try:
                 cfg = self.get_channel_config(ch)
                 if cfg.enabled:
@@ -353,166 +489,25 @@ class BaseOscilloscopeDriver(ABC):
         return settings_dict
 
 
-# ---------------------------------------------------------------------------
-# Built-in mock driver (used in DEBUG mode and automated tests)
-# ---------------------------------------------------------------------------
+def __getattr__(name: str):
+    """Lazily re-export :class:`MockOscilloscopeDriver` (avoids a circular import).
 
-_BLANK_PNG: bytes | None = None
+    ``MockOscilloscopeDriver`` used to live in this module. It now lives in
+    :mod:`app.instruments.mock_driver`, which itself imports this module, so the
+    old import path ``from app.instruments.base_driver import
+    MockOscilloscopeDriver`` is served lazily.
 
+    Args:
+        name: Attribute name requested from this module.
 
-def _make_blank_png() -> bytes:
-    """Build a minimal valid 640×480 white PNG image using only stdlib."""
+    Returns:
+        The mock driver class for ``"MockOscilloscopeDriver"``.
 
-    def png_chunk(chunk_type: bytes, data: bytes) -> bytes:
-        chunk_len = len(data)
-        chunk_data = chunk_type + data
-        crc = zlib.crc32(chunk_data) & 0xFFFFFFFF
-        return struct.pack(">I", chunk_len) + chunk_data + struct.pack(">I", crc)
-
-    signature = b"\x89PNG\r\n\x1a\n"
-    ihdr_data = struct.pack(">IIBBBBB", 640, 480, 8, 2, 0, 0, 0)
-    ihdr = png_chunk(b"IHDR", ihdr_data)
-    raw_row = b"\x00" + b"\xff\xff\xff" * 640
-    compressed = zlib.compress(raw_row * 480)
-    idat = png_chunk(b"IDAT", compressed)
-    iend = png_chunk(b"IEND", b"")
-    return signature + ihdr + idat + iend
-
-
-def _get_blank_png() -> bytes:
-    """Return a cached blank PNG, building it once on first call."""
-    global _BLANK_PNG
-    if _BLANK_PNG is None:
-        _BLANK_PNG = _make_blank_png()
-    return _BLANK_PNG
-
-
-class MockOscilloscopeDriver(BaseOscilloscopeDriver):
-    """Synthetic oscilloscope driver that generates sine-wave data in memory.
-
-    Intended for local development (``DEBUG=True``) and automated tests.
-    No real network connection is made; all responses are computed immediately.
-
-    Each channel produces a sine wave at a distinct frequency:
-
-    - Channel 1: 1 kHz
-    - Channel 2: 1.5 kHz
-    - Channel 3: 2 kHz
-    - Channel 4: 2.5 kHz
-
-    Small Gaussian noise (σ = 0.01 V) is added to each waveform. All four
-    channels are enabled by default.
-
-    Use ``driver: "mock"`` in ``oscilloscopes.yaml`` to activate this driver
-    for a specific device, or set ``DEBUG=True`` to force it for all devices.
+    Raises:
+        AttributeError: For any other unknown attribute.
     """
+    if name == "MockOscilloscopeDriver":
+        from app.instruments.mock_driver import MockOscilloscopeDriver
 
-    def __init__(self, ip: str = "127.0.0.1", port: int = 5025) -> None:
-        super().__init__(ip, port)
-        self._connected = False
-        self._running = False
-        self._stop_time: float = 0.0
-        self._rng = np.random.default_rng(seed=42)
-        self._channels: dict[int, ChannelConfig] = {
-            ch: ChannelConfig(
-                channel=ch,
-                enabled=True,
-                scale_v_div=1.0,
-                offset_v=0.0,
-                coupling="DC",
-                probe_attenuation=1.0,
-            )
-            for ch in range(1, 5)
-        }
-        self._timebase = TimebaseConfig(scale_s_div=1e-6, offset_s=0.0, sample_rate=1e9)
-        self._trigger = TriggerConfig(
-            source="CH1", level_v=0.0, slope="RISE", mode="AUTO"
-        )
-        self._keyboard_locked = False
-
-    def connect(self) -> None:
-        self._connected = True
-
-    def disconnect(self) -> None:
-        self._connected = False
-
-    def identify(self) -> InstrumentInfo:
-        return InstrumentInfo(
-            idn="MOCK,MockScope,SN000001,FW1.0", ip=self.ip, firmware="FW1.0"
-        )
-
-    def run(self) -> None:
-        self._running = True
-
-    def stop(self) -> None:
-        self._running = False
-        self._stop_time = time.time()
-
-    def acquire_waveform(self, channel: int, max_samples: bool = False) -> WaveformData:
-        """Generate a synthetic sine-wave waveform for the requested channel.
-
-        When the scope is running the phase advances with wall-clock time so
-        successive calls show different snapshots; when stopped the waveform is
-        frozen at the instant :meth:`stop` was called.
-
-        Args:
-            channel: 1-based channel number (1–4).
-            max_samples: If ``True``, returns a 10× wider window (MAX-mode simulation).
-        """
-        num_divs = 10
-        multiplier = 10 if max_samples else 1
-        window_s = self._timebase.scale_s_div * num_divs * multiplier
-        sample_rate = 1e6
-        min_samples = 10_000 if max_samples else 1_000
-        max_cap = 1_500_000 if max_samples else 100_000
-        record_length = min(max(min_samples, int(sample_rate * window_s)), max_cap)
-
-        freq_hz = 1e3 + (channel - 1) * 500
-        amplitude = self._channels[channel].scale_v_div * 3.0
-        phase_time = time.time() if self._running else self._stop_time
-
-        t = np.linspace(0, window_s, record_length, endpoint=False)
-        v = amplitude * np.sin(2 * math.pi * freq_hz * (t + phase_time))
-        v = v + self._rng.normal(0, 0.01 * amplitude, size=record_length)
-
-        return WaveformData(
-            channel=channel,
-            time_array=t,
-            voltage_array=v,
-            sample_rate=sample_rate,
-            record_length=record_length,
-        )
-
-    def acquire_waveform_max(self, channel: int) -> WaveformData:
-        """Delegate to :meth:`acquire_waveform` with ``max_samples=True``."""
-        return self.acquire_waveform(channel, max_samples=True)
-
-    def get_screenshot(self) -> bytes:
-        return _get_blank_png()
-
-    def get_channel_config(self, channel: int) -> ChannelConfig:
-        return self._channels[channel]
-
-    def get_timebase(self) -> TimebaseConfig:
-        return self._timebase
-
-    def get_trigger(self) -> TriggerConfig:
-        return self._trigger
-
-    def set_channel_config(self, channel: int, config: ChannelConfig) -> None:
-        self._channels[channel] = config
-
-    def set_timebase(self, config: TimebaseConfig) -> None:
-        self._timebase = config
-
-    def set_trigger(self, config: TriggerConfig) -> None:
-        self._trigger = config
-
-    def get_memory_depth(self) -> int:
-        num_divs = 10
-        window_s = self._timebase.scale_s_div * num_divs
-        sample_rate = 1e6
-        return min(max(1000, int(sample_rate * window_s)), 100_000)
-
-    def set_keyboard_lock(self, locked: bool) -> None:
-        self._keyboard_locked = locked
+        return MockOscilloscopeDriver
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

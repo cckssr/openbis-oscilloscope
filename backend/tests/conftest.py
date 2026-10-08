@@ -7,6 +7,7 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
+from app.api.events import EventBus
 from app.buffer.service import BufferService
 from app.instruments.manager import (
     DeviceConfig,
@@ -14,7 +15,7 @@ from app.instruments.manager import (
     DeviceState,
     InstrumentManager,
 )
-from app.instruments.base_driver import MockOscilloscopeDriver
+from app.instruments.mock_driver import MockOscilloscopeDriver
 from app.locks.service import LockService
 from app.openbis_client.client import OpenBISClient, UserInfo
 
@@ -155,7 +156,9 @@ def admin_user():
 
 @pytest.fixture
 def mock_driver():
-    d = MockOscilloscopeDriver()
+    # Short full-memory reads (4 blocks, no sleeping) keep the suite fast; tests
+    # that exercise progress / cancel slow the blocks down themselves.
+    d = MockOscilloscopeDriver(max_depth=20_000, block_size=5_000, block_delay_s=0.0)
     d.connect()
     return d
 
@@ -205,6 +208,7 @@ async def app(fake_redis, instrument_manager, buffer_service, regular_user):
     test_app.state.instrument_manager = instrument_manager
     test_app.state.buffer_service = buffer_service
     test_app.state.openbis_client = mock_openbis
+    test_app.state.event_bus = EventBus()
 
     # Start per-device worker tasks
     for device_id, entry in instrument_manager.devices.items():
@@ -223,6 +227,16 @@ async def app(fake_redis, instrument_manager, buffer_service, regular_user):
                 await entry.worker_task
             except asyncio.CancelledError:
                 pass
+
+
+@pytest.fixture
+def act_as(app):
+    """Return a function that switches the authenticated user of the test app."""
+
+    def _act_as(user: UserInfo) -> None:
+        app.state.openbis_client.validate_token.return_value = user
+
+    return _act_as
 
 
 @pytest_asyncio.fixture

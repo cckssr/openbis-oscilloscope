@@ -6,7 +6,15 @@ from contextlib import asynccontextmanager
 import redis.asyncio as aioredis
 from fastapi import FastAPI, Request
 
-from app.api import admin, auth, devices, events, openbis_structure, sessions
+from app.api import (
+    admin,
+    app_config,
+    auth,
+    devices,
+    events,
+    openbis_structure,
+    sessions,
+)
 from app.api.events import EventBus
 from app.buffer.service import BufferService
 from app.config import settings
@@ -140,8 +148,9 @@ def create_app() -> FastAPI:
     context manager, registers the global :class:`~app.core.exceptions.AppError`
     exception handler, and mounts all API routers under their respective prefixes:
 
+    - ``/config`` — public runtime configuration
     - ``/auth`` — authentication endpoints
-    - ``/devices`` — device control endpoints
+    - ``/devices`` — device control endpoints (``/devices/events`` SSE first)
     - ``/sessions`` — session and artifact management
     - ``/admin`` — admin-only operations
     - ``/health`` — simple liveness probe
@@ -167,9 +176,12 @@ def create_app() -> FastAPI:
             tracker.record()
         return await call_next(request)
 
+    app.include_router(app_config.router)
     app.include_router(auth.router)
-    app.include_router(devices.router)
+    # events must precede devices: GET /devices/events would otherwise be
+    # matched by GET /devices/{device_id}.
     app.include_router(events.router)
+    app.include_router(devices.router)
     app.include_router(sessions.router)
     app.include_router(admin.router)
     app.include_router(openbis_structure.router)

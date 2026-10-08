@@ -150,6 +150,33 @@ class ValidationError(AppError):
         super().__init__(400, detail, "validation_error")
 
 
+class NotSupportedError(AppError):
+    """Raised when a command is not supported by the device's driver (HTTP 400).
+
+    Args:
+        device_id: The device identifier whose driver lacks the capability.
+        capability: Name of the missing capability (e.g. ``"autoscale"``).
+    """
+
+    def __init__(self, device_id: str, capability: str):
+        super().__init__(
+            400,
+            f"Device '{device_id}' does not support '{capability}'",
+            "not_supported",
+        )
+
+
+class AcquisitionCancelledError(AppError):
+    """Raised when a running acquisition was cancelled by the user (HTTP 409).
+
+    Drivers raise this from :meth:`BaseOscilloscopeDriver.raise_if_cancelled`
+    between read blocks. Nothing is stored for a cancelled acquisition.
+    """
+
+    def __init__(self, detail: str = "Acquisition was cancelled"):
+        super().__init__(409, detail, "acquisition_cancelled")
+
+
 class AdminRequiredError(AppError):
     """Raised when an endpoint that requires admin privileges is accessed by a
     regular user (HTTP 403).

@@ -331,3 +331,93 @@ def test_zip_screenshot(svc):
         pngs = [n for n in zf.namelist() if n.endswith(".png")]
     assert len(pngs) == 1
     assert pngs[0] == "screenshot_0001.png"
+
+
+# ---------------------------------------------------------------------------
+# Session ownership, upload status, shared created_at
+# ---------------------------------------------------------------------------
+
+
+def test_register_session_writes_block_and_keeps_first_owner(svc):
+    info = svc.register_session("scope-01", "s1", "alice")
+    assert (info.owner_user, info.device_id) == ("alice", "scope-01")
+    index = json.loads((svc._root / "scope-01" / "s1" / "index.json").read_text())
+    assert set(index["session"]) == {
+        "session_id",
+        "device_id",
+        "owner_user",
+        "created_at",
+    }
+    svc.register_session("scope-01", "s1", "mallory")
+    assert svc.get_session_info("s1").owner_user == "alice"
+
+
+def test_session_block_survives_artifact_writes(svc):
+    svc.register_session("scope-01", "s1", "alice")
+    svc.store_waveform("scope-01", "s1", _make_waveform(), meta={})
+    assert svc.get_session_info("s1").owner_user == "alice"
+
+
+def test_legacy_session_has_no_owner(svc):
+    svc.store_waveform("scope-01", "old", _make_waveform(), meta={})
+    info = svc.get_session_info("old")
+    assert info.owner_user is None
+    assert svc.get_session_info("missing") is None
+
+
+def test_store_waveform_uses_given_created_at(svc):
+    stamp = "2026-10-08T10:00:00+00:00"
+    svc.store_waveform("scope-01", "s1", _make_waveform(), meta={}, created_at=stamp)
+    assert svc.list_artifacts("s1")[0].created_at == stamp
+
+
+def test_mark_uploaded_and_get_artifacts(svc):
+    a = svc.store_waveform("scope-01", "s1", _make_waveform(1), meta={})
+    b = svc.store_waveform("scope-01", "s1", _make_waveform(2), meta={})
+    svc.set_flag("s1", a, True)
+    svc.mark_uploaded("s1", [a], "PERM-1")
+    got = {x.artifact_id: x for x in svc.list_artifacts("s1")}
+    assert got[a].uploaded and got[a].perm_id == "PERM-1" and got[a].uploaded_at
+    assert got[a].persist is False
+    assert not got[b].uploaded and got[b].perm_id is None
+    assert [x.artifact_id for x in svc.get_artifacts("s1", [b, a])] == [b, a]
+    from app.core.exceptions import ArtifactNotFoundError, SessionNotFoundError
+
+    with pytest.raises(ArtifactNotFoundError):
+        svc.get_artifacts("s1", [a, "nope"])
+    with pytest.raises(SessionNotFoundError):
+        svc.get_artifacts("missing", [a])
+
+
+def test_legacy_index_entries_get_upload_defaults(svc):
+    d = svc._root / "scope-01" / "old"
+    d.mkdir(parents=True)
+    (d / "index.json").write_text(
+        json.dumps(
+            {
+                "artifacts": [
+                    {
+                        "artifact_id": "trace_0001_ch1",
+                        "artifact_type": "trace",
+                        "channel": 1,
+                        "seq": 1,
+                        "persist": False,
+                        "created_at": "2026-01-01T00:00:00+00:00",
+                        "files": [],
+                    }
+                ]
+            }
+        )
+    )
+    art = svc.list_artifacts("old")[0]
+    assert (art.uploaded, art.uploaded_at, art.perm_id) == (False, None, None)
+
+
+def test_list_sessions_returns_every_session(svc):
+    svc.register_session("scope-01", "s1", "alice")
+    svc.register_session("scope-02", "s2", "bob")
+    svc.store_waveform("scope-02", "s2", _make_waveform(), meta={})
+    records = {r.info.session_id: r for r in svc.list_sessions()}
+    assert set(records) == {"s1", "s2"}
+    assert records["s2"].info.owner_user == "bob"
+    assert len(records["s2"].artifacts) == 1 and records["s1"].artifacts == []

@@ -88,7 +88,30 @@ The `driver` field is a Python dotted import path. The class is loaded dynamical
 - `record_length` — number of samples (int)
 - `unit_x`, `unit_y` — axis units, default `"s"` and `"V"`
 
-## 6. Tips
+## 6. Optional capabilities and long-read hooks
+
+Everything below is optional. `BaseOscilloscopeDriver.capabilities` derives what `GET /devices/{id}` reports from what your class overrides, so the frontend shows a control only when the driver supports it.
+
+| Override / attribute          | Effect                                                                                                              |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `single()`                    | Arm one acquisition (`POST /devices/{id}/single`, capability `single`). Rigol: `:SINGle`.                           |
+| `force_trigger()`             | Trigger now (`POST …/force-trigger`, capability `force_trigger`). Rigol: `:TFORce`.                                 |
+| `autoscale()`                 | Auto-Setup (`POST …/autoscale`, capability `autoscale`). **Block until the scope settled** (Rigol polls `*OPC?`).   |
+| `channel_count = N`           | Class attribute, default 4. Channels `1..N` are listed, validated and returned by `/settings`.                      |
+| `supports_cancel_acquire = True` | Declare that your long reads honour cancellation (capability `cancel_acquire`).                                  |
+
+Methods you do not override stay "unsupported": the endpoint answers `400 not_supported` and the capability is not advertised.
+
+**Progress and cancel for full-memory reads** (`acquire_waveform(channel, max_samples=True)`): read in blocks and, after each block, call
+
+```python
+self.report_progress(points_done, points_total)   # throttled SSE "progress" events
+self.raise_if_cancelled()                         # raises AcquisitionCancelledError -> HTTP 409
+```
+
+Both are no-ops when no hook is bound (e.g. in preview or in your own scripts). Wrap the read in `try/finally` and restore the instrument state (`RUN`, key lock) there, because a cancel aborts the read with an exception. Nothing is stored for a cancelled acquisition: the endpoint reads all channels first and writes to the archive afterwards. `MockOscilloscopeDriver` and `RigolDS1000Driver` are reference implementations.
+
+## 7. Tips
 
 - **Waveform preamble**: Most SCPI oscilloscopes return a preamble with `x_increment`, `x_origin`, `y_increment`, `y_origin`, and `y_reference`. Use these to convert raw ADC counts to physical values.
 - **Timeout**: Set instrument timeout > expected acquisition time. Single-shot triggers may take seconds.

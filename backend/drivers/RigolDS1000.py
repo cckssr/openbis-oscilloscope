@@ -1,6 +1,8 @@
 """Openbis-compatible driver for Rigol DS1000 series oscilloscopes."""
 
 import logging
+import time
+
 import numpy as np
 
 from app.instruments.base_driver import (
@@ -32,7 +34,13 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
     Note: This driver assumes the oscilloscope is configured to return data in
     a compatible format (e.g. vertical scale in volts/div, horizontal scale in
     seconds/div, etc.). Some manual setup may be required on the instrument.
+
+    Optional capabilities: ``single``, ``force_trigger`` and ``autoscale`` are
+    implemented, and full-memory (MAX) reads report progress and honour
+    cancellation between the 250 k-point SCPI blocks.
     """
+
+    supports_cancel_acquire = True
 
     def __init__(self, ip: str, port: int = 5025) -> None:
         super().__init__(ip, port)
@@ -84,9 +92,13 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
     def acquire_waveform(self, channel: int, max_samples: bool = False) -> WaveformData:
         """Acquire and return waveform data from the specified channel.
 
-        Stops the oscilloscope, reads waveform data in BYTE format from internal
-        memory (RAW mode), converts raw ADC values to voltages using the preamble
-        parameters, then restarts acquisition.
+        Reads waveform data in BYTE format and converts raw ADC values to
+        voltages using the preamble parameters. A normal read (``NORM`` mode)
+        leaves the run state untouched. With ``max_samples`` the scope is
+        stopped and its keys locked, the full memory (``MAX`` mode) is read in
+        250 k-point blocks (reporting progress and honouring cancellation after
+        each block), and acquisition is restarted afterwards, also when the read
+        was cancelled or failed.
 
         Args:
             channel: 1-based channel number (1–4).
@@ -109,11 +121,22 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
         else:
             self.instrument.waveform_mode = "NORM"
 
-        self.instrument.waveform_format = "BYTE"
-
-        voltages, preamble = self.instrument.get_waveform_data(
-            raw=False, return_preamble=True
-        )
+        try:
+            self.instrument.waveform_format = "BYTE"
+            voltages, preamble = self.instrument.get_waveform_data(
+                raw=False,
+                return_preamble=True,
+                progress_callback=self._on_block if max_samples else None,
+            )
+        finally:
+            if max_samples:
+                # MAX mode stops the scope and locks the keys; restore both even
+                # when the read was cancelled or failed.
+                try:
+                    self.set_keyboard_lock(False)
+                    self.instrument.run()
+                except Exception:
+                    pass  # Non-fatal — the next explicit run() call will recover
 
         n_points = len(voltages)
         x_inc = preamble["xincrement"]
@@ -127,13 +150,6 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
         time_array = x_origin + (np.arange(n_points) - x_ref) * x_inc
         sample_rate = 1.0 / x_inc
 
-        # MAX mode stops the scope; restart so continuous acquisition resumes.
-        try:
-            self.set_keyboard_lock(False)
-            self.instrument.run()
-        except Exception:
-            pass  # Non-fatal — the next explicit run() call will recover
-
         return WaveformData(
             channel=channel,
             time_array=time_array,
@@ -141,6 +157,53 @@ class RigolDS1000Driver(BaseOscilloscopeDriver):
             sample_rate=sample_rate,
             record_length=n_points,
         )
+
+    def _on_block(self, done: int, total: int) -> None:
+        """Report progress after a SCPI block and abort if the user cancelled.
+
+        Passed to ``get_waveform_data`` as ``progress_callback``.
+
+        Args:
+            done: Points transferred so far.
+            total: Points the read will transfer in total.
+
+        Raises:
+            AcquisitionCancelledError: If the acquisition was cancelled.
+        """
+        self.report_progress(done, total)
+        self.raise_if_cancelled()
+
+    def single(self) -> None:
+        """Arm a single acquisition (``:SINGle``): wait for one trigger, then stop."""
+        self.instrument.write(":SINGle")
+
+    def force_trigger(self) -> None:
+        """Force a trigger event now (``:TFORce``)."""
+        self.instrument.force_trigger()
+
+    def autoscale(self, timeout_s: float = 20.0) -> None:
+        """Run the scope's Auto-Setup (``:AUToscale``) and wait until it settles.
+
+        Polls ``*OPC?`` (tolerating VISA timeouts while the scope is busy) until
+        the instrument reports completion or ``timeout_s`` has elapsed.
+
+        Args:
+            timeout_s: Maximum seconds to wait for the scope to settle.
+
+        Raises:
+            TimeoutError: If the scope did not finish within ``timeout_s``.
+        """
+        self.instrument.autoscale()
+        deadline = time.monotonic() + timeout_s
+        while time.monotonic() < deadline:
+            try:
+                if str(self.instrument.ask("*OPC?")).strip() == "1":
+                    time.sleep(0.3)  # let the display settle before the next read
+                    return
+            except Exception as exc:  # VISA timeout while the scope is busy
+                logger.debug("Waiting for autoscale to finish: %s", exc)
+                time.sleep(0.5)
+        raise TimeoutError("Autoscale did not finish in time")
 
     def acquire_waveform_max(self, channel: int) -> WaveformData:
         """Acquire full memory depth by delegating to acquire_waveform(max_samples=True)."""

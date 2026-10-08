@@ -32,7 +32,9 @@ class LockService:
     """Distributed, exclusive device-locking service backed by Redis.
 
     Each lock is stored at the key ``lock:{device_id}`` as a JSON string with a
-    TTL of :attr:`~app.config.Settings.LOCK_TTL_SECONDS`. Locks are acquired
+    TTL of :attr:`~app.config.Settings.LOCK_TTL_SECONDS` (shortened to
+    :attr:`~app.config.Settings.LOCK_SOFT_RELEASE_SECONDS` by :meth:`soften_lock`
+    when the client page unloads). Locks are acquired
     atomically with ``SET NX EX`` so that only one session can hold a lock at a
     time. If a client disappears without calling :meth:`release_lock`, the key
     expires automatically.
@@ -173,6 +175,46 @@ class LockService:
                     pipe.set(key, json.dumps(d), ex=settings.LOCK_TTL_SECONDS)
                     await pipe.execute()
                     return True
+                except aioredis.WatchError:
+                    continue
+
+    async def soften_lock(self, device_id: str, session_id: str) -> int | None:
+        """Shorten a lock's TTL to the soft-release window instead of deleting it.
+
+        Used when the client's page unloads (reload, tab close): the lock stays
+        in place so the same user can reclaim it, but it expires after
+        :attr:`~app.config.Settings.LOCK_SOFT_RELEASE_SECONDS` if nobody does. A
+        later :meth:`renew_lock` (heartbeat) restores the full TTL.
+
+        The TTL is never *extended*: if the lock already has less time left than
+        the soft window, it is left as is.
+
+        Args:
+            device_id: Identifier of the device whose lock should be softened.
+            session_id: Session UUID that must match the stored lock's session.
+
+        Returns:
+            The remaining lifetime in seconds after the change, or ``None`` if
+            the lock does not exist or belongs to another session.
+        """
+        key = self._key(device_id)
+        async with self._redis.pipeline(transaction=True) as pipe:
+            while True:
+                try:
+                    await pipe.watch(key)
+                    raw = await pipe.get(key)
+                    if raw is None or json.loads(raw)["session_id"] != session_id:
+                        await pipe.unwatch()
+                        return None
+                    remaining = await pipe.ttl(key)
+                    soft = settings.LOCK_SOFT_RELEASE_SECONDS
+                    if 0 <= remaining <= soft:
+                        await pipe.unwatch()
+                        return remaining
+                    pipe.multi()
+                    pipe.expire(key, soft)
+                    await pipe.execute()
+                    return soft
                 except aioredis.WatchError:
                     continue
 

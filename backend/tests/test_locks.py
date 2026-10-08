@@ -91,3 +91,31 @@ async def test_force_release(lock_svc):
 async def test_force_release_no_lock(lock_svc):
     released = await lock_svc.force_release_lock("scope-nonexistent")
     assert released is False
+
+
+@pytest.mark.asyncio
+async def test_soften_lock_shortens_ttl_and_renew_restores_it(lock_svc):
+    from app.config import settings
+
+    await lock_svc.acquire_lock("scope-01", "alice", "sess-001")
+    assert (
+        await lock_svc.soften_lock("scope-01", "sess-001")
+        == settings.LOCK_SOFT_RELEASE_SECONDS
+    )
+    assert (
+        0
+        < await lock_svc._redis.ttl("lock:scope-01")
+        <= settings.LOCK_SOFT_RELEASE_SECONDS
+    )
+    assert (await lock_svc.get_lock("scope-01")).session_id == "sess-001"
+    assert await lock_svc.renew_lock("scope-01", "sess-001") is True
+    assert (
+        await lock_svc._redis.ttl("lock:scope-01") > settings.LOCK_SOFT_RELEASE_SECONDS
+    )
+
+
+@pytest.mark.asyncio
+async def test_soften_lock_rejects_foreign_session_and_missing_lock(lock_svc):
+    assert await lock_svc.soften_lock("scope-01", "sess-001") is None
+    await lock_svc.acquire_lock("scope-01", "alice", "sess-001")
+    assert await lock_svc.soften_lock("scope-01", "other") is None

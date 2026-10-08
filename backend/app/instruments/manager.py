@@ -12,10 +12,9 @@ from typing import Any, Callable, Coroutine
 import yaml
 
 from app.config import settings
-from app.instruments.base_driver import (
-    BaseOscilloscopeDriver,
-    MockOscilloscopeDriver,
-)
+from app.instruments.base_driver import BaseOscilloscopeDriver
+from app.instruments.jobs import AcquireJobRegistry
+from app.instruments.mock_driver import MockOscilloscopeDriver
 
 logger = logging.getLogger(__name__)
 
@@ -141,12 +140,15 @@ class InstrumentManager:
 
     Attributes:
         devices: Mapping from device ID string to its :class:`DeviceEntry`.
+        event_bus: Optional event bus that receives device-state events.
+        jobs: Registry of in-flight acquisitions (used for cancelling).
     """
 
     def __init__(self) -> None:
         """Initialize the manager with an empty device registry."""
         self.devices: dict[str, DeviceEntry] = {}
         self.event_bus = None  # set to EventBus instance by app lifespan
+        self.jobs = AcquireJobRegistry()
 
     async def startup(self) -> None:
         """Load device configuration from YAML and start per-device worker tasks.

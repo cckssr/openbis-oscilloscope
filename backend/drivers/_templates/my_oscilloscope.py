@@ -24,7 +24,19 @@ class MyOscilloscope(BaseOscilloscopeDriver):
 
     Uses LAN/TCP SCPI communication.  Replace the TODO stubs with
     your instrument's actual command set.
+
+    Optional extras (see the sections at the bottom of this class):
+    ``single()``, ``force_trigger()`` and ``autoscale()`` add capabilities,
+    and ``report_progress()`` / ``raise_if_cancelled()`` in a block-wise read
+    add progress events and the "cancel" button for full-memory reads.
     """
+
+    #: Number of analog input channels (default 4).
+    channel_count = 4
+
+    #: Set to True once acquire_waveform() calls raise_if_cancelled() between
+    #: the blocks of a max_samples read. Adds the "cancel_acquire" capability.
+    supports_cancel_acquire = False
 
     def __init__(self, ip: str, port: int = 5025) -> None:
         """Initialize the driver with the instrument's network address.
@@ -143,3 +155,47 @@ class MyOscilloscope(BaseOscilloscopeDriver):
         """Return current trigger configuration."""
         # TODO: query :TRIG:SOUR?, :TRIG:LEV?, :TRIG:SLOP?, :TRIG:SWE?
         raise NotImplementedError("get_trigger() not implemented")
+
+    # ------------------------------------------------------------------
+    # OPTIONAL: extra capabilities
+    #
+    # Delete what your instrument cannot do. Every method you override is
+    # advertised in GET /devices/{id} "capabilities" and unlocks the matching
+    # button in the UI; methods you do not override answer 400 "not_supported".
+    # ------------------------------------------------------------------
+
+    def single(self) -> None:
+        """Arm a single acquisition (capability ``single``)."""
+        # TODO: self._resource.write(":SING")
+        raise NotImplementedError("single() not implemented")
+
+    def force_trigger(self) -> None:
+        """Force a trigger event now (capability ``force_trigger``)."""
+        # TODO: self._resource.write(":TFOR")
+        raise NotImplementedError("force_trigger() not implemented")
+
+    def autoscale(self) -> None:
+        """Run Auto-Setup (capability ``autoscale``).
+
+        Block until the instrument has settled, e.g. by polling ``*OPC?``
+        (tolerate timeouts while it is busy), so the next read sees the new
+        scales.
+        """
+        # TODO: self._resource.write(":AUT"); then poll "*OPC?" until it returns 1
+        raise NotImplementedError("autoscale() not implemented")
+
+    # ------------------------------------------------------------------
+    # OPTIONAL: progress and cancel for full-memory reads
+    #
+    # Inside acquire_waveform(channel, max_samples=True), read the record in
+    # blocks and after EACH block call:
+    #
+    #     self.report_progress(points_done, points_total)   # SSE progress bar
+    #     self.raise_if_cancelled()                         # user pressed "cancel"
+    #
+    # Both are no-ops when nobody is listening. Put the read in try/finally and
+    # restore the instrument (RUN, key lock) in the finally block, because a
+    # cancel aborts the read with AcquisitionCancelledError. Then set
+    # supports_cancel_acquire = True above. See RigolDS1000Driver for a
+    # complete example.
+    # ------------------------------------------------------------------

@@ -30,6 +30,8 @@ Defines the `AppError` hierarchy and the global exception handler.
 | `LockConflictError`     | 409  | Lock is held by a different user/session          |
 | `ArtifactNotFoundError` | 404  | Artifact ID not in a session's index              |
 | `SessionNotFoundError`  | 404  | Session directory does not exist                  |
+| `NotSupportedError`     | 400  | Driver lacks the requested optional capability (`not_supported`) |
+| `AcquisitionCancelledError` | 409 | Running acquisition was cancelled by the user (`acquisition_cancelled`) |
 | `OpenBISError`          | 502  | pybis call to OpenBIS failed                      |
 
 `register_exception_handlers(app)` installs a single FastAPI exception handler that converts any `AppError` subclass into a JSON `{"detail": "..."}` response with the matching status code.

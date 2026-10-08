@@ -9,7 +9,6 @@ import numpy as np
 import pytest
 
 from app.instruments.base_driver import WaveformData
-from app.openbis_client.client import UserInfo
 
 
 def _make_waveform(channel: int = 1, n: int = 50) -> WaveformData:
@@ -274,7 +273,7 @@ async def test_commit_dropbox_mode(app, async_client, tmp_path):
     buf.set_flag(sess, art_id, persist=True)
 
     dropbox_dir = tmp_path / "dropbox"
-    with patch("app.api.sessions.settings") as mock_settings:
+    with patch("app.api.sessions.commit.settings") as mock_settings:
         mock_settings.OPENBIS_USE_DROPBOX = True
         mock_settings.OPENBIS_DROPBOX_PATH = str(dropbox_dir)
         mock_settings.OPENBIS_DATASET_TYPE = "OSCILLOSCOPE"

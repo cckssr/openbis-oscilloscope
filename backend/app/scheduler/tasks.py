@@ -12,6 +12,11 @@ from app.scheduler.openbis_sync import sync_oscilloscopes_from_openbis
 
 logger = logging.getLogger(__name__)
 
+# Local time (in ``EOD_RESET_TIMEZONE``) of the end-of-day lock reset; also
+# reported to the frontend by ``GET /config``.
+EOD_LOCK_RESET_HOUR = 23
+EOD_LOCK_RESET_MINUTE = 59
+
 
 def create_scheduler(lock_service, instrument_manager) -> AsyncIOScheduler:
     """Build and return a configured :class:`~apscheduler.schedulers.asyncio.AsyncIOScheduler`.
@@ -65,7 +70,11 @@ def create_scheduler(lock_service, instrument_manager) -> AsyncIOScheduler:
 
     scheduler.add_job(
         eod_lock_reset,
-        trigger=CronTrigger(hour=23, minute=59, timezone=settings.EOD_RESET_TIMEZONE),
+        trigger=CronTrigger(
+            hour=EOD_LOCK_RESET_HOUR,
+            minute=EOD_LOCK_RESET_MINUTE,
+            timezone=settings.EOD_RESET_TIMEZONE,
+        ),
         id="eod_lock_reset",
         name="End-of-day lock reset",
         replace_existing=True,
