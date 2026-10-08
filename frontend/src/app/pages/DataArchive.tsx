@@ -73,7 +73,7 @@ function buildPlotData(waveforms: WaveformData[]): PlotPoint[] {
     for (const w of waveforms) {
       const key = `ch${w.channel}` as keyof PlotPoint;
       const idx = Math.floor(i * (w.voltage_V.length / times.length));
-      (pt as Record<string, number>)[key] = w.voltage_V[idx] ?? 0;
+      (pt as unknown as Record<string, number>)[key] = w.voltage_V[idx] ?? 0;
     }
     return pt;
   });

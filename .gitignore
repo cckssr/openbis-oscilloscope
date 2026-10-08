@@ -17,8 +17,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -120,3 +120,7 @@ dist/
 # Buffer
 /backend/buffer/
 /backend/config/oscilloscopes.yaml
+
+# Frontend test artifacts
+frontend/playwright-report/
+frontend/test-results/

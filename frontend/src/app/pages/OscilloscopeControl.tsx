@@ -276,12 +276,6 @@ export function OscilloscopeControl() {
     triggerSettings.slope !== appliedTrigger.slope ||
     triggerSettings.mode !== appliedTrigger.mode;
 
-  const enabledChannels = {
-    ch1: channelSettings[1]?.enabled ?? false,
-    ch2: channelSettings[2]?.enabled ?? false,
-    ch3: channelSettings[3]?.enabled ?? false,
-    ch4: channelSettings[4]?.enabled ?? false,
-  };
 
   // Fetch settings and populate both pending and applied state
   const loadSettings = useCallback(async () => {
