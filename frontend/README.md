@@ -28,8 +28,8 @@ src/
   api/          # Typed API client (client.ts, devices.ts, sessions.ts, auth.ts, types.ts)
   app/
     context/    # AuthContext — token storage and user state
-    pages/      # DeviceList, OscilloscopeControl, DataArchive, Login
-    components/ # Reusable UI components
+    pages/      # DeviceList, OscilloscopeControl, DataArchive (+ archive/), MySessions (+ sessions/), Login
+    components/ # Reusable UI components (upload/ = upload wizard)
   styles/       # Tailwind + theme CSS variables
 ```
 
@@ -145,3 +145,24 @@ Settings are **data**: a `ControlGroupDef` (`controls/types.ts`) lists `ControlD
 - **Inspector** `<SettingsInspector deviceId level canEdit readOnlyReason? onTakeControl? layout? className? />`: groups as Radix tabs (list scrolls above 4 groups; icons show from 352 px container width, container query) or `layout="accordion"` (headers show `summary`); a single group renders without tabs. Each group sits in a `RegionBoundary`. Per-channel groups use collapsible sections with colour chip, one-line summary (`CH1 · 200 mV/div · DC · 1×` / `CH2 · aus`) and the on/off switch in the header; enabled channels start expanded. In `basic` level only the compact on/off rows remain. With `canEdit=false` all controls are disabled (`title` = reason), the content is dimmed and a sticky banner "Gerät übernehmen, um Einstellungen zu ändern" (or `readOnlyReason`) offers the `onTakeControl` button. Works from 280 px container width; scrolling is up to the parent.
 
 Tests: `controls/registry.test.ts`, `controls/renderers/renderers.test.tsx`, `pages/control/settings/SettingsInspector.test.tsx` (fixtures in `controls/testing.ts`).
+
+## Archive, upload & Meine Messdaten
+
+Strings: `src/i18n/de/archive.ts` (`de.archive.*`, wizard under `de.archive.wizard`, sessions under `de.archive.sessions`).
+Glossary: *Aufnahme* (all channels of one acquisition or one screenshot), *Kanalspur* (one channel), *Serie* (run group), *Hochladen*.
+
+**`pages/DataArchive.tsx`** (`/archive/:sessionId`, exports `DataArchive`) — header (`archive/ArchiveHeader`: back to `/device/:id` while the session is active else `/sessions`, refresh, `<ExportMenu>` for the upload selection, "Alle als ZIP" = server ZIP of the whole session without a client cap, primary "Hochladen (n)" which opens the wizard), a summary/select bar, the timeline table and the preview. From 1280 px the preview sits next to the list (split view, Esc clears it); narrower it opens in a `Dialog` (Esc, focus trap). ←/→ step through captures in list order (stepping into a collapsed series expands it).
+
+| File (`pages/archive/`) | Role |
+| --- | --- |
+| `groupArtifacts.ts` | Pure: `buildTimeline(artifacts)` → `{days, captures}`; captures merge traces by `acquisition_id` (screenshots and legacy traces are single captures), series = runs with ≥ 2 captures numbered oldest-first, one timeline newest first, day groups. `statusOf` (selected > uploaded > local), `selectionState`, `countByStatus`, immutable `withPersist` / `restorePersist` / `withAnnotation`. Tested in `groupArtifacts.test.ts`. |
+| `useArchive.ts` | Loads artifacts; `setUploadSelection(captures, wanted)` (optimistic `flagArtifact` per artifact, rollback + `notifyError` + re-sync on any failure) and `saveNote` (optimistic `setAnnotation`, rollback + toast). |
+| `ArchiveTable.tsx`, `ArchiveRows.tsx` | Real `<table>` (fixed column widths): Hochladen · Zeit · Kanäle · Notiz · Status · Aktionen; `DayRow` (date once per day), `SeriesRow` (collapsible "Serie n", tri-state checkbox), `CaptureRow`. Uploaded captures have a disabled checkbox (reason as title); "Erneut hochladen" is in the row menu. |
+| `UploadCheckbox`, `StatusChip` (Lokal / Zum Hochladen ausgewählt / Hochgeladen ✓, icon + text), `ChannelChips` (`channelColor` chips, screenshot thumbnail), `NoteCell` (inline edit: Enter/blur saves, Esc cancels) | Row building blocks. |
+| `CapturePreview.tsx`, `PreviewDialog.tsx`, `PreviewPlaceholder.tsx` | Preview body (`WaveformPlot` with `yMode="volts"`, `MeasurementTable level="basic"`, note, `ExportMenu` of that capture, prev/next, or the screenshot image) and its Dialog wrapper. |
+| `usePreviewData.ts` (12-entry LRU of loaded traces), `usePreviewKeys.ts`, `useScreenshotUrls.ts`, `useSessionInfo.ts` (device/`is_active` from `listMySessions`), `useMediaQuery.ts` | Hooks. |
+
+**Upload wizard** (`components/upload/`, opened from the archive header): `UploadWizard` is a Dialog (full screen below 640 px) with `Stepper` and one component per step — `ReviewStep` ① (untick captures → `artifact_ids`), `TargetStep` ② (`components/OpenBISObjectSelector` Gruppe → Versuch → Probe/Objekt, manual identifier under "Erweitert: Kennung manuell eingeben"; a load error switches to manual entry), `DetailsStep` ③ (Praktikum from `useAppConfig().lab_courses` with `FALLBACK_LAB_COURSES`, Versuchstitel, Beschreibung, Messobjekt, Notizen; openBIS property names only in `HelpPopover`), `ConfirmStep` ④ (summary + "Jetzt hochladen"), `ResultStep` ⑤ (indeterminate progress; "✓ n Aufnahmen hochgeladen" + "In openBIS öffnen ↗" from `openbis_url` or the dropbox note; error panel with "Erneut versuchen"). State lives in `wizardReducer.ts` (`wizardReducer`, `initialWizardState`, `stepIssue` = reason shown next to the disabled "Weiter", `buildCommitRequest`); after success the archive refreshes so rows show "Hochgeladen ✓" and the selection is empty (no double upload). `OpenBISObjectSelector` is controlled (`ObjectSelection`); `resolveSelection` fills labels/identifiers of remembered codes in one pass.
+`rememberedMetadata.ts` keeps the form per user (`localStorage` key `osc_upload_prefs:<user_id>`, all access in try/catch): each field has a "merken" pin (`RememberToggle`); pinned fields (default: Ziel, Praktikum, Titel, Beschreibung) are pre-filled next time, unpinned ones are cleared. Saved on successful upload. Tests: `wizardReducer.test.ts`, `rememberedMetadata.test.ts`, `OpenBISObjectSelector.test.ts`.
+
+**`pages/MySessions.tsx`** (`/sessions`, exports `MySessions`) — `listMySessions` grouped by day (`sessions/groupSessions.ts`, tested), rows (`sessions/SessionRow.tsx`) with device, start time, counts ("5 Aufnahmen · 2 ausgewählt · 3 hochgeladen"), status chip (Aktiv / Alles hochgeladen ✓ / n nicht hochgeladen / Leer) and "Öffnen"; a retention note using `useAppConfig().eod_reset_time`; empty state linking to the device list.
